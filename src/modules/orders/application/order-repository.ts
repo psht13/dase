@@ -44,6 +44,7 @@ export type ConfirmCustomerDeliveryInput = {
 export interface OrderRepository {
   confirmCustomerDelivery(input: ConfirmCustomerDeliveryInput): Promise<void>;
   create(input: CreateOrderInput): Promise<PersistedOrder>;
+  findById(orderId: string): Promise<PersistedOrder | null>;
   findByPublicToken(publicToken: string): Promise<PersistedOrder | null>;
   updateStatus(orderId: string, status: OrderStatus): Promise<void>;
 }

@@ -15,6 +15,7 @@ export const serverEnvSchema = z
     DATABASE_URL: optionalUrl,
     DATABASE_URL_TEST: optionalUrl,
     MONOBANK_PUBLIC_KEY: z.string().optional(),
+    MONOBANK_API_URL: optionalUrl,
     MONOBANK_TOKEN: z.string().optional(),
     MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY: z.string().optional(),
     NODE_ENV: z
@@ -53,6 +54,7 @@ export const serverEnvSchema = z
     BETTER_AUTH_URL: env.BETTER_AUTH_URL || undefined,
     DATABASE_URL: env.DATABASE_URL || undefined,
     DATABASE_URL_TEST: env.DATABASE_URL_TEST || undefined,
+    MONOBANK_API_URL: env.MONOBANK_API_URL || undefined,
     NOVA_POSHTA_API_URL: env.NOVA_POSHTA_API_URL || undefined,
     UKRPOSHTA_API_URL: env.UKRPOSHTA_API_URL || undefined,
   }));

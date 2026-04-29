@@ -1,8 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type {
+  PaymentProviderCode,
   PaymentRecord,
   PaymentRepository,
+  UpdatePaymentProviderInvoiceInput,
+  UpdatePaymentStatusInput,
 } from "@/modules/payments/application/payment-repository";
 import * as schema from "@/shared/db/schema";
 
@@ -19,6 +22,28 @@ export class DrizzlePaymentRepository implements PaymentRepository {
       .where(eq(schema.payments.orderId, orderId));
 
     return payments.map(mapPayment);
+  }
+
+  async findByProviderInvoiceId(
+    provider: PaymentProviderCode,
+    providerInvoiceId: string,
+  ): Promise<PaymentRecord | null> {
+    const [payment] = await this.db
+      .select()
+      .from(schema.payments)
+      .where(
+        and(
+          eq(schema.payments.provider, provider),
+          eq(schema.payments.providerInvoiceId, providerInvoiceId),
+        ),
+      )
+      .limit(1);
+
+    if (!payment) {
+      return null;
+    }
+
+    return mapPayment(payment);
   }
 
   async save(
@@ -44,6 +69,46 @@ export class DrizzlePaymentRepository implements PaymentRepository {
     }
 
     return mapPayment(savedPayment);
+  }
+
+  async updateProviderInvoice(
+    input: UpdatePaymentProviderInvoiceInput,
+  ): Promise<PaymentRecord> {
+    const [updatedPayment] = await this.db
+      .update(schema.payments)
+      .set({
+        providerInvoiceId: input.providerInvoiceId,
+        providerModifiedAt: input.providerModifiedAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.payments.id, input.paymentId))
+      .returning();
+
+    if (!updatedPayment) {
+      throw new Error("Payment not found");
+    }
+
+    return mapPayment(updatedPayment);
+  }
+
+  async updateStatus(input: UpdatePaymentStatusInput): Promise<PaymentRecord> {
+    const [updatedPayment] = await this.db
+      .update(schema.payments)
+      .set({
+        failureReason: input.failureReason,
+        paidAt: input.paidAt,
+        providerModifiedAt: input.providerModifiedAt,
+        status: input.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.payments.id, input.paymentId))
+      .returning();
+
+    if (!updatedPayment) {
+      throw new Error("Payment not found");
+    }
+
+    return mapPayment(updatedPayment);
   }
 }
 

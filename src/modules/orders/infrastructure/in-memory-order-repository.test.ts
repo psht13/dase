@@ -24,6 +24,13 @@ describe("InMemoryOrderRepository", () => {
     });
 
     await expect(
+      repository.findById(order.id),
+    ).resolves.toMatchObject({
+      id: order.id,
+      status: "SENT_TO_CUSTOMER",
+    });
+
+    await expect(
       repository.findByPublicToken("secure-token"),
     ).resolves.toMatchObject({
       id: order.id,

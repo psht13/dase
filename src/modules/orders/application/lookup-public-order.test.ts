@@ -131,6 +131,9 @@ function createOrderRepository(order: PersistedOrder | null): OrderRepository {
   return {
     confirmCustomerDelivery: vi.fn(),
     create: vi.fn(),
+    findById: vi.fn(async (orderId: string) =>
+      order?.id === orderId ? order : null,
+    ),
     findByPublicToken: vi.fn(async () => order),
     updateStatus: vi.fn(),
   };

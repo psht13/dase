@@ -11,9 +11,14 @@ export type WebhookEventRecord = {
   receivedAt: Date;
 };
 
+export type SaveWebhookEventResult = {
+  event: WebhookEventRecord;
+  inserted: boolean;
+};
+
 export interface WebhookEventRepository {
   markProcessed(id: string, processedAt: Date): Promise<void>;
   saveIfNew(
     event: Omit<WebhookEventRecord, "id" | "processedAt" | "receivedAt">,
-  ): Promise<WebhookEventRecord>;
+  ): Promise<SaveWebhookEventResult>;
 }

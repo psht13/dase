@@ -6,7 +6,7 @@ import type {
 } from "@/modules/orders/application/order-repository";
 import { isValidPublicOrderToken } from "@/modules/orders/application/public-order-token";
 import { assertOrderStatusTransition } from "@/modules/orders/domain/status";
-import type { PaymentProvider } from "@/modules/payments/application/payment-repository";
+import type { PaymentProviderCode } from "@/modules/payments/application/payment-repository";
 import type { PaymentRepository } from "@/modules/payments/application/payment-repository";
 import type {
   ShipmentCarrier,
@@ -18,7 +18,7 @@ export type ConfirmPublicOrderInput = {
   cityId: string;
   cityName: string;
   fullName: string;
-  paymentMethod: PaymentProvider;
+  paymentMethod: PaymentProviderCode;
   phone: string;
   publicToken: string;
   warehouseAddress: string | null;

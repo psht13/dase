@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, product catalog, owner order builder, public order review, and customer delivery confirmation implemented locally
+Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, and MonoPay / Monobank payment flow implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -96,6 +96,16 @@ Customer delivery confirmation update on 2026-04-30:
 - MSW contract tests cover Nova Poshta and Ukrposhta adapter response mapping, status mapping, and carrier error handling.
 - Playwright e2e covers a customer confirming delivery with mocked carrier lookup.
 
+MonoPay / Monobank payment update on 2026-04-30:
+- `PaymentProvider` application port defines `createInvoice`, `getInvoiceStatus`, and `verifyWebhook`.
+- Monobank infrastructure provider creates invoices through the acquiring API shape, reads invoice status, verifies webhook `X-Sign` signatures with the configured public key, and sanitizes webhook payloads so card data is not stored.
+- Customer confirmation now creates a MonoPay invoice when payment method is `MONOBANK`, stores the provider invoice id, moves the order to `PAYMENT_PENDING`, and returns a payment redirect URL.
+- Cash on delivery skips online invoice creation and keeps the existing confirmation/shipment preparation path.
+- `/api/webhooks/monobank` accepts raw signed webhook bodies, verifies the signature, stores webhook events idempotently, ignores stale events by comparing Monobank `modifiedDate`, and safely updates payment/order statuses.
+- Payment status copy shown to customers is Ukrainian: pending confirmation, successful MonoPay payment, and failed MonoPay payment states are covered by tests.
+- MSW contract tests cover Monobank invoice creation/status mapping and webhook signature verification without calling live Monobank APIs.
+- Playwright e2e covers customer MonoPay confirmation, mocked invoice redirect, mocked successful webhook, and Ukrainian paid status copy.
+
 ## Core flows
 
 ### Product management
@@ -132,12 +142,14 @@ Customer delivery confirmation update on 2026-04-30:
 
 For MonoPay:
 
-1. App creates payment invoice.
-2. Customer is redirected to payment.
-3. Monobank sends webhook.
-4. App verifies signature.
-5. App stores event idempotently.
-6. App updates payment and order status.
+1. App creates payment invoice after customer confirmation.
+2. App stores the provider invoice id and marks the order `PAYMENT_PENDING`.
+3. Customer is redirected to payment.
+4. Monobank sends webhook.
+5. App verifies signature.
+6. App stores event idempotently.
+7. App ignores stale events by provider `modifiedDate`.
+8. App updates payment and order status.
 
 For cash on delivery:
 
@@ -240,6 +252,13 @@ Confirmed customer delivery data is stored through existing tables:
 
 No new migration was required for the customer delivery form milestone because the foundation schema already included these columns and `carrier_directory_cache`.
 
+The MonoPay payment milestone also required no new migration because the foundation schema already included:
+- `payments.provider_invoice_id`
+- `payments.provider_modified_at`
+- `webhook_events.external_event_id`
+- `webhook_events.provider_modified_at`
+- the unique idempotency index on `webhook_events(provider, external_event_id)`
+
 ## Quality requirements
 
 - TypeScript strict mode.
@@ -252,11 +271,11 @@ No new migration was required for the customer delivery form milestone because t
 - No `admin` role.
 - Automated tests must use pure domain tests, fake adapters, or `DATABASE_URL_TEST`; they must not reset or mutate production data.
 
-Latest local quality status on 2026-04-30:
+Latest local quality status on 2026-04-30 after the MonoPay payment milestone:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
-- `pnpm test:coverage` passed with 93.53% statements, 81.56% branches, 95.84% functions, and 93.53% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium, including seeded owner product creation, user-role dashboard denial, owner order link creation, public order review, and customer delivery confirmation with mocked carriers.
+- `pnpm test:coverage` passed with 93.11% statements, 80.82% branches, 96.53% functions, and 93.11% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium, including seeded owner product creation, user-role dashboard denial, owner order link creation, public order review, customer delivery confirmation with mocked carriers, and mocked MonoPay success webhook flow.
 - `pnpm build` passed.
 - `pnpm db:generate` passed and created `drizzle/0003_kind_deathstrike.sql`.
 
@@ -293,6 +312,7 @@ BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=
 
 MONOBANK_TOKEN=
+MONOBANK_API_URL=
 MONOBANK_PUBLIC_KEY=
 MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
 
@@ -329,6 +349,7 @@ Current Railway status on 2026-04-30:
 - `list_projects` failed during Prompt 02 and Prompt 03 because the Railway token is invalid or expired.
 - `list_services` failed during Prompt 04 because the Railway token is invalid or expired.
 - `list_projects` failed again during Prompt 05 because the Railway token is invalid or expired.
+- `list_services` failed again during Prompt 06 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -402,7 +423,9 @@ Status: completed locally on 2026-04-30; Railway migration verification remains 
 
 ### Milestone 5 - Payments, shipments, and worker
 
-- Implement MonoPay invoice creation and webhook handling.
+Status: payment module completed locally on 2026-04-30; shipment jobs and worker automation remain pending. Railway migration/database verification remains blocked by invalid Railway authentication.
+
+- Implement MonoPay invoice creation and webhook handling. Completed locally with mocked/contract-tested Monobank adapters.
 - Implement Nova Poshta and Ukrposhta shipment creation/tracking adapters.
 - Add worker jobs for shipment creation, tracking sync, and auto-completion.
 - Add audit events and owner status/tag views.
@@ -428,7 +451,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Open questions
 
-- Exact MonoPay contract and production credentials.
+- Production MonoPay credentials, public key, and final callback domain.
 - Exact Nova Poshta sender/counterparty settings.
 - Exact Ukrposhta sender/client/address setup.
 - Whether to reserve stock when order link is created or only after customer confirms.

@@ -170,6 +170,7 @@ function createOrderRepository(): OrderRepository {
         updatedAt: now,
       } satisfies PersistedOrder;
     }),
+    findById: vi.fn(),
     findByPublicToken: vi.fn(),
     updateStatus: vi.fn(),
   };

@@ -73,6 +73,26 @@ export class DrizzleOrderRepository implements OrderRepository {
     });
   }
 
+  async findById(orderId: string): Promise<PersistedOrder | null> {
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orderId))
+      .limit(1);
+
+    if (!order) {
+      return null;
+    }
+
+    const items = await this.db
+      .select()
+      .from(schema.orderItems)
+      .where(eq(schema.orderItems.orderId, order.id))
+      .orderBy(asc(schema.orderItems.createdAt));
+
+    return mapOrder(order, items);
+  }
+
   async findByPublicToken(publicToken: string): Promise<PersistedOrder | null> {
     const [order] = await this.db
       .select()

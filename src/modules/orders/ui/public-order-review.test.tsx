@@ -37,9 +37,24 @@ describe("PublicOrderReview", () => {
     ).toBeVisible();
     expect(screen.getByText(/термін його дії завершився/i)).toBeVisible();
   });
+
+  it("renders Ukrainian MonoPay status messages", () => {
+    render(
+      <PublicOrderReview
+        deliveryHref="/o/public-token/delivery"
+        order={createPublicOrder({ status: "PAYMENT_PENDING" })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Очікуємо підтвердження оплати MonoPay."),
+    ).toBeVisible();
+  });
 });
 
-function createPublicOrder(): PublicOrderReviewData {
+function createPublicOrder(
+  input: Partial<PublicOrderReviewData> = {},
+): PublicOrderReviewData {
   return {
     currency: "UAH",
     items: [
@@ -56,5 +71,6 @@ function createPublicOrder(): PublicOrderReviewData {
     publicTokenExpiresAt: new Date("2026-05-14T10:00:00.000Z"),
     status: "SENT_TO_CUSTOMER",
     totalMinor: 2_400_00,
+    ...input,
   };
 }

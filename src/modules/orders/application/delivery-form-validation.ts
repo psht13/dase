@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { PaymentProvider } from "@/modules/payments/application/payment-repository";
+import type { PaymentProviderCode } from "@/modules/payments/application/payment-repository";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
 
 const shipmentCarriers = ["NOVA_POSHTA", "UKRPOSHTA"] as const;
@@ -41,7 +41,7 @@ export type ValidatedDeliveryInput = {
   cityId: string;
   cityName: string;
   fullName: string;
-  paymentMethod: PaymentProvider;
+  paymentMethod: PaymentProviderCode;
   phone: string;
   warehouseAddress: string | null;
   warehouseId: string;
@@ -77,7 +77,7 @@ function toValidatedDeliveryInput(
     cityId: values.cityId.trim(),
     cityName: values.cityName.trim(),
     fullName: values.fullName.trim(),
-    paymentMethod: values.paymentMethod as PaymentProvider,
+    paymentMethod: values.paymentMethod as PaymentProviderCode,
     phone: normalizePhone(values.phone),
     warehouseAddress: values.warehouseAddress.trim() || null,
     warehouseId: values.warehouseId.trim(),

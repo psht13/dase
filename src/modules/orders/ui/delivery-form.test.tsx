@@ -49,7 +49,7 @@ describe("DeliveryForm", () => {
         expect(formData).toBeInstanceOf(FormData);
 
         return {
-          message: "Замовлення підтверджено",
+          message: "Замовлення підтверджено. Оплата при отриманні.",
           ok: true,
         };
       },
@@ -105,7 +105,9 @@ describe("DeliveryForm", () => {
     expect(formData.get("cityId")).toBe("city-1");
     expect(formData.get("warehouseId")).toBe("warehouse-1");
     expect(formData.get("paymentMethod")).toBe("CASH_ON_DELIVERY");
-    expect(await screen.findByText("Замовлення підтверджено")).toBeVisible();
+    expect(
+      await screen.findByText("Замовлення підтверджено. Оплата при отриманні."),
+    ).toBeVisible();
   });
 });
 

@@ -54,6 +54,10 @@ export class InMemoryOrderRepository implements OrderRepository {
     return order;
   }
 
+  async findById(orderId: string): Promise<PersistedOrder | null> {
+    return this.orders.get(orderId) ?? null;
+  }
+
   async findByPublicToken(publicToken: string): Promise<PersistedOrder | null> {
     return (
       [...this.orders.values()].find(

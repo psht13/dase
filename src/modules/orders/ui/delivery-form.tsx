@@ -132,6 +132,11 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         if (result.ok) {
           setIsConfirmed(true);
           router.refresh();
+
+          if (result.paymentRedirectUrl) {
+            window.location.assign(result.paymentRedirectUrl);
+          }
+
           return;
         }
 

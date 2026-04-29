@@ -118,6 +118,21 @@ describe("DrizzleOrderRepository", () => {
     });
   });
 
+  it("finds orders by id with item snapshots", async () => {
+    const db = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(createSelectChain([order]))
+        .mockReturnValueOnce(createSelectChain([item])),
+    };
+    const repository = new DrizzleOrderRepository(db as never);
+
+    await expect(repository.findById("order-1")).resolves.toMatchObject({
+      id: "order-1",
+      items: [{ productNameSnapshot: "Каблучка" }],
+    });
+  });
+
   it("returns null when public token is missing", async () => {
     const db = {
       select: vi.fn().mockReturnValueOnce(createSelectChain([])),

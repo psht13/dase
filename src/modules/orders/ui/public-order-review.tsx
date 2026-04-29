@@ -1,6 +1,7 @@
 import { ImageIcon, Truck } from "lucide-react";
 import Link from "next/link";
 import type { PublicOrderReview as PublicOrderReviewData } from "@/modules/orders/application/lookup-public-order";
+import { getCustomerPaymentStatusMessage } from "@/modules/payments/application/payment-status";
 import { Button } from "@/shared/ui/button";
 
 type PublicOrderReviewProps = {
@@ -27,6 +28,8 @@ export function PublicOrderReview({
             оплати.
           </p>
         </div>
+
+        <PaymentStatusNotice status={order.status} />
 
         <div className="grid gap-4">
           {order.items.map((item) => (
@@ -68,6 +71,20 @@ export function PublicOrderReview({
         </div>
       </section>
     </main>
+  );
+}
+
+function PaymentStatusNotice({ status }: { status: string }) {
+  const message = getCustomerPaymentStatusMessage(status);
+
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <p className="rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+      {message}
+    </p>
   );
 }
 

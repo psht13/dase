@@ -119,17 +119,23 @@ function createDependencies(order: PersistedOrder) {
     orderRepository: {
       confirmCustomerDelivery: vi.fn(),
       create: vi.fn(),
+      findById: vi.fn(async (orderId: string) =>
+        order.id === orderId ? order : null,
+      ),
       findByPublicToken: vi.fn(async () => order),
       updateStatus: vi.fn(),
     } satisfies OrderRepository,
     paymentRepository: {
       findByOrderId: vi.fn(),
+      findByProviderInvoiceId: vi.fn(),
       save: vi.fn(async (payment) => ({
         ...payment,
         createdAt: now,
         id: "payment-1",
         updatedAt: now,
       })),
+      updateProviderInvoice: vi.fn(),
+      updateStatus: vi.fn(),
     } satisfies PaymentRepository,
     shipmentRepository: {
       findByOrderId: vi.fn(),
