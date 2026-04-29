@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, shipment worker automation, and owner order management implemented locally
+Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, shipment worker automation, owner order management, UI polish, and repository-side Railway deployment configuration implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -141,6 +141,16 @@ UI polish and accessibility verification update on 2026-04-30:
 - MCP verification found and fixed a stale city lookup empty-state message that could appear after selecting a city.
 - Playwright E2E now asserts the keyboard skip link, product validation error state, public mobile labels, and stable product creation waits before order-builder navigation.
 - Code and test fixtures no longer contain an `admin` role string; unsupported-role tests use a neutral unsupported role.
+
+Railway deployment readiness update on 2026-04-30:
+- `/api/health` already exists and remains the Railway web health check endpoint.
+- Added `pnpm start` as the production web start command for Railway.
+- Added `railway.json` for the `web` service with Railpack build, `pnpm build`, `pnpm start`, `pnpm db:migrate` as the pre-deploy command, `/api/health` health check, and restart policy.
+- Added `railway.worker.json` for the `worker` service with Railpack build and `pnpm worker:start`.
+- Moved `tsx` to runtime dependencies because the worker service starts TypeScript through the `worker:start` script.
+- Added `DEPLOYMENT.md` with Railway services, env vars, deployment flow, rollback notes, migration notes, manual external API verification, and the external-image-URL-only image strategy.
+- Added a deployment configuration test to keep web and worker Railway commands aligned with the documented deployment plan.
+- Railway MCP was attempted during Prompt 10, but live Railway configuration is blocked because the Railway CLI token is invalid or expired.
 
 ## Core flows
 
@@ -347,11 +357,20 @@ Latest local quality status on 2026-04-30 after the UI polish milestone:
 - `pnpm test:e2e` passed with Chromium, including the updated keyboard, mobile public customer, product creation, order builder, delivery/payment, MonoPay, and owner order management checks.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-04-30 after the Railway deployment readiness milestone:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 90.84% statements, 80.15% branches, 93% functions, and 90.84% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium, including health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and owner-role access checks.
+- `pnpm build` passed.
+- Railway live deployment, PostgreSQL provisioning, GitHub autodeploy configuration, secure variable configuration, and Railway migration verification remain blocked by invalid or expired Railway authentication.
+
 ## Commands
 
 Configured commands:
 
 ```bash
+pnpm start
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -365,6 +384,7 @@ pnpm worker:start
 
 Current command status:
 - `package.json`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml` are present.
+- `pnpm start` runs `next start` for Railway web deployments.
 - `pnpm db:generate` was verified and generated Drizzle migrations through `drizzle/0003_kind_deathstrike.sql`.
 - `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway verification is blocked by Railway authentication and no local `DATABASE_URL`/`DATABASE_URL_TEST` is set in this shell.
 - `pnpm worker:start` requires a secure `DATABASE_URL` before the worker can connect to PostgreSQL and start pg-boss shipment jobs.
@@ -421,6 +441,7 @@ Current Railway status on 2026-04-30:
 - `list_projects` failed again during Prompt 07 because the Railway token is invalid or expired.
 - `list_projects` and `list_services` failed again during Prompt 08 because the Railway token is invalid or expired.
 - `list_projects` and `list_services` failed again during Prompt 09 because the Railway token is invalid or expired.
+- `check_railway_status`, `list_services`, and `list_variables` failed again during Prompt 10 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -448,7 +469,10 @@ Deployment:
 
 Current deployment status:
 - GitHub Actions CI is configured in `.github/workflows/ci.yml` to run install, lint, typecheck, coverage, e2e, and build.
-- No Railway deployment is configured in the repository yet.
+- Repository-side Railway config is present for the `web` service in `railway.json`.
+- Repository-side Railway config is present for the `worker` service in `railway.worker.json`; the Railway worker service must use `/railway.worker.json` as its custom config file path or set `pnpm worker:start` directly in service settings.
+- `DEPLOYMENT.md` documents expected Railway services, env vars, GitHub autodeploy from protected `main`, migration flow, rollback notes, manual external API verification, and the external-image-URL image strategy.
+- Live Railway service creation, GitHub repository linking, PostgreSQL provisioning, secure variable configuration, autodeploy setup, and migration verification remain blocked by invalid or expired Railway authentication in this session.
 
 ## Implementation plan
 
@@ -513,10 +537,12 @@ Status: completed locally on 2026-04-30. Railway PostgreSQL verification remains
 
 ### Milestone 7 - Deployment readiness
 
-- Configure Railway web, worker, and postgres services.
-- Configure GitHub autodeploy from protected `main`.
-- Add deployment documentation.
-- Run full required checks and Railway migration verification.
+Status: repository-side deployment readiness completed locally on 2026-04-30; live Railway configuration and migration verification are blocked by invalid Railway authentication.
+
+- Configure Railway web, worker, and postgres services. Repository config and documentation completed locally; live service configuration blocked by Railway authentication.
+- Configure GitHub autodeploy from protected `main`. Documented in `DEPLOYMENT.md`; live Railway autodeploy setup blocked by Railway authentication.
+- Add deployment documentation. Completed in `DEPLOYMENT.md`.
+- Run full required checks and Railway migration verification. Local checks are required for completion; Railway migration verification remains blocked until Railway authentication is restored.
 
 ## Commit message format
 
