@@ -12,6 +12,24 @@ function createSelectChain<T>(result: T) {
   return chain;
 }
 
+function createUpdateChain<T>(result: T) {
+  const chain = {
+    returning: vi.fn(async () => result),
+    set: vi.fn(() => chain),
+    where: vi.fn(() => chain),
+  };
+
+  return chain;
+}
+
+function createDeleteChain() {
+  const chain = {
+    where: vi.fn(async () => undefined),
+  };
+
+  return chain;
+}
+
 describe("DrizzleProductRepository", () => {
   const now = new Date("2026-04-30T00:00:00.000Z");
   const product = {
@@ -96,5 +114,61 @@ describe("DrizzleProductRepository", () => {
       expect.objectContaining({ productId: "product-1", url: image.url }),
     ]);
     expect(savedProduct.images).toHaveLength(1);
+  });
+
+  it("lists owner products with image rows", async () => {
+    const db = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(createSelectChain([product]))
+        .mockReturnValueOnce(createSelectChain([image])),
+    };
+    const repository = new DrizzleProductRepository(db as never);
+
+    await expect(repository.listByOwnerId("owner-1")).resolves.toMatchObject([
+      {
+        id: "product-1",
+        images: [{ url: image.url }],
+      },
+    ]);
+  });
+
+  it("updates product rows and replaces image URLs", async () => {
+    const productUpdate = createUpdateChain([product]);
+    const imageDelete = createDeleteChain();
+    const imageInsert = {
+      values: vi.fn(async () => undefined),
+    };
+    const db = {
+      delete: vi.fn(() => imageDelete),
+      insert: vi.fn(() => imageInsert),
+      select: vi.fn().mockReturnValueOnce(createSelectChain([image])),
+      update: vi.fn(() => productUpdate),
+    };
+    const repository = new DrizzleProductRepository(db as never);
+
+    const updatedProduct = await repository.update("product-1", {
+      description: "Оновлена каблучка",
+      images: [{ sortOrder: 0, url: image.url }],
+      isActive: false,
+      name: "Каблучка",
+      ownerId: "owner-1",
+      priceMinor: 130_00,
+      sku: "RING-1",
+      stockQuantity: 2,
+    });
+
+    expect(productUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isActive: false,
+        priceCents: 130_00,
+        stockQuantity: 2,
+      }),
+    );
+    expect(imageDelete.where).toHaveBeenCalled();
+    expect(imageInsert.values).toHaveBeenCalledWith([
+      expect.objectContaining({ productId: "product-1", url: image.url }),
+    ]);
+    expect(updatedProduct.images).toHaveLength(1);
   });
 });

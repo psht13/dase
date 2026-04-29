@@ -15,6 +15,13 @@
       "when": 1777497617536,
       "tag": "0001_secret_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777498742406,
+      "tag": "0002_romantic_sway",
+      "breakpoints": true
     }
   ]
 }

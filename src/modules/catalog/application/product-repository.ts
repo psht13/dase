@@ -43,5 +43,7 @@ export type SaveProductInput = {
 export interface ProductRepository {
   findById(id: string): Promise<ProductRecord | null>;
   findBySku(sku: string): Promise<ProductRecord | null>;
+  listByOwnerId(ownerId: string): Promise<ProductRecord[]>;
   save(input: SaveProductInput): Promise<ProductRecord>;
+  update(id: string, input: SaveProductInput): Promise<ProductRecord>;
 }

@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: database and domain foundation implemented locally
+Status: owner authentication and product catalog implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -62,6 +62,17 @@ Repository audit on 2026-04-30:
 - Roles are restricted to `owner` and `user`; the default user role is `user`.
 - Domain tests cover order total calculation, quantity validation, order status transitions, product snapshots in order items, role rejection for `admin`, image URL validation, and public order token generation.
 - Application repository ports are defined at module boundaries; Drizzle repository implementations live under infrastructure modules.
+
+Owner auth and catalog update on 2026-04-30:
+- Better Auth is configured with the Drizzle adapter, UUID database IDs, and Next.js route handlers under `/api/auth/[...all]`.
+- Better Auth tables are modeled in Drizzle as `accounts`, `sessions`, and `verifications`; `users` now includes `email_verified` and `image`.
+- Dashboard routes live under `/dashboard` using an `(owner)` route group and require an authenticated `owner` role.
+- `user` role sessions are denied dashboard access.
+- Owner dashboard shell, product list, product creation, product editing, and active/inactive toggle are implemented.
+- Product forms use React Hook Form and Zod with Ukrainian validation messages.
+- Product images remain external image URLs only, with one or more validated URLs per product and a simple preview in the owner form.
+- Product create/update/toggle behavior is implemented through application use cases and repository ports, not directly inside React components.
+- Playwright e2e uses a test-only seeded owner session and in-memory catalog fallback when Railway/local PostgreSQL credentials are unavailable. This fallback is disabled in production.
 
 ## Core flows
 
@@ -158,6 +169,9 @@ Do not store uploaded image files on ephemeral service storage. If uploads becom
 
 Implemented foundation migrations:
 - users
+- accounts
+- sessions
+- verifications
 - products
 - product_images
 - orders
@@ -174,6 +188,7 @@ Implemented foundation migrations:
 Migration files:
 - `drizzle/0000_spotty_golden_guardian.sql`
 - `drizzle/0001_secret_the_fallen.sql`
+- `drizzle/0002_romantic_sway.sql`
 
 Money values are stored in integer minor units. The historical product price column is `products.price_cents`; new order and payment amount columns use `_minor` naming.
 
@@ -199,10 +214,10 @@ Public order links use a random URL-safe `orders.public_token` with a unique dat
 Latest local quality status on 2026-04-30:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
-- `pnpm test:coverage` passed with 99.02% statements, 89.24% branches, 100% functions, and 99.02% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium.
+- `pnpm test:coverage` passed with 96.23% statements, 81.2% branches, 97.11% functions, and 96.23% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium, including seeded owner product creation and user-role dashboard denial.
 - `pnpm build` passed.
-- `pnpm db:generate` passed and created `drizzle/0001_secret_the_fallen.sql`.
+- `pnpm db:generate` passed and created `drizzle/0002_romantic_sway.sql`.
 
 ## Commands
 
@@ -248,6 +263,8 @@ UKRPOSHTA_COUNTERPARTY_TOKEN=
 UKRPOSHTA_API_URL=
 
 AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24
+
+PLAYWRIGHT_E2E=
 ```
 
 No S3/storage bucket env vars are required for the initial version.
@@ -267,12 +284,12 @@ Expected result:
 
 Current Railway status on 2026-04-30:
 - Railway MCP tools are available.
-- `list_projects` failed during Prompt 02 because the Railway token is invalid or expired.
+- `list_projects` failed during Prompt 02 and Prompt 03 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
 - Railway DB connectivity and migration verification are blocked until Railway authentication is refreshed outside the repository.
-- Initial migrations were generated locally with Drizzle, but not applied to Railway.
+- Migrations were generated locally with Drizzle, but not applied to Railway.
 
 Fallback until Railway access is restored:
 - Use a local or disposable PostgreSQL database for development tests.
@@ -320,6 +337,8 @@ Status: completed locally on 2026-04-30; Railway migration verification is block
 - Verify migrations against Railway PostgreSQL when credentials are available, otherwise a local disposable database.
 
 ### Milestone 3 - Owner catalog and order draft flow
+
+Status: owner authentication and catalog management completed locally on 2026-04-30; order draft creation remains pending.
 
 - Implement owner authentication and dashboard access for `owner` role only.
 - Implement product catalog CRUD with external image URLs.

@@ -71,13 +71,89 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull(),
   email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
   id: uuid("id").defaultRandom().primaryKey(),
+  image: text("image"),
   name: text("name"),
   role: userRole("role").default("user").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
 });
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    ipAddress: text("ip_address"),
+    token: text("token").notNull().unique(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    userAgent: text("user_agent"),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("sessions_user_id_idx").on(table.userId)],
+);
+
+export const accounts = pgTable(
+  "accounts",
+  {
+    accessToken: text("access_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+    accountId: text("account_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    idToken: text("id_token"),
+    password: text("password"),
+    providerId: text("provider_id").notNull(),
+    refreshToken: text("refresh_token"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      withTimezone: true,
+    }),
+    scope: text("scope"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("accounts_user_id_idx").on(table.userId),
+    uniqueIndex("accounts_provider_account_unique").on(
+      table.providerId,
+      table.accountId,
+    ),
+  ],
+);
+
+export const verifications = pgTable(
+  "verifications",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    identifier: text("identifier").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    value: text("value").notNull(),
+  },
+  (table) => [index("verifications_identifier_idx").on(table.identifier)],
+);
 
 export const products = pgTable(
   "products",
@@ -391,6 +467,9 @@ export const carrierDirectoryCache = pgTable(
 );
 
 export type UserRecord = typeof users.$inferSelect;
+export type SessionRecord = typeof sessions.$inferSelect;
+export type AccountRecord = typeof accounts.$inferSelect;
+export type VerificationRecord = typeof verifications.$inferSelect;
 export type ProductRecord = typeof products.$inferSelect;
 export type ProductImageRecord = typeof productImages.$inferSelect;
 export type CustomerRecord = typeof customers.$inferSelect;

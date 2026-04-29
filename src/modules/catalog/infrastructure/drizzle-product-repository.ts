@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type {
   ProductImageRecord,
@@ -35,6 +35,20 @@ export class DrizzleProductRepository implements ProductRepository {
     return this.mapProductWithImages(product);
   }
 
+  async listByOwnerId(ownerId: string): Promise<ProductRecord[]> {
+    const ownerProducts = await this.db
+      .select()
+      .from(schema.products)
+      .where(eq(schema.products.ownerId, ownerId))
+      .orderBy(asc(schema.products.name));
+
+    return Promise.all(
+      ownerProducts.map(async (product) =>
+        mapProduct(product, await this.findImages(product.id)),
+      ),
+    );
+  }
+
   async save(input: SaveProductInput): Promise<ProductRecord> {
     const [product] = await this.db
       .insert(schema.products)
@@ -68,6 +82,45 @@ export class DrizzleProductRepository implements ProductRepository {
     const images = await this.findImages(product.id);
 
     return mapProduct(product, images);
+  }
+
+  async update(id: string, input: SaveProductInput): Promise<ProductRecord> {
+    const [product] = await this.db
+      .update(schema.products)
+      .set({
+        currency: input.currency ?? "UAH",
+        description: input.description ?? null,
+        isActive: input.isActive ?? true,
+        name: input.name,
+        ownerId: input.ownerId ?? null,
+        priceCents: input.priceMinor,
+        sku: input.sku,
+        stockQuantity: input.stockQuantity ?? 0,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(schema.products.id, id))
+      .returning();
+
+    if (!product) {
+      throw new Error("Failed to update product");
+    }
+
+    await this.db
+      .delete(schema.productImages)
+      .where(eq(schema.productImages.productId, id));
+
+    if (input.images?.length) {
+      await this.db.insert(schema.productImages).values(
+        input.images.map((image) => ({
+          altText: image.altText ?? null,
+          productId: product.id,
+          sortOrder: image.sortOrder,
+          url: image.url,
+        })),
+      );
+    }
+
+    return mapProduct(product, await this.findImages(product.id));
   }
 
   private async mapProductWithImages(

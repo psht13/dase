@@ -16,7 +16,9 @@ describe("DrizzleUserRepository", () => {
   const user = {
     createdAt: now,
     email: "owner@example.com",
+    emailVerified: true,
     id: "owner-1",
+    image: null,
     name: "Власниця",
     role: "owner",
     updatedAt: now,

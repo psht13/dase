@@ -16,6 +16,7 @@
     "worker:start": "tsx src/worker/index.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-slot": "^1.2.3",
     "better-auth": "^1.6.9",
     "class-variance-authority": "^0.7.1",
@@ -27,6 +28,7 @@
     "pg-boss": "^10.3.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-hook-form": "^7.74.0",
     "tailwind-merge": "^2.6.0",
     "zod": "^4.3.6"
   },
