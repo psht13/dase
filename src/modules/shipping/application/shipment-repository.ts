@@ -32,4 +32,16 @@ export interface ShipmentRepository {
   save(
     shipment: Omit<ShipmentRecord, "createdAt" | "id" | "updatedAt">,
   ): Promise<ShipmentRecord>;
+  updateCreation(input: {
+    carrierShipmentId: string;
+    labelUrl: string | null;
+    shipmentId: string;
+    trackingNumber: string;
+  }): Promise<ShipmentRecord>;
+  updateStatus(input: {
+    deliveredAt?: Date | null;
+    shipmentId: string;
+    status: ShipmentStatus;
+    trackingNumber?: string | null;
+  }): Promise<ShipmentRecord>;
 }

@@ -9,6 +9,8 @@ import { getOrderRepository } from "@/modules/orders/infrastructure/order-reposi
 import { getMonobankPaymentProvider } from "@/modules/payments/infrastructure/payment-provider-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { getWebhookEventRepository } from "@/modules/payments/infrastructure/webhook-event-repository-factory";
+import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
+import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,8 @@ export async function POST(request: Request) {
         orderRepository: getOrderRepository(),
         paymentProvider: getMonobankPaymentProvider(),
         paymentRepository: getPaymentRepository(),
+        shipmentJobQueue: getShipmentJobQueue(),
+        shipmentRepository: getShipmentRepository(),
         webhookEventRepository: getWebhookEventRepository(),
       },
     );

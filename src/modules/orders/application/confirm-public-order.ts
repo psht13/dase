@@ -8,6 +8,8 @@ import { isValidPublicOrderToken } from "@/modules/orders/application/public-ord
 import { assertOrderStatusTransition } from "@/modules/orders/domain/status";
 import type { PaymentProviderCode } from "@/modules/payments/application/payment-repository";
 import type { PaymentRepository } from "@/modules/payments/application/payment-repository";
+import { enqueueShipmentCreationForReadyOrderUseCase } from "@/modules/shipping/application/enqueue-shipment-creation";
+import type { ShipmentJobQueue } from "@/modules/shipping/application/shipment-job-queue";
 import type {
   ShipmentCarrier,
   ShipmentRepository,
@@ -38,6 +40,7 @@ type ConfirmPublicOrderDependencies = {
   now?: () => Date;
   orderRepository: OrderRepository;
   paymentRepository: PaymentRepository;
+  shipmentJobQueue: ShipmentJobQueue;
   shipmentRepository: ShipmentRepository;
 };
 
@@ -141,6 +144,16 @@ export async function confirmPublicOrderUseCase(
       warehouseName: input.warehouseName,
     },
   });
+
+  if (input.paymentMethod === "CASH_ON_DELIVERY") {
+    await enqueueShipmentCreationForReadyOrderUseCase(
+      {
+        orderId: order.id,
+        requestedBy: "system",
+      },
+      dependencies,
+    );
+  }
 
   return {
     confirmedAt: now,

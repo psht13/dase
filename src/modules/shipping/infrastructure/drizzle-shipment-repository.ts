@@ -49,6 +49,57 @@ export class DrizzleShipmentRepository implements ShipmentRepository {
 
     return mapShipment(savedShipment);
   }
+
+  async updateCreation(input: {
+    carrierShipmentId: string;
+    labelUrl: string | null;
+    shipmentId: string;
+    trackingNumber: string;
+  }): Promise<ShipmentRecord> {
+    const [updatedShipment] = await this.db
+      .update(schema.shipments)
+      .set({
+        carrierShipmentId: input.carrierShipmentId,
+        labelUrl: input.labelUrl,
+        status: "CREATED",
+        trackingNumber: input.trackingNumber,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.shipments.id, input.shipmentId))
+      .returning();
+
+    if (!updatedShipment) {
+      throw new Error("Shipment not found");
+    }
+
+    return mapShipment(updatedShipment);
+  }
+
+  async updateStatus(input: {
+    deliveredAt?: Date | null;
+    shipmentId: string;
+    status: ShipmentRecord["status"];
+    trackingNumber?: string | null;
+  }): Promise<ShipmentRecord> {
+    const [updatedShipment] = await this.db
+      .update(schema.shipments)
+      .set({
+        deliveredAt:
+          input.deliveredAt === undefined ? undefined : input.deliveredAt,
+        status: input.status,
+        trackingNumber:
+          input.trackingNumber === undefined ? undefined : input.trackingNumber,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.shipments.id, input.shipmentId))
+      .returning();
+
+    if (!updatedShipment) {
+      throw new Error("Shipment not found");
+    }
+
+    return mapShipment(updatedShipment);
+  }
 }
 
 function mapShipment(shipment: DbShipment): ShipmentRecord {

@@ -10,6 +10,9 @@ import type {
 } from "@/modules/payments/application/payment-repository";
 import { mapProviderStatusToPaymentTransition } from "@/modules/payments/application/payment-status";
 import type { WebhookEventRepository } from "@/modules/payments/application/webhook-event-repository";
+import { enqueueShipmentCreationForReadyOrderUseCase } from "@/modules/shipping/application/enqueue-shipment-creation";
+import type { ShipmentJobQueue } from "@/modules/shipping/application/shipment-job-queue";
+import type { ShipmentRepository } from "@/modules/shipping/application/shipment-repository";
 
 export type ProcessMonobankWebhookInput = {
   rawBody: Buffer | string;
@@ -28,6 +31,8 @@ type ProcessMonobankWebhookDependencies = {
   orderRepository: OrderRepository;
   paymentProvider: PaymentProvider;
   paymentRepository: PaymentRepository;
+  shipmentJobQueue: ShipmentJobQueue;
+  shipmentRepository: ShipmentRepository;
   webhookEventRepository: WebhookEventRepository;
 };
 
@@ -107,6 +112,16 @@ export async function processMonobankWebhookUseCase(
       payment.orderId,
       transition.orderStatus,
       dependencies.orderRepository,
+    );
+  }
+
+  if (transition.paymentStatus === "PAID") {
+    await enqueueShipmentCreationForReadyOrderUseCase(
+      {
+        orderId: payment.orderId,
+        requestedBy: "system",
+      },
+      dependencies,
     );
   }
 

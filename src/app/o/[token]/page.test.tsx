@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import type { PersistedOrder } from "@/modules/orders/application/order-repository";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
+import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import PublicOrderPage from "./page";
 
 const validToken = "secure_public_token_123456789012345";
@@ -9,7 +10,21 @@ vi.mock("@/modules/orders/infrastructure/order-repository-factory", () => ({
   getOrderRepository: vi.fn(),
 }));
 
+vi.mock("@/modules/payments/infrastructure/payment-repository-factory", () => ({
+  getPaymentRepository: vi.fn(),
+}));
+
 describe("PublicOrderPage", () => {
+  beforeEach(() => {
+    vi.mocked(getPaymentRepository).mockReturnValue({
+      findByOrderId: vi.fn(async () => []),
+    } as never);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders the public order review without exposing the internal order id", async () => {
     vi.mocked(getOrderRepository).mockReturnValue({
       findByPublicToken: vi.fn(async () => createOrder()),

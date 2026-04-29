@@ -23,6 +23,7 @@ import {
 } from "@/modules/payments/application/payment-provider";
 import { getMonobankPaymentProvider } from "@/modules/payments/infrastructure/payment-provider-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
+import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 import { getServerEnv } from "@/shared/config/env";
 
@@ -63,6 +64,7 @@ export async function confirmDeliveryAction(
         customerRepository: getCustomerRepository(),
         orderRepository: getOrderRepository(),
         paymentRepository: getPaymentRepository(),
+        shipmentJobQueue: getShipmentJobQueue(),
         shipmentRepository: getShipmentRepository(),
       },
     );

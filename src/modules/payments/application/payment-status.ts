@@ -1,5 +1,8 @@
 import type { OrderStatus } from "@/modules/orders/domain/status";
-import type { PaymentStatus } from "@/modules/payments/application/payment-repository";
+import type {
+  PaymentProviderCode,
+  PaymentStatus,
+} from "@/modules/payments/application/payment-repository";
 
 export type PaymentStatusTransition = {
   failureReason: string | null;
@@ -67,18 +70,48 @@ export function mapProviderStatusToPaymentTransition(
 
 export function getCustomerPaymentStatusMessage(
   orderStatus: string,
+  payment: {
+    provider: PaymentProviderCode | null;
+    status: PaymentStatus | null;
+  } = {
+    provider: null,
+    status: null,
+  },
 ): string | null {
-  if (orderStatus === "PAYMENT_PENDING") {
+  if (payment.provider !== "MONOBANK" && orderStatus !== "PAYMENT_PENDING") {
+    return null;
+  }
+
+  if (orderStatus === "PAYMENT_PENDING" || payment.status === "PENDING") {
     return "Очікуємо підтвердження оплати MonoPay.";
   }
 
-  if (orderStatus === "PAID") {
+  if (
+    payment.provider === "MONOBANK" &&
+    payment.status === "PAID" &&
+    isPaidOrFulfillmentStatus(orderStatus)
+  ) {
     return "Оплату MonoPay успішно підтверджено.";
   }
 
-  if (orderStatus === "PAYMENT_FAILED") {
+  if (
+    orderStatus === "PAYMENT_FAILED" ||
+    payment.status === "FAILED" ||
+    payment.status === "CANCELLED"
+  ) {
     return "Оплату MonoPay не вдалося провести. Зв’яжіться з продавцем.";
   }
 
   return null;
+}
+
+function isPaidOrFulfillmentStatus(orderStatus: string): boolean {
+  return [
+    "PAID",
+    "SHIPMENT_PENDING",
+    "SHIPMENT_CREATED",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "COMPLETED",
+  ].includes(orderStatus);
 }

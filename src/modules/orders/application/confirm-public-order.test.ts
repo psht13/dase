@@ -9,8 +9,15 @@ import type {
   OrderRepository,
   PersistedOrder,
 } from "@/modules/orders/application/order-repository";
-import type { PaymentRepository } from "@/modules/payments/application/payment-repository";
-import type { ShipmentRepository } from "@/modules/shipping/application/shipment-repository";
+import type {
+  PaymentRecord,
+  PaymentRepository,
+} from "@/modules/payments/application/payment-repository";
+import type { ShipmentJobQueue } from "@/modules/shipping/application/shipment-job-queue";
+import type {
+  ShipmentRecord,
+  ShipmentRepository,
+} from "@/modules/shipping/application/shipment-repository";
 
 const validToken = "secure_public_token_123456789012345";
 const now = new Date("2026-04-30T10:00:00.000Z");
@@ -61,6 +68,19 @@ describe("confirmPublicOrderUseCase", () => {
         eventType: "ORDER_CONFIRMED_BY_CUSTOMER",
       }),
     );
+    expect(dependencies.orderRepository.updateStatus).toHaveBeenCalledWith(
+      "order-1",
+      "SHIPMENT_PENDING",
+    );
+    expect(
+      dependencies.shipmentJobQueue.enqueueCreateShipment,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: "order-1",
+        requestedBy: "system",
+        shipmentId: "shipment-1",
+      }),
+    );
   });
 
   it("rejects expired public tokens", async () => {
@@ -98,6 +118,23 @@ function createInput() {
 }
 
 function createDependencies(order: PersistedOrder) {
+  let currentOrder = order;
+  let savedPayment: PaymentRecord = {
+    amountMinor: 2_400_00,
+    createdAt: now,
+    currency: "UAH",
+    failureReason: null,
+    id: "payment-1",
+    orderId: "order-1",
+    paidAt: null,
+    provider: "CASH_ON_DELIVERY" as const,
+    providerInvoiceId: null,
+    providerModifiedAt: null,
+    status: "PENDING" as const,
+    updatedAt: now,
+  };
+  let savedShipmentId = "shipment-1";
+
   return {
     auditEventRepository: {
       append: vi.fn(async (event) => ({
@@ -108,6 +145,7 @@ function createDependencies(order: PersistedOrder) {
       listForOrder: vi.fn(),
     } satisfies AuditEventRepository,
     customerRepository: {
+      findById: vi.fn(),
       save: vi.fn(async (input) => ({
         ...input,
         createdAt: now,
@@ -117,34 +155,80 @@ function createDependencies(order: PersistedOrder) {
       })),
     } satisfies CustomerRepository,
     orderRepository: {
-      confirmCustomerDelivery: vi.fn(),
+      confirmCustomerDelivery: vi.fn(async (input) => {
+        currentOrder = {
+          ...currentOrder,
+          confirmedAt: input.confirmedAt,
+          customerId: input.customerId,
+          status: "CONFIRMED_BY_CUSTOMER",
+        };
+      }),
       create: vi.fn(),
       findById: vi.fn(async (orderId: string) =>
-        order.id === orderId ? order : null,
+        currentOrder.id === orderId ? currentOrder : null,
       ),
-      findByPublicToken: vi.fn(async () => order),
-      updateStatus: vi.fn(),
+      findByPublicToken: vi.fn(async () => currentOrder),
+      updateStatus: vi.fn(async (_orderId, status) => {
+        currentOrder = {
+          ...currentOrder,
+          status,
+        };
+      }),
     } satisfies OrderRepository,
     paymentRepository: {
-      findByOrderId: vi.fn(),
+      findByOrderId: vi.fn(async () => [savedPayment]),
       findByProviderInvoiceId: vi.fn(),
-      save: vi.fn(async (payment) => ({
-        ...payment,
-        createdAt: now,
-        id: "payment-1",
-        updatedAt: now,
-      })),
+      save: vi.fn(async (payment) => {
+        savedPayment = {
+          ...payment,
+          createdAt: now,
+          id: "payment-1",
+          updatedAt: now,
+        };
+
+        return savedPayment;
+      }),
       updateProviderInvoice: vi.fn(),
       updateStatus: vi.fn(),
     } satisfies PaymentRepository,
+    shipmentJobQueue: {
+      enqueueAutoCompleteDeliveredOrder: vi.fn(),
+      enqueueCreateShipment: vi.fn(async () => "job-1"),
+      enqueueSyncShipmentStatus: vi.fn(),
+    } satisfies ShipmentJobQueue,
     shipmentRepository: {
-      findByOrderId: vi.fn(),
-      save: vi.fn(async (shipment) => ({
-        ...shipment,
-        createdAt: now,
-        id: "shipment-1",
-        updatedAt: now,
-      })),
+      findByOrderId: vi.fn(async (): Promise<ShipmentRecord[]> => [
+        {
+          addressText: "Київ, Відділення №1",
+          carrier: "NOVA_POSHTA",
+          carrierOfficeId: "warehouse-1",
+          carrierPayload: { warehouseName: "Відділення №1" },
+          carrierShipmentId: null,
+          cityName: "Київ",
+          cityRef: "city-1",
+          createdAt: now,
+          deliveredAt: null,
+          id: savedShipmentId,
+          labelUrl: null,
+          orderId: "order-1",
+          recipientCustomerId: "customer-1",
+          status: "PENDING",
+          trackingNumber: null,
+          updatedAt: now,
+        } satisfies ShipmentRecord,
+      ]),
+      save: vi.fn(async (shipment) => {
+        savedShipmentId = "shipment-1";
+
+        return {
+          ...shipment,
+          createdAt: now,
+          id: savedShipmentId,
+          updatedAt: now,
+        };
+      }),
+      updateCreation: vi.fn(),
+      updateStatus: vi.fn(),
     } satisfies ShipmentRepository,
   };
 }

@@ -42,7 +42,11 @@ describe("PublicOrderReview", () => {
     render(
       <PublicOrderReview
         deliveryHref="/o/public-token/delivery"
-        order={createPublicOrder({ status: "PAYMENT_PENDING" })}
+        order={createPublicOrder({
+          paymentProvider: "MONOBANK",
+          paymentStatus: "PENDING",
+          status: "PAYMENT_PENDING",
+        })}
       />,
     );
 
@@ -67,6 +71,8 @@ function createPublicOrder(
         unitPriceMinor: 1_200_00,
       },
     ],
+    paymentProvider: null,
+    paymentStatus: null,
     publicToken: "public-token",
     publicTokenExpiresAt: new Date("2026-05-14T10:00:00.000Z"),
     status: "SENT_TO_CUSTOMER",

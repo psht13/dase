@@ -1,5 +1,6 @@
 import { lookupPublicOrderUseCase } from "@/modules/orders/application/lookup-public-order";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
+import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import {
   PublicOrderReview,
   PublicOrderUnavailable,
@@ -19,6 +20,7 @@ export default async function PublicOrderPage({ params }: PublicOrderPageProps) 
     },
     {
       orderRepository: getOrderRepository(),
+      paymentRepository: getPaymentRepository(),
     },
   );
 

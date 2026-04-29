@@ -4,6 +4,7 @@ import { getOrderRepository } from "@/modules/orders/infrastructure/order-reposi
 import { confirmDeliveryAction } from "@/modules/orders/ui/delivery-actions";
 import { DeliveryForm } from "@/modules/orders/ui/delivery-form";
 import { PublicOrderUnavailable } from "@/modules/orders/ui/public-order-review";
+import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { Button } from "@/shared/ui/button";
 
 type PublicDeliveryPageProps = {
@@ -22,6 +23,7 @@ export default async function PublicDeliveryPage({
     },
     {
       orderRepository: getOrderRepository(),
+      paymentRepository: getPaymentRepository(),
     },
   );
 

@@ -8,6 +8,7 @@ import { confirmDeliveryAction } from "@/modules/orders/ui/delivery-actions";
 import { deliveryFormValuesToFormData } from "@/modules/orders/ui/delivery-form-data";
 import { getMonobankPaymentProvider } from "@/modules/payments/infrastructure/payment-provider-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
+import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 
 vi.mock("next/cache", () => ({
@@ -42,11 +43,23 @@ vi.mock("@/modules/shipping/infrastructure/shipment-repository-factory", () => (
   getShipmentRepository: vi.fn(),
 }));
 
+vi.mock("@/modules/shipping/infrastructure/shipment-job-queue-factory", () => ({
+  getShipmentJobQueue: vi.fn(),
+}));
+
 const validToken = "secure_public_token_123456789012345";
 const now = new Date("2026-04-30T10:00:00.000Z");
 
 describe("confirmDeliveryAction", () => {
   beforeEach(() => {
+    let currentOrder = createOrder();
+    let savedPayment: Awaited<
+      ReturnType<ReturnType<typeof getPaymentRepository>["save"]>
+    > | null = null;
+    let savedShipment: Awaited<
+      ReturnType<ReturnType<typeof getShipmentRepository>["save"]>
+    > | null = null;
+
     vi.mocked(headers).mockResolvedValue(
       new Headers({
         host: "dase.test",
@@ -62,6 +75,7 @@ describe("confirmDeliveryAction", () => {
       listForOrder: vi.fn(),
     } as never);
     vi.mocked(getCustomerRepository).mockReturnValue({
+      findById: vi.fn(),
       save: vi.fn(async (input) => ({
         ...input,
         createdAt: now,
@@ -71,22 +85,36 @@ describe("confirmDeliveryAction", () => {
       })),
     } as never);
     vi.mocked(getOrderRepository).mockReturnValue({
-      confirmCustomerDelivery: vi.fn(),
-      findById: vi.fn(async () =>
-        createOrder({ status: "CONFIRMED_BY_CUSTOMER" }),
-      ),
-      findByPublicToken: vi.fn(async () => createOrder()),
-      updateStatus: vi.fn(),
+      confirmCustomerDelivery: vi.fn(async (input) => {
+        currentOrder = {
+          ...currentOrder,
+          confirmedAt: input.confirmedAt,
+          customerId: input.customerId,
+          status: "CONFIRMED_BY_CUSTOMER",
+        };
+      }),
+      findById: vi.fn(async () => currentOrder),
+      findByPublicToken: vi.fn(async () => currentOrder),
+      updateStatus: vi.fn(async (_orderId, status) => {
+        currentOrder = {
+          ...currentOrder,
+          status,
+        };
+      }),
     } as never);
     vi.mocked(getPaymentRepository).mockReturnValue({
-      findByOrderId: vi.fn(),
+      findByOrderId: vi.fn(async () => (savedPayment ? [savedPayment] : [])),
       findByProviderInvoiceId: vi.fn(),
-      save: vi.fn(async (payment) => ({
-        ...payment,
-        createdAt: now,
-        id: "payment-1",
-        updatedAt: now,
-      })),
+      save: vi.fn(async (payment) => {
+        savedPayment = {
+          ...payment,
+          createdAt: now,
+          id: "payment-1",
+          updatedAt: now,
+        };
+
+        return savedPayment;
+      }),
       updateProviderInvoice: vi.fn(),
       updateStatus: vi.fn(),
     } as never);
@@ -95,13 +123,25 @@ describe("confirmDeliveryAction", () => {
       getInvoiceStatus: vi.fn(),
       verifyWebhook: vi.fn(),
     } as never);
+    vi.mocked(getShipmentJobQueue).mockReturnValue({
+      enqueueAutoCompleteDeliveredOrder: vi.fn(),
+      enqueueCreateShipment: vi.fn(async () => "job-1"),
+      enqueueSyncShipmentStatus: vi.fn(),
+    } as never);
     vi.mocked(getShipmentRepository).mockReturnValue({
-      save: vi.fn(async (shipment) => ({
-        ...shipment,
-        createdAt: now,
-        id: "shipment-1",
-        updatedAt: now,
-      })),
+      findByOrderId: vi.fn(async () => (savedShipment ? [savedShipment] : [])),
+      save: vi.fn(async (shipment) => {
+        savedShipment = {
+          ...shipment,
+          createdAt: now,
+          id: "shipment-1",
+          updatedAt: now,
+        };
+
+        return savedShipment;
+      }),
+      updateCreation: vi.fn(),
+      updateStatus: vi.fn(),
     } as never);
   });
 

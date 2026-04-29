@@ -1,4 +1,6 @@
 import { getServerEnv } from "@/shared/config/env";
+import { createPgBoss } from "@/modules/shipping/infrastructure/pg-boss-shipment-job-queue";
+import { registerShipmentWorkers } from "@/worker/jobs/shipment-jobs";
 
 async function main() {
   const env = getServerEnv();
@@ -7,7 +9,28 @@ async function main() {
     throw new Error("DATABASE_URL is required to start the worker");
   }
 
-  console.log("Worker process is ready.");
+  const boss = createPgBoss(env.DATABASE_URL);
+
+  boss.on("error", (error) => {
+    console.error("Worker queue error", error);
+  });
+
+  await boss.start();
+  await registerShipmentWorkers(boss);
+
+  const stop = async () => {
+    await boss.stop();
+    process.exit(0);
+  };
+
+  process.once("SIGINT", () => {
+    void stop();
+  });
+  process.once("SIGTERM", () => {
+    void stop();
+  });
+
+  console.log("Shipment worker is ready.");
 }
 
 main().catch((error: unknown) => {

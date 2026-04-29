@@ -1,4 +1,5 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { eq } from "drizzle-orm";
 import type {
   CustomerRecord,
   CustomerRepository,
@@ -11,6 +12,16 @@ type DbCustomer = typeof schema.customers.$inferSelect;
 
 export class DrizzleCustomerRepository implements CustomerRepository {
   constructor(private readonly db: Database) {}
+
+  async findById(customerId: string): Promise<CustomerRecord | null> {
+    const [customer] = await this.db
+      .select()
+      .from(schema.customers)
+      .where(eq(schema.customers.id, customerId))
+      .limit(1);
+
+    return customer ? mapCustomer(customer) : null;
+  }
 
   async save(input: SaveCustomerInput): Promise<CustomerRecord> {
     const [customer] = await this.db

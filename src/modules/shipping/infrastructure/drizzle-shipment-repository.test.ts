@@ -70,4 +70,65 @@ describe("DrizzleShipmentRepository", () => {
       expect.objectContaining({ carrier: "NOVA_POSHTA", orderId: "order-1" }),
     );
   });
+
+  it("updates created shipment fields and status sync fields", async () => {
+    const returningCreated = vi.fn(async () => [
+      {
+        ...shipment,
+        carrierShipmentId: "np-shipment-1",
+        labelUrl: "https://nova.test/label.pdf",
+        status: "CREATED",
+        trackingNumber: "20450000000000",
+      },
+    ]);
+    const returningStatus = vi.fn(async () => [
+      {
+        ...shipment,
+        deliveredAt: new Date("2026-04-30T12:00:00.000Z"),
+        status: "DELIVERED",
+      },
+    ]);
+    const set = vi
+      .fn()
+      .mockReturnValueOnce({
+        returning: returningCreated,
+        where: vi.fn(() => ({ returning: returningCreated })),
+      })
+      .mockReturnValueOnce({
+        returning: returningStatus,
+        where: vi.fn(() => ({ returning: returningStatus })),
+      });
+    const updateChain = {
+      set,
+    };
+    const db = {
+      update: vi.fn(() => updateChain),
+    };
+    const repository = new DrizzleShipmentRepository(db as never);
+
+    await expect(
+      repository.updateCreation({
+        carrierShipmentId: "np-shipment-1",
+        labelUrl: "https://nova.test/label.pdf",
+        shipmentId: "shipment-1",
+        trackingNumber: "20450000000000",
+      }),
+    ).resolves.toMatchObject({ status: "CREATED" });
+    await expect(
+      repository.updateStatus({
+        deliveredAt: new Date("2026-04-30T12:00:00.000Z"),
+        shipmentId: "shipment-1",
+        status: "DELIVERED",
+      }),
+    ).resolves.toMatchObject({ status: "DELIVERED" });
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        carrierShipmentId: "np-shipment-1",
+        status: "CREATED",
+      }),
+    );
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "DELIVERED" }),
+    );
+  });
 });

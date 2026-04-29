@@ -5,6 +5,8 @@ import { PaymentWebhookSignatureError } from "@/modules/payments/application/pay
 import { getMonobankPaymentProvider } from "@/modules/payments/infrastructure/payment-provider-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { getWebhookEventRepository } from "@/modules/payments/infrastructure/webhook-event-repository-factory";
+import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
+import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 
 vi.mock("@/modules/orders/infrastructure/audit-event-repository-factory", () => ({
   getAuditEventRepository: vi.fn(),
@@ -29,10 +31,21 @@ vi.mock(
   }),
 );
 
+vi.mock("@/modules/shipping/infrastructure/shipment-job-queue-factory", () => ({
+  getShipmentJobQueue: vi.fn(),
+}));
+
+vi.mock("@/modules/shipping/infrastructure/shipment-repository-factory", () => ({
+  getShipmentRepository: vi.fn(),
+}));
+
 const now = new Date("2026-04-30T12:00:00.000Z");
 
 describe("POST /api/webhooks/monobank", () => {
   beforeEach(() => {
+    let orderStatus = "PAYMENT_PENDING";
+    let paymentStatus = "PENDING";
+
     vi.mocked(getAuditEventRepository).mockReturnValue({
       append: vi.fn(async (event) => ({
         ...event,
@@ -55,15 +68,32 @@ describe("POST /api/webhooks/monobank", () => {
         publicToken: "secure_public_token_123456789012345",
         publicTokenExpiresAt: new Date("2026-05-14T12:00:00.000Z"),
         sentAt: now,
-        status: "PAYMENT_PENDING",
+        status: orderStatus,
         totalMinor: 2_400_00,
         updatedAt: now,
       })),
       findByPublicToken: vi.fn(),
-      updateStatus: vi.fn(),
+      updateStatus: vi.fn(async (_orderId, status) => {
+        orderStatus = status;
+      }),
     } as never);
     vi.mocked(getPaymentRepository).mockReturnValue({
-      findByOrderId: vi.fn(),
+      findByOrderId: vi.fn(async () => [
+        {
+          amountMinor: 2_400_00,
+          createdAt: now,
+          currency: "UAH",
+          failureReason: null,
+          id: "payment-1",
+          orderId: "order-1",
+          paidAt: now,
+          provider: "MONOBANK",
+          providerInvoiceId: "invoice-1",
+          providerModifiedAt: now,
+          status: paymentStatus,
+          updatedAt: now,
+        },
+      ]),
       findByProviderInvoiceId: vi.fn(async () => ({
         amountMinor: 2_400_00,
         createdAt: now,
@@ -91,9 +121,39 @@ describe("POST /api/webhooks/monobank", () => {
         provider: "MONOBANK",
         providerInvoiceId: "invoice-1",
         providerModifiedAt: input.providerModifiedAt,
-        status: input.status,
+        status: (paymentStatus = input.status),
         updatedAt: now,
       })),
+    } as never);
+    vi.mocked(getShipmentJobQueue).mockReturnValue({
+      enqueueAutoCompleteDeliveredOrder: vi.fn(),
+      enqueueCreateShipment: vi.fn(async () => "job-1"),
+      enqueueSyncShipmentStatus: vi.fn(),
+    } as never);
+    vi.mocked(getShipmentRepository).mockReturnValue({
+      findByOrderId: vi.fn(async () => [
+        {
+          addressText: "Київ, Відділення №1",
+          carrier: "NOVA_POSHTA",
+          carrierOfficeId: "warehouse-1",
+          carrierPayload: { warehouseName: "Відділення №1" },
+          carrierShipmentId: null,
+          cityName: "Київ",
+          cityRef: "city-1",
+          createdAt: now,
+          deliveredAt: null,
+          id: "shipment-1",
+          labelUrl: null,
+          orderId: "order-1",
+          recipientCustomerId: "customer-1",
+          status: "PENDING",
+          trackingNumber: null,
+          updatedAt: now,
+        },
+      ]),
+      save: vi.fn(),
+      updateCreation: vi.fn(),
+      updateStatus: vi.fn(),
     } as never);
     vi.mocked(getWebhookEventRepository).mockReturnValue({
       markProcessed: vi.fn(),

@@ -28,4 +28,59 @@ export class InMemoryShipmentRepository implements ShipmentRepository {
 
     return savedShipment;
   }
+
+  async updateCreation(input: {
+    carrierShipmentId: string;
+    labelUrl: string | null;
+    shipmentId: string;
+    trackingNumber: string;
+  }): Promise<ShipmentRecord> {
+    const shipment = this.shipments.get(input.shipmentId);
+
+    if (!shipment) {
+      throw new Error("Shipment not found");
+    }
+
+    const updatedShipment: ShipmentRecord = {
+      ...shipment,
+      carrierShipmentId: input.carrierShipmentId,
+      labelUrl: input.labelUrl,
+      status: "CREATED",
+      trackingNumber: input.trackingNumber,
+      updatedAt: new Date(),
+    };
+
+    this.shipments.set(updatedShipment.id, updatedShipment);
+
+    return updatedShipment;
+  }
+
+  async updateStatus(input: {
+    deliveredAt?: Date | null;
+    shipmentId: string;
+    status: ShipmentRecord["status"];
+    trackingNumber?: string | null;
+  }): Promise<ShipmentRecord> {
+    const shipment = this.shipments.get(input.shipmentId);
+
+    if (!shipment) {
+      throw new Error("Shipment not found");
+    }
+
+    const updatedShipment: ShipmentRecord = {
+      ...shipment,
+      deliveredAt:
+        input.deliveredAt === undefined ? shipment.deliveredAt : input.deliveredAt,
+      status: input.status,
+      trackingNumber:
+        input.trackingNumber === undefined
+          ? shipment.trackingNumber
+          : input.trackingNumber,
+      updatedAt: new Date(),
+    };
+
+    this.shipments.set(updatedShipment.id, updatedShipment);
+
+    return updatedShipment;
+  }
 }

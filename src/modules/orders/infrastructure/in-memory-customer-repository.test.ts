@@ -4,15 +4,18 @@ describe("InMemoryCustomerRepository", () => {
   it("saves customer contact data", async () => {
     const repository = new InMemoryCustomerRepository();
 
-    await expect(
-      repository.save({
+    const customer = await repository.save({
         fullName: "Олена Петренко",
         phone: "+380671234567",
-      }),
-    ).resolves.toMatchObject({
+      });
+
+    expect(customer).toMatchObject({
       email: null,
       fullName: "Олена Петренко",
       phone: "+380671234567",
+    });
+    await expect(repository.findById(customer.id)).resolves.toMatchObject({
+      fullName: "Олена Петренко",
     });
   });
 });

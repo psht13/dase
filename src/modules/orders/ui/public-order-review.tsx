@@ -29,7 +29,7 @@ export function PublicOrderReview({
           </p>
         </div>
 
-        <PaymentStatusNotice status={order.status} />
+        <PaymentStatusNotice order={order} />
 
         <div className="grid gap-4">
           {order.items.map((item) => (
@@ -74,8 +74,11 @@ export function PublicOrderReview({
   );
 }
 
-function PaymentStatusNotice({ status }: { status: string }) {
-  const message = getCustomerPaymentStatusMessage(status);
+function PaymentStatusNotice({ order }: { order: PublicOrderReviewData }) {
+  const message = getCustomerPaymentStatusMessage(order.status, {
+    provider: order.paymentProvider,
+    status: order.paymentStatus,
+  });
 
   if (!message) {
     return null;

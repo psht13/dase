@@ -14,5 +14,6 @@ export type SaveCustomerInput = {
 };
 
 export interface CustomerRepository {
+  findById(customerId: string): Promise<CustomerRecord | null>;
   save(input: SaveCustomerInput): Promise<CustomerRecord>;
 }

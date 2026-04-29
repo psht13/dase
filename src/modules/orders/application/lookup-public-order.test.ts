@@ -15,6 +15,7 @@ describe("lookupPublicOrderUseCase", () => {
       },
       {
         orderRepository: createOrderRepository(createOrder()),
+        paymentRepository: createPaymentRepository(),
       },
     );
 
@@ -28,6 +29,8 @@ describe("lookupPublicOrderUseCase", () => {
             quantity: 2,
           },
         ],
+        paymentProvider: "MONOBANK",
+        paymentStatus: "PAID",
         publicToken: validToken,
         totalMinor: 2_400_00,
       },
@@ -44,6 +47,7 @@ describe("lookupPublicOrderUseCase", () => {
         },
         {
           orderRepository: createOrderRepository(createOrder()),
+          paymentRepository: createPaymentRepository(),
         },
       ),
     ).resolves.toEqual({
@@ -63,6 +67,7 @@ describe("lookupPublicOrderUseCase", () => {
           orderRepository: createOrderRepository(
             createOrder({ status: "CANCELLED" }),
           ),
+          paymentRepository: createPaymentRepository(),
         },
       ),
     ).resolves.toEqual({
@@ -81,6 +86,7 @@ describe("lookupPublicOrderUseCase", () => {
         },
         {
           orderRepository,
+          paymentRepository: createPaymentRepository(),
         },
       ),
     ).resolves.toEqual({
@@ -135,6 +141,31 @@ function createOrderRepository(order: PersistedOrder | null): OrderRepository {
       order?.id === orderId ? order : null,
     ),
     findByPublicToken: vi.fn(async () => order),
+    updateStatus: vi.fn(),
+  };
+}
+
+function createPaymentRepository() {
+  return {
+    findByOrderId: vi.fn(async () => [
+      {
+        amountMinor: 2_400_00,
+        createdAt: new Date("2026-04-30T10:00:00.000Z"),
+        currency: "UAH",
+        failureReason: null,
+        id: "payment-1",
+        orderId: "order-1",
+        paidAt: new Date("2026-04-30T12:00:00.000Z"),
+        provider: "MONOBANK" as const,
+        providerInvoiceId: "invoice-1",
+        providerModifiedAt: new Date("2026-04-30T12:00:00.000Z"),
+        status: "PAID" as const,
+        updatedAt: new Date("2026-04-30T12:00:00.000Z"),
+      },
+    ]),
+    findByProviderInvoiceId: vi.fn(),
+    save: vi.fn(),
+    updateProviderInvoice: vi.fn(),
     updateStatus: vi.fn(),
   };
 }

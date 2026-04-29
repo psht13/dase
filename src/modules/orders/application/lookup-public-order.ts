@@ -1,9 +1,16 @@
 import type { OrderRepository } from "@/modules/orders/application/order-repository";
 import { isValidPublicOrderToken } from "@/modules/orders/application/public-order-token";
+import type {
+  PaymentProviderCode,
+  PaymentRepository,
+  PaymentStatus,
+} from "@/modules/payments/application/payment-repository";
 
 export type PublicOrderReview = {
   currency: string;
   items: PublicOrderReviewItem[];
+  paymentProvider: PaymentProviderCode | null;
+  paymentStatus: PaymentStatus | null;
   publicToken: string;
   publicTokenExpiresAt: Date;
   status: string;
@@ -36,6 +43,7 @@ export async function lookupPublicOrderUseCase(
   },
   dependencies: {
     orderRepository: OrderRepository;
+    paymentRepository: PaymentRepository;
   },
 ): Promise<PublicOrderLookupResult> {
   if (!isValidPublicOrderToken(input.publicToken)) {
@@ -72,6 +80,10 @@ export async function lookupPublicOrderUseCase(
     };
   }
 
+  const payments = await dependencies.paymentRepository.findByOrderId(order.id);
+  const monobankPayment =
+    payments.find((payment) => payment.provider === "MONOBANK") ?? null;
+
   return {
     available: true,
     order: {
@@ -84,6 +96,8 @@ export async function lookupPublicOrderUseCase(
         quantity: item.quantity,
         unitPriceMinor: item.unitPriceMinor,
       })),
+      paymentProvider: monobankPayment?.provider ?? null,
+      paymentStatus: monobankPayment?.status ?? null,
       publicToken: order.publicToken,
       publicTokenExpiresAt: order.publicTokenExpiresAt,
       status: order.status,

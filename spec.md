@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, and MonoPay / Monobank payment flow implemented locally
+Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, and shipment worker automation implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -105,6 +105,20 @@ MonoPay / Monobank payment update on 2026-04-30:
 - Payment status copy shown to customers is Ukrainian: pending confirmation, successful MonoPay payment, and failed MonoPay payment states are covered by tests.
 - MSW contract tests cover Monobank invoice creation/status mapping and webhook signature verification without calling live Monobank APIs.
 - Playwright e2e covers customer MonoPay confirmation, mocked invoice redirect, mocked successful webhook, and Ukrainian paid status copy.
+
+Shipment worker update on 2026-04-30:
+- `pg-boss` is the selected Postgres-backed job queue; `pnpm worker:start` starts the shipment worker entrypoint.
+- Worker jobs are registered for `create-shipment`, `sync-shipment-status`, and `auto-complete-delivered-order`.
+- Confirmed cash-on-delivery orders enqueue `create-shipment` after the customer confirmation use case stores customer, payment, and shipment rows.
+- Successful MonoPay webhooks mark payment as paid, move the order into shipment preparation, and enqueue `create-shipment`.
+- `create-shipment` calls the selected `ShippingCarrier`, stores tracking number, carrier document id, and label URL/reference, marks the shipment created, moves the order to `SHIPMENT_CREATED`, and schedules status sync.
+- Shipment creation failures mark the shipment `FAILED`, append a Ukrainian audit payload, and rethrow so pg-boss retry behavior can apply.
+- `sync-shipment-status` calls carrier tracking, maps carrier status into internal shipment/order statuses, schedules another sync for active shipments, and schedules auto-completion for delivered shipments.
+- `auto-complete-delivered-order` moves delivered orders to `COMPLETED` after `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
+- Owner retry action `retryShipmentCreationAction` re-enqueues failed shipment creation and returns Ukrainian dashboard-facing messages.
+- Dashboard/status helper labels for shipment statuses and worker job names are Ukrainian and covered by tests.
+- Public payment status copy remains payment-aware: MonoPay paid orders continue to show Ukrainian paid copy after moving into shipment statuses, while cash-on-delivery shipment statuses do not show MonoPay copy.
+- Tests cover job enqueueing, shipment creation success and failure, tracking status mapping, auto-completion rules, retry action copy, pg-boss retry options, and Ukrainian shipment status/job labels.
 
 ## Core flows
 
@@ -163,6 +177,7 @@ For cash on delivery:
 3. App stores tracking number and label/reference.
 4. Worker periodically syncs shipment status.
 5. App auto-completes order when delivered according to configured rules.
+6. Owner can manually retry failed shipment creation from a server action that re-enqueues the job.
 
 ## Order statuses
 
@@ -259,6 +274,15 @@ The MonoPay payment milestone also required no new migration because the foundat
 - `webhook_events.provider_modified_at`
 - the unique idempotency index on `webhook_events(provider, external_event_id)`
 
+The shipment worker milestone required no new app-table migration because the foundation schema already included:
+- `shipments.carrier_shipment_id`
+- `shipments.tracking_number`
+- `shipments.label_url`
+- `shipments.status`
+- `shipments.delivered_at`
+
+`pg-boss` manages its own queue schema inside PostgreSQL when the worker connects with `DATABASE_URL`.
+
 ## Quality requirements
 
 - TypeScript strict mode.
@@ -271,10 +295,10 @@ The MonoPay payment milestone also required no new migration because the foundat
 - No `admin` role.
 - Automated tests must use pure domain tests, fake adapters, or `DATABASE_URL_TEST`; they must not reset or mutate production data.
 
-Latest local quality status on 2026-04-30 after the MonoPay payment milestone:
+Latest local quality status on 2026-04-30 after the shipment worker milestone:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
-- `pnpm test:coverage` passed with 93.11% statements, 80.82% branches, 96.53% functions, and 93.11% lines across the configured coverage scope.
+- `pnpm test:coverage` passed with 92.24% statements, 80.67% branches, 94.81% functions, and 92.24% lines across the configured coverage scope.
 - `pnpm test:e2e` passed with Chromium, including seeded owner product creation, user-role dashboard denial, owner order link creation, public order review, customer delivery confirmation with mocked carriers, and mocked MonoPay success webhook flow.
 - `pnpm build` passed.
 - `pnpm db:generate` passed and created `drizzle/0003_kind_deathstrike.sql`.
@@ -299,7 +323,7 @@ Current command status:
 - `package.json`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml` are present.
 - `pnpm db:generate` was verified and generated Drizzle migrations through `drizzle/0003_kind_deathstrike.sql`.
 - `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway verification is blocked by Railway authentication and no local `DATABASE_URL`/`DATABASE_URL_TEST` is set in this shell.
-- `pnpm worker:start` requires a secure `DATABASE_URL` before the worker can connect to PostgreSQL.
+- `pnpm worker:start` requires a secure `DATABASE_URL` before the worker can connect to PostgreSQL and start pg-boss shipment jobs.
 - Required local checks are available through pnpm scripts.
 
 ## Environment variables
@@ -350,6 +374,7 @@ Current Railway status on 2026-04-30:
 - `list_services` failed during Prompt 04 because the Railway token is invalid or expired.
 - `list_projects` failed again during Prompt 05 because the Railway token is invalid or expired.
 - `list_services` failed again during Prompt 06 because the Railway token is invalid or expired.
+- `list_projects` failed again during Prompt 07 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -423,12 +448,13 @@ Status: completed locally on 2026-04-30; Railway migration verification remains 
 
 ### Milestone 5 - Payments, shipments, and worker
 
-Status: payment module completed locally on 2026-04-30; shipment jobs and worker automation remain pending. Railway migration/database verification remains blocked by invalid Railway authentication.
+Status: payment module and shipment worker automation completed locally on 2026-04-30. Railway migration/database/job queue verification remains blocked by invalid Railway authentication.
 
 - Implement MonoPay invoice creation and webhook handling. Completed locally with mocked/contract-tested Monobank adapters.
-- Implement Nova Poshta and Ukrposhta shipment creation/tracking adapters.
-- Add worker jobs for shipment creation, tracking sync, and auto-completion.
-- Add audit events and owner status/tag views.
+- Implement Nova Poshta and Ukrposhta shipment creation/tracking adapters. Completed locally with mocked/contract-tested carrier adapters.
+- Add worker jobs for shipment creation, tracking sync, and auto-completion. Completed locally with pg-boss queue adapter and in-memory test queue.
+- Add shipment audit events. Completed locally for worker enqueue/create/failure/sync/auto-complete events.
+- Owner status/tag views remain pending.
 
 ### Milestone 6 - Deployment readiness
 
@@ -455,5 +481,5 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 - Exact Nova Poshta sender/counterparty settings.
 - Exact Ukrposhta sender/client/address setup.
 - Whether to reserve stock when order link is created or only after customer confirms.
-- Whether cash on delivery should always create shipment immediately.
+- Cash on delivery now enqueues shipment creation after customer confirmation.
 - Whether image uploads are needed later or external URLs are enough.

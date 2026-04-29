@@ -4,6 +4,8 @@ import type { PaymentProvider } from "@/modules/payments/application/payment-pro
 import { processMonobankWebhookUseCase } from "@/modules/payments/application/process-monobank-webhook";
 import { InMemoryPaymentRepository } from "@/modules/payments/infrastructure/in-memory-payment-repository";
 import { InMemoryWebhookEventRepository } from "@/modules/payments/infrastructure/in-memory-webhook-event-repository";
+import { InMemoryShipmentJobQueue } from "@/modules/shipping/infrastructure/in-memory-shipment-job-queue";
+import { InMemoryShipmentRepository } from "@/modules/shipping/infrastructure/in-memory-shipment-repository";
 
 const now = new Date("2026-04-30T10:00:00.000Z");
 
@@ -30,7 +32,12 @@ describe("processMonobankWebhookUseCase", () => {
     await expect(
       dependencies.orderRepository.findById("order-1"),
     ).resolves.toMatchObject({
-      status: "PAID",
+      status: "SHIPMENT_PENDING",
+    });
+    expect(dependencies.shipmentJobQueue.createShipmentJobs).toHaveLength(1);
+    expect(dependencies.shipmentJobQueue.createShipmentJobs[0]).toMatchObject({
+      orderId: "order-1",
+      requestedBy: "system",
     });
   });
 
@@ -116,6 +123,8 @@ type DependencyInput = {
 async function createDependencies(input: DependencyInput = {}) {
   const orderRepository = new InMemoryOrderRepository();
   const paymentRepository = new InMemoryPaymentRepository();
+  const shipmentJobQueue = new InMemoryShipmentJobQueue();
+  const shipmentRepository = new InMemoryShipmentRepository();
   const webhookEventRepository = new InMemoryWebhookEventRepository();
   const auditEventRepository = new InMemoryAuditEventRepository();
   const providerStatusModifiedAt =
@@ -141,6 +150,21 @@ async function createDependencies(input: DependencyInput = {}) {
     providerInvoiceId: "invoice-1",
     providerModifiedAt: input.initialPaymentModifiedAt ?? null,
     status: input.initialPaymentStatus ?? "PENDING",
+  });
+  const savedShipment = await shipmentRepository.save({
+    addressText: "Київ, Відділення №1",
+    carrier: "NOVA_POSHTA",
+    carrierOfficeId: "warehouse-1",
+    carrierPayload: { warehouseName: "Відділення №1" },
+    carrierShipmentId: null,
+    cityName: "Київ",
+    cityRef: "city-1",
+    deliveredAt: null,
+    labelUrl: null,
+    orderId: "order-1",
+    recipientCustomerId: "customer-1",
+    status: "PENDING",
+    trackingNumber: null,
   });
 
   const savedOrder = await orderRepository.findByPublicToken(
@@ -185,7 +209,14 @@ async function createDependencies(input: DependencyInput = {}) {
       status: input.providerStatus ?? "success",
     }),
     paymentRepository: {
-      findByOrderId: vi.fn(async () => [savedPayment]),
+      findByOrderId: vi.fn(async () => {
+        const currentPayment = await paymentRepository.findByProviderInvoiceId(
+          "MONOBANK",
+          "invoice-1",
+        );
+
+        return currentPayment ? [currentPayment] : [];
+      }),
       findByProviderInvoiceId: vi.fn(
         async (provider: "MONOBANK", invoiceId: string) => {
           void provider;
@@ -205,6 +236,23 @@ async function createDependencies(input: DependencyInput = {}) {
           paymentId: savedPayment.id,
         }),
       ),
+    },
+    shipmentJobQueue,
+    shipmentRepository: {
+      findByOrderId: vi.fn(async (orderId: string) => {
+        void orderId;
+
+        const shipments = await shipmentRepository.findByOrderId("order-1");
+
+        return shipments.map((shipment) => ({
+          ...shipment,
+          id: savedShipment.id,
+          orderId: "order-1",
+        }));
+      }),
+      save: vi.fn(),
+      updateCreation: vi.fn(),
+      updateStatus: vi.fn(),
     },
     webhookEventRepository,
   };

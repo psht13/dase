@@ -76,12 +76,34 @@ describe("payment status mapping", () => {
     expect(getCustomerPaymentStatusMessage("PAYMENT_PENDING")).toBe(
       "Очікуємо підтвердження оплати MonoPay.",
     );
-    expect(getCustomerPaymentStatusMessage("PAID")).toBe(
+    expect(
+      getCustomerPaymentStatusMessage("PAID", {
+        provider: "MONOBANK",
+        status: "PAID",
+      }),
+    ).toBe("Оплату MonoPay успішно підтверджено.");
+    expect(
+      getCustomerPaymentStatusMessage("SHIPMENT_PENDING", {
+        provider: "MONOBANK",
+        status: "PAID",
+      }),
+    ).toBe(
       "Оплату MonoPay успішно підтверджено.",
     );
-    expect(getCustomerPaymentStatusMessage("PAYMENT_FAILED")).toBe(
+    expect(
+      getCustomerPaymentStatusMessage("PAYMENT_FAILED", {
+        provider: "MONOBANK",
+        status: "FAILED",
+      }),
+    ).toBe(
       "Оплату MonoPay не вдалося провести. Зв’яжіться з продавцем.",
     );
+    expect(
+      getCustomerPaymentStatusMessage("SHIPMENT_PENDING", {
+        provider: "CASH_ON_DELIVERY",
+        status: "PENDING",
+      }),
+    ).toBeNull();
     expect(getCustomerPaymentStatusMessage("SENT_TO_CUSTOMER")).toBeNull();
   });
 });

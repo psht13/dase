@@ -8,6 +8,10 @@ import type {
 export class InMemoryCustomerRepository implements CustomerRepository {
   private readonly customers = new Map<string, CustomerRecord>();
 
+  async findById(customerId: string): Promise<CustomerRecord | null> {
+    return this.customers.get(customerId) ?? null;
+  }
+
   async save(input: SaveCustomerInput): Promise<CustomerRecord> {
     const now = new Date();
     const customer: CustomerRecord = {
