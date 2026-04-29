@@ -50,14 +50,16 @@ Notes:
 
 ## Current status
 
-Status: initial planning
+Status: foundation implemented
 
 Repository audit on 2026-04-30:
-- Repository contains Git metadata and `TASKS.md` only.
-- No package manager files are present yet.
-- No application framework has been scaffolded yet.
-- No test setup, CI files, deployment files, source code, or migrations are present yet.
-- No existing roles, routes, or user-facing UI copy were found.
+- Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
+- ESLint, Vitest coverage, Testing Library, MSW dependency, Playwright, Drizzle, Better Auth skeleton, and worker start script are configured.
+- `/api/health` returns a no-store JSON health response.
+- Environment validation is implemented in `src/shared/config/env.ts`.
+- Starter UI copy is Ukrainian and covered by unit and E2E tests.
+- Initial Drizzle migration creates `users`, `products`, and `product_images`.
+- Roles are restricted to `owner` and `user`; the default user role is `user`.
 
 ## Core flows
 
@@ -152,12 +154,13 @@ Do not store uploaded image files on ephemeral service storage. If uploads becom
 
 ## Data model
 
-To be implemented with Drizzle migrations.
-
-Main entities:
+Implemented foundation migration:
 - users
 - products
 - product_images
+
+Still to be implemented in later milestones:
+
 - orders
 - order_items
 - customers
@@ -180,9 +183,17 @@ Main entities:
 - UI must be Ukrainian.
 - No `admin` role.
 
+Latest local quality status on 2026-04-30:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 100% statements, 91.3% branches, 100% functions, and 100% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium.
+- `pnpm build` passed.
+- `pnpm db:generate` passed and created the initial Drizzle migration.
+
 ## Commands
 
-Preferred commands once the app is scaffolded:
+Configured commands:
 
 ```bash
 pnpm lint
@@ -197,9 +208,11 @@ pnpm worker:start
 ```
 
 Current command status:
-- No `package.json`, lockfile, or package manager configuration exists yet.
-- No checks are currently runnable from the repository.
-- The next implementation milestone should scaffold the app and add these scripts before feature work.
+- `package.json`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml` are present.
+- `pnpm db:generate` was verified and generated `drizzle/0000_spotty_golden_guardian.sql`.
+- `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway verification is blocked by Railway authentication.
+- `pnpm worker:start` requires a secure `DATABASE_URL` before the worker can connect to PostgreSQL.
+- Required local checks are available through pnpm scripts.
 
 ## Environment variables
 
@@ -247,6 +260,7 @@ Current Railway status on 2026-04-30:
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
 - Railway DB connectivity and migration verification are blocked until Railway authentication is refreshed outside the repository.
+- Initial migrations were generated locally with Drizzle, but not applied to Railway.
 
 Fallback until Railway access is restored:
 - Use a local or disposable PostgreSQL database for development tests.
@@ -268,18 +282,21 @@ Deployment:
 - Worker runs separately from web process.
 
 Current deployment status:
+- GitHub Actions CI is configured in `.github/workflows/ci.yml` to run install, lint, typecheck, coverage, e2e, and build.
 - No Railway deployment is configured in the repository yet.
-- No CI configuration is present yet.
 
 ## Implementation plan
 
 ### Milestone 1 - Application scaffold and quality gates
 
-- Scaffold Next.js App Router with TypeScript strict mode and pnpm.
-- Add lint, typecheck, unit coverage, e2e, and build scripts.
-- Add CI workflow for required checks.
-- Add baseline Ukrainian UI shell with owner/dashboard wording.
-- Add environment validation without committing secrets.
+Status: completed on 2026-04-30.
+
+- Scaffolded Next.js App Router with TypeScript strict mode and pnpm.
+- Added lint, typecheck, unit coverage, e2e, and build scripts.
+- Added CI workflow for required checks.
+- Added baseline Ukrainian UI shell.
+- Added environment validation without committing secrets.
+- Added `/api/health` and tests.
 
 ### Milestone 2 - Database and domain foundation
 
