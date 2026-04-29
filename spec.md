@@ -1,0 +1,338 @@
+# spec.md
+
+## Product goal
+
+Build a small commercial web app for jewelry sellers.
+
+Owners can manage products, create custom order links, send those links to customers, collect delivery/payment information, create shipping labels, and track fulfillment.
+
+## Language
+
+All user-facing UI text must be Ukrainian.
+
+This includes:
+- dashboard pages;
+- public order pages;
+- forms;
+- buttons;
+- validation messages;
+- loading, empty, error, and success states;
+- status labels.
+
+Code identifiers and commit messages can be English.
+
+## Roles
+
+Only these roles are allowed:
+
+### owner
+
+Authenticated seller/owner.
+
+Can:
+- access dashboard;
+- manage products;
+- create order links;
+- view orders;
+- update statuses and tags;
+- view payments and shipments;
+- retry shipment creation;
+- manage owner-level settings if implemented.
+
+### user
+
+Regular user/customer role.
+
+Notes:
+- A public customer does not need to authenticate to open an order link.
+- If the auth library requires a default role for newly created accounts, use `user`.
+- Do not create or use `admin`.
+
+## Current status
+
+Status: initial planning
+
+Repository audit on 2026-04-30:
+- Repository contains Git metadata and `TASKS.md` only.
+- No package manager files are present yet.
+- No application framework has been scaffolded yet.
+- No test setup, CI files, deployment files, source code, or migrations are present yet.
+- No existing roles, routes, or user-facing UI copy were found.
+
+## Core flows
+
+### Product management
+
+1. Owner logs in.
+2. Owner opens dashboard catalog.
+3. Owner creates product with name, SKU, description, price, stock quantity, and image URLs.
+4. Product becomes available for order creation.
+
+### Owner order creation
+
+1. Owner selects products and quantities.
+2. App calculates total.
+3. Owner creates order draft.
+4. App creates secure public token.
+5. Owner sends public link to customer.
+
+### Customer confirmation
+
+1. Customer opens public order link.
+2. Customer reviews product list and totals.
+3. Customer fills full name and phone.
+4. Customer chooses delivery carrier:
+   - Nova Poshta
+   - Ukrposhta
+5. Customer selects city and branch/office from official carrier data.
+6. Customer chooses payment:
+   - MonoPay
+   - cash on delivery
+7. Customer submits form.
+8. App saves confirmation data.
+
+### Payment
+
+For MonoPay:
+
+1. App creates payment invoice.
+2. Customer is redirected to payment.
+3. Monobank sends webhook.
+4. App verifies signature.
+5. App stores event idempotently.
+6. App updates payment and order status.
+
+For cash on delivery:
+
+1. App skips online payment.
+2. App moves order to shipment creation.
+
+### Shipment
+
+1. App creates shipment job.
+2. Worker calls selected carrier API.
+3. App stores tracking number and label/reference.
+4. Worker periodically syncs shipment status.
+5. App auto-completes order when delivered according to configured rules.
+
+## Order statuses
+
+- DRAFT
+- SENT_TO_CUSTOMER
+- CONFIRMED_BY_CUSTOMER
+- PAYMENT_PENDING
+- PAID
+- PAYMENT_FAILED
+- SHIPMENT_PENDING
+- SHIPMENT_CREATED
+- IN_TRANSIT
+- DELIVERED
+- COMPLETED
+- RETURN_REQUESTED
+- RETURNED
+- CANCELLED
+
+## Image strategy
+
+Initial strategy:
+
+- Do not create S3/R2/Railway Storage Bucket.
+- Do not implement binary image uploads at the start.
+- Store one or more image URLs per product in `product_images`.
+- Validate image URLs.
+- Keep future storage strategy open.
+
+Rationale:
+
+The expected catalog size is small, around up to 100 products, so object storage is unnecessary for the first version.
+
+Important caveat:
+
+Do not store uploaded image files on ephemeral service storage. If uploads become necessary later, choose either Railway Volume for small single-service storage or an S3-compatible object storage service.
+
+## Data model
+
+To be implemented with Drizzle migrations.
+
+Main entities:
+- users
+- products
+- product_images
+- orders
+- order_items
+- customers
+- payments
+- shipments
+- order_tags
+- order_tag_links
+- audit_events
+- webhook_events
+- carrier_directory_cache
+
+## Quality requirements
+
+- TypeScript strict mode.
+- 80%+ test coverage for lines, statements, branches, and functions.
+- Clean architecture.
+- No business logic in UI components.
+- No direct external API calls from domain/application tests.
+- CI must run lint, typecheck, coverage, e2e, and build.
+- UI must be Ukrainian.
+- No `admin` role.
+
+## Commands
+
+Preferred commands once the app is scaffolded:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+pnpm db:generate
+pnpm db:migrate
+pnpm worker:start
+```
+
+Current command status:
+- No `package.json`, lockfile, or package manager configuration exists yet.
+- No checks are currently runnable from the repository.
+- The next implementation milestone should scaffold the app and add these scripts before feature work.
+
+## Environment variables
+
+```txt
+DATABASE_URL=
+DATABASE_URL_TEST=
+
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=
+
+MONOBANK_TOKEN=
+MONOBANK_PUBLIC_KEY=
+MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
+
+NOVA_POSHTA_API_KEY=
+NOVA_POSHTA_API_URL=
+
+UKRPOSHTA_BEARER_TOKEN=
+UKRPOSHTA_COUNTERPARTY_TOKEN=
+UKRPOSHTA_API_URL=
+
+AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24
+```
+
+No S3/storage bucket env vars are required for the initial version.
+
+Never commit `.env` files or secret values.
+
+## Railway PostgreSQL
+
+Railway MCP should be used immediately to provision PostgreSQL.
+
+Expected result:
+- Railway project exists or is connected.
+- PostgreSQL service exists.
+- `DATABASE_URL` is configured securely.
+- Migrations can run against Railway PostgreSQL.
+- Repository/use case integration checks can use the configured test/development database safely.
+
+Current Railway status on 2026-04-30:
+- Railway MCP tools are available.
+- `list_services` for this workspace failed because the Railway token is invalid or expired.
+- `list_projects` also failed because the Railway token is invalid or expired.
+- No Railway project could be connected or created from this session.
+- PostgreSQL could not be provisioned from this session.
+- `DATABASE_URL` could not be retrieved or configured.
+- Railway DB connectivity and migration verification are blocked until Railway authentication is refreshed outside the repository.
+
+Fallback until Railway access is restored:
+- Use a local or disposable PostgreSQL database for development tests.
+- Keep integration tests isolated from production data.
+- Do not commit local connection strings.
+
+## Deployment
+
+Target: Railway
+
+Services:
+- web
+- worker
+- postgres
+
+Deployment:
+- GitHub autodeploy from protected `main`.
+- Run migrations before web deployment.
+- Worker runs separately from web process.
+
+Current deployment status:
+- No Railway deployment is configured in the repository yet.
+- No CI configuration is present yet.
+
+## Implementation plan
+
+### Milestone 1 - Application scaffold and quality gates
+
+- Scaffold Next.js App Router with TypeScript strict mode and pnpm.
+- Add lint, typecheck, unit coverage, e2e, and build scripts.
+- Add CI workflow for required checks.
+- Add baseline Ukrainian UI shell with owner/dashboard wording.
+- Add environment validation without committing secrets.
+
+### Milestone 2 - Database and domain foundation
+
+- Add Drizzle PostgreSQL setup and migrations.
+- Model users, products, product images, orders, order items, customers, payments, shipments, tags, audit events, webhook events, and carrier cache.
+- Add domain/application tests for product and order invariants.
+- Verify migrations against Railway PostgreSQL when credentials are available, otherwise a local disposable database.
+
+### Milestone 3 - Owner catalog and order draft flow
+
+- Implement owner authentication and dashboard access for `owner` role only.
+- Implement product catalog CRUD with external image URLs.
+- Implement order draft creation from selected products and quantities.
+- Generate secure public order tokens.
+
+### Milestone 4 - Public customer confirmation
+
+- Implement public order page.
+- Add Ukrainian delivery and payment form validation.
+- Integrate carrier directory adapters through ports with mocked tests.
+- Persist customer confirmation data.
+
+### Milestone 5 - Payments, shipments, and worker
+
+- Implement MonoPay invoice creation and webhook handling.
+- Implement Nova Poshta and Ukrposhta shipment creation/tracking adapters.
+- Add worker jobs for shipment creation, tracking sync, and auto-completion.
+- Add audit events and owner status/tag views.
+
+### Milestone 6 - Deployment readiness
+
+- Configure Railway web, worker, and postgres services.
+- Configure GitHub autodeploy from protected `main`.
+- Add deployment documentation.
+- Run full required checks and Railway migration verification.
+
+## Commit message format
+
+Use English imperative sentence case without prefixes.
+
+Examples:
+- `Add project specification`
+- `Create product catalog schema`
+- `Add order confirmation form`
+- `Fix shipment status mapping`
+
+Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chore:`.
+
+## Open questions
+
+- Exact MonoPay contract and production credentials.
+- Exact Nova Poshta sender/counterparty settings.
+- Exact Ukrposhta sender/client/address setup.
+- Whether to reserve stock when order link is created or only after customer confirms.
+- Whether cash on delivery should always create shipment immediately.
+- Whether image uploads are needed later or external URLs are enough.
