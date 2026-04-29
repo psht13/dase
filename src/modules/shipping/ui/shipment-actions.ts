@@ -57,6 +57,8 @@ export async function retryShipmentCreationAction(
   }
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/orders");
+  revalidatePath(`/dashboard/orders/${orderId}`);
 
   return {
     message: "Повторне створення відправлення заплановано",

@@ -66,6 +66,12 @@ export class InMemoryOrderRepository implements OrderRepository {
     );
   }
 
+  async listByOwnerId(ownerId: string): Promise<PersistedOrder[]> {
+    return [...this.orders.values()]
+      .filter((order) => order.ownerId === ownerId)
+      .sort((first, second) => first.createdAt.getTime() - second.createdAt.getTime());
+  }
+
   async updateStatus(orderId: string, status: OrderStatus): Promise<void> {
     const order = this.orders.get(orderId);
 

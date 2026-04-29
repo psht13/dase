@@ -98,6 +98,7 @@ function createOrderRepository(): OrderRepository {
     create: vi.fn(),
     findById: vi.fn(async () => order),
     findByPublicToken: vi.fn(),
+    listByOwnerId: vi.fn(async () => [order]),
     updateStatus: vi.fn(),
   };
 }

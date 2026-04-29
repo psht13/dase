@@ -34,15 +34,18 @@ export default function DashboardPage() {
           </p>
         </Link>
 
-        <div className="rounded-md border p-5 text-muted-foreground">
-          <ShoppingBag className="size-5" />
-          <h2 className="mt-4 text-lg font-semibold text-foreground">
+        <Link
+          className="rounded-md border p-5 transition-colors hover:bg-accent"
+          href="/dashboard/orders"
+        >
+          <ShoppingBag className="size-5 text-muted-foreground" />
+          <h2 className="mt-4 text-lg font-semibold">
             Замовлення
           </h2>
-          <p className="mt-2 text-sm">
-            Створення посилань замовлень буде додано наступним кроком.
+          <p className="mt-2 text-sm text-muted-foreground">
+            Фільтруйте замовлення, керуйте статусами, тегами та відправленнями.
           </p>
-        </div>
+        </Link>
       </section>
     </div>
   );

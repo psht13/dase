@@ -59,6 +59,7 @@ describe("retryShipmentCreationAction", () => {
       create: vi.fn(),
       findById: vi.fn(async () => createOrder()),
       findByPublicToken: vi.fn(),
+      listByOwnerId: vi.fn(async () => [createOrder()]),
       updateStatus: vi.fn(),
     } as never);
     vi.mocked(getPaymentRepository).mockReturnValue({

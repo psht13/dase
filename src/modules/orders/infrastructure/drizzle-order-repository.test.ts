@@ -133,6 +133,23 @@ describe("DrizzleOrderRepository", () => {
     });
   });
 
+  it("lists orders by owner with item snapshots", async () => {
+    const db = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(createSelectChain([order]))
+        .mockReturnValueOnce(createSelectChain([item])),
+    };
+    const repository = new DrizzleOrderRepository(db as never);
+
+    await expect(repository.listByOwnerId("owner-1")).resolves.toEqual([
+      expect.objectContaining({
+        id: "order-1",
+        items: [expect.objectContaining({ productNameSnapshot: "Каблучка" })],
+      }),
+    ]);
+  });
+
   it("returns null when public token is missing", async () => {
     const db = {
       select: vi.fn().mockReturnValueOnce(createSelectChain([])),

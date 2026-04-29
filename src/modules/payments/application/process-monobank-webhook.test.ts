@@ -198,6 +198,9 @@ async function createDependencies(input: DependencyInput = {}) {
         };
       }),
       findByPublicToken: vi.fn(async () => savedOrder),
+      listByOwnerId: vi.fn(async (ownerId: string) =>
+        savedOrder.ownerId === ownerId ? [savedOrder] : [],
+      ),
       updateStatus: vi.fn(async (orderId, status) => {
         void orderId;
         await orderRepository.updateStatus(savedOrder.id, status);

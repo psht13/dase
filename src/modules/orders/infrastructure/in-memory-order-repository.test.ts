@@ -37,6 +37,9 @@ describe("InMemoryOrderRepository", () => {
       items: [{ productNameSnapshot: "Каблучка" }],
       status: "SENT_TO_CUSTOMER",
     });
+    await expect(repository.listByOwnerId("owner-1")).resolves.toEqual([
+      expect.objectContaining({ id: order.id }),
+    ]);
 
     await repository.updateStatus(order.id, "CANCELLED");
 

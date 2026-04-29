@@ -113,6 +113,26 @@ export class DrizzleOrderRepository implements OrderRepository {
     return mapOrder(order, items);
   }
 
+  async listByOwnerId(ownerId: string): Promise<PersistedOrder[]> {
+    const orders = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.ownerId, ownerId))
+      .orderBy(asc(schema.orders.createdAt));
+
+    return Promise.all(
+      orders.map(async (order) => {
+        const items = await this.db
+          .select()
+          .from(schema.orderItems)
+          .where(eq(schema.orderItems.orderId, order.id))
+          .orderBy(asc(schema.orderItems.createdAt));
+
+        return mapOrder(order, items);
+      }),
+    );
+  }
+
   async updateStatus(
     orderId: string,
     status: PersistedOrder["status"],

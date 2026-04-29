@@ -172,6 +172,7 @@ function createOrderRepository(): OrderRepository {
     }),
     findById: vi.fn(),
     findByPublicToken: vi.fn(),
+    listByOwnerId: vi.fn(),
     updateStatus: vi.fn(),
   };
 }

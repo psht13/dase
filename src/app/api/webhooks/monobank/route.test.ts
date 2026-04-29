@@ -73,6 +73,7 @@ describe("POST /api/webhooks/monobank", () => {
         updatedAt: now,
       })),
       findByPublicToken: vi.fn(),
+      listByOwnerId: vi.fn(),
       updateStatus: vi.fn(async (_orderId, status) => {
         orderStatus = status;
       }),

@@ -168,6 +168,9 @@ function createDependencies(order: PersistedOrder) {
         currentOrder.id === orderId ? currentOrder : null,
       ),
       findByPublicToken: vi.fn(async () => currentOrder),
+      listByOwnerId: vi.fn(async (ownerId: string) =>
+        currentOrder.ownerId === ownerId ? [currentOrder] : [],
+      ),
       updateStatus: vi.fn(async (_orderId, status) => {
         currentOrder = {
           ...currentOrder,

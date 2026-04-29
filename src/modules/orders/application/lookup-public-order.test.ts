@@ -141,6 +141,9 @@ function createOrderRepository(order: PersistedOrder | null): OrderRepository {
       order?.id === orderId ? order : null,
     ),
     findByPublicToken: vi.fn(async () => order),
+    listByOwnerId: vi.fn(async (ownerId: string) =>
+      order?.ownerId === ownerId ? [order] : [],
+    ),
     updateStatus: vi.fn(),
   };
 }

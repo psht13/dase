@@ -248,6 +248,9 @@ describe("shipment worker use cases", () => {
           findByPublicToken: context.orderRepository.findByPublicToken.bind(
             context.orderRepository,
           ),
+          listByOwnerId: context.orderRepository.listByOwnerId.bind(
+            context.orderRepository,
+          ),
           updateStatus: context.orderRepository.updateStatus.bind(
             context.orderRepository,
           ),

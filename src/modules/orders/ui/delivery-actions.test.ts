@@ -93,6 +93,9 @@ describe("confirmDeliveryAction", () => {
           status: "CONFIRMED_BY_CUSTOMER",
         };
       }),
+      listByOwnerId: vi.fn(async (ownerId: string) =>
+        currentOrder.ownerId === ownerId ? [currentOrder] : [],
+      ),
       findById: vi.fn(async () => currentOrder),
       findByPublicToken: vi.fn(async () => currentOrder),
       updateStatus: vi.fn(async (_orderId, status) => {
@@ -235,6 +238,7 @@ describe("confirmDeliveryAction", () => {
       confirmCustomerDelivery: vi.fn(),
       findById: vi.fn(),
       findByPublicToken: vi.fn(async () => null),
+      listByOwnerId: vi.fn(),
       updateStatus: vi.fn(),
     } as never);
 
@@ -253,6 +257,7 @@ describe("confirmDeliveryAction", () => {
       findByPublicToken: vi.fn(async () =>
         createOrder({ status: "PAYMENT_PENDING" }),
       ),
+      listByOwnerId: vi.fn(),
       updateStatus: vi.fn(),
     } as never);
 

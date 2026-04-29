@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, and shipment worker automation implemented locally
+Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, shipment worker automation, and owner order management implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -120,6 +120,18 @@ Shipment worker update on 2026-04-30:
 - Public payment status copy remains payment-aware: MonoPay paid orders continue to show Ukrainian paid copy after moving into shipment statuses, while cash-on-delivery shipment statuses do not show MonoPay copy.
 - Tests cover job enqueueing, shipment creation success and failure, tracking status mapping, auto-completion rules, retry action copy, pg-boss retry options, and Ukrainian shipment status/job labels.
 
+Owner order management update on 2026-04-30:
+- `/dashboard/orders` lists owner orders with Ukrainian labels and filters for status, delivery carrier, payment method, tag, date range, and customer phone or tracking number search.
+- `/dashboard/orders/[orderId]` shows products, customer info, delivery info, payment info, shipment info, status history, and audit events.
+- Owner order reads are implemented through application use cases and repository ports; React components and route files do not contain order management business rules.
+- Order tag storage is implemented for Drizzle and in-memory fallback through `OrderTagRepository`.
+- Owners can create tags, assign existing tags, remove tags, and filter the order list by tag.
+- Manual status updates use the domain transition rules and append `ORDER_STATUS_UPDATED` audit events.
+- Shipment retry is exposed on the owner details page and reuses the existing failed-shipment retry use case.
+- All owner order management labels, filters, table headings, empty states, action messages, status text, and audit labels are Ukrainian.
+- Unit and UI tests cover list orders, filters, tag assignment/removal, audit event creation, manual status update rules, owner order pages, Ukrainian labels, and order tag repositories.
+- Playwright e2e covers owner order filtering, tag creation, manual status update, audit visibility, and the shipment retry entry point.
+
 ## Core flows
 
 ### Product management
@@ -136,6 +148,15 @@ Shipment worker update on 2026-04-30:
 3. Owner creates order draft.
 4. App creates secure public token.
 5. Owner sends public link to customer.
+
+### Owner order management
+
+1. Owner opens the orders list.
+2. Owner filters orders by status, delivery carrier, payment method, tag, date range, customer phone, or tracking number.
+3. Owner opens order details to review products, customer data, delivery, payment, shipment, status history, and audit events.
+4. Owner creates or assigns order tags and removes tags when they no longer apply.
+5. Owner manually updates order status only through allowed domain transitions; every change writes an audit event.
+6. Owner retries failed shipment creation from the order details page.
 
 ### Customer confirmation
 
@@ -283,6 +304,12 @@ The shipment worker milestone required no new app-table migration because the fo
 
 `pg-boss` manages its own queue schema inside PostgreSQL when the worker connects with `DATABASE_URL`.
 
+The owner order management milestone required no new migration because the foundation schema already included:
+- `order_tags`
+- `order_tag_links`
+- `audit_events`
+- order/customer/payment/shipment foreign keys and indexes used by the owner read models.
+
 ## Quality requirements
 
 - TypeScript strict mode.
@@ -295,11 +322,11 @@ The shipment worker milestone required no new app-table migration because the fo
 - No `admin` role.
 - Automated tests must use pure domain tests, fake adapters, or `DATABASE_URL_TEST`; they must not reset or mutate production data.
 
-Latest local quality status on 2026-04-30 after the shipment worker milestone:
+Latest local quality status on 2026-04-30 after the owner order management milestone:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
-- `pnpm test:coverage` passed with 92.24% statements, 80.67% branches, 94.81% functions, and 92.24% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium, including seeded owner product creation, user-role dashboard denial, owner order link creation, public order review, customer delivery confirmation with mocked carriers, and mocked MonoPay success webhook flow.
+- `pnpm test:coverage` passed with 90.85% statements, 80.02% branches, 93% functions, and 90.85% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium, including owner order management for filtering, tag creation, manual status update, audit visibility, and shipment retry entry point.
 - `pnpm build` passed.
 - `pnpm db:generate` passed and created `drizzle/0003_kind_deathstrike.sql`.
 
@@ -375,6 +402,7 @@ Current Railway status on 2026-04-30:
 - `list_projects` failed again during Prompt 05 because the Railway token is invalid or expired.
 - `list_services` failed again during Prompt 06 because the Railway token is invalid or expired.
 - `list_projects` failed again during Prompt 07 because the Railway token is invalid or expired.
+- `list_projects` and `list_services` failed again during Prompt 08 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -454,9 +482,18 @@ Status: payment module and shipment worker automation completed locally on 2026-
 - Implement Nova Poshta and Ukrposhta shipment creation/tracking adapters. Completed locally with mocked/contract-tested carrier adapters.
 - Add worker jobs for shipment creation, tracking sync, and auto-completion. Completed locally with pg-boss queue adapter and in-memory test queue.
 - Add shipment audit events. Completed locally for worker enqueue/create/failure/sync/auto-complete events.
-- Owner status/tag views remain pending.
+- Owner status/tag views moved to the owner order management milestone.
 
-### Milestone 6 - Deployment readiness
+### Milestone 6 - Owner order management
+
+Status: completed locally on 2026-04-30. Railway PostgreSQL verification remains blocked by invalid Railway authentication.
+
+- Implement owner order list and filters for status, delivery carrier, payment method, tag, date range, phone, and tracking number. Completed locally.
+- Implement owner order details with products, customer, delivery, payment, shipment, status history, and audit events. Completed locally.
+- Implement owner tags, tag assignment/removal, manual status updates with audit events, and failed shipment retry entry point. Completed locally.
+- Add unit, UI, and Playwright e2e coverage for owner order management and Ukrainian labels. Completed locally.
+
+### Milestone 7 - Deployment readiness
 
 - Configure Railway web, worker, and postgres services.
 - Configure GitHub autodeploy from protected `main`.

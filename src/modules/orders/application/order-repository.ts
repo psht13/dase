@@ -46,5 +46,6 @@ export interface OrderRepository {
   create(input: CreateOrderInput): Promise<PersistedOrder>;
   findById(orderId: string): Promise<PersistedOrder | null>;
   findByPublicToken(publicToken: string): Promise<PersistedOrder | null>;
+  listByOwnerId(ownerId: string): Promise<PersistedOrder[]>;
   updateStatus(orderId: string, status: OrderStatus): Promise<void>;
 }
