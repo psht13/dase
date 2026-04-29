@@ -1,4 +1,4 @@
-import { Gem, LayoutDashboard, Package } from "lucide-react";
+import { Gem, LayoutDashboard, Package, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
@@ -35,6 +35,13 @@ export default async function DashboardLayout({
             >
               <Package className="size-4" />
               Каталог товарів
+            </Link>
+            <Link
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+              href="/dashboard/orders/new"
+            >
+              <ShoppingCart className="size-4" />
+              Створити замовлення
             </Link>
           </nav>
         </aside>

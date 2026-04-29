@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication and product catalog implemented locally
+Status: owner authentication, product catalog, owner order builder, and public order review implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -73,6 +73,15 @@ Owner auth and catalog update on 2026-04-30:
 - Product images remain external image URLs only, with one or more validated URLs per product and a simple preview in the owner form.
 - Product create/update/toggle behavior is implemented through application use cases and repository ports, not directly inside React components.
 - Playwright e2e uses a test-only seeded owner session and in-memory catalog fallback when Railway/local PostgreSQL credentials are unavailable. This fallback is disabled in production.
+
+Owner order builder and public order link update on 2026-04-30:
+- `/dashboard/orders/new` lets an authenticated `owner` select active catalog products, set quantities, review totals, create an order link, and copy the generated public URL.
+- Order creation is implemented through application use cases and repository ports. The created order is stored as `SENT_TO_CUSTOMER`, gets `sent_at`, a random URL-safe `public_token`, and a 14-day `public_token_expires_at`.
+- Order items store product snapshots for name, SKU, unit price, line total, quantity, and image URLs, so public pages do not depend on later catalog changes.
+- Order creation appends an `ORDER_CREATED` audit event with owner actor metadata and non-secret order summary payload.
+- `/o/[token]` renders a public Ukrainian order review page using only the token URL. Missing, malformed, expired, and cancelled links render a safe Ukrainian unavailable page.
+- `/o/[token]/delivery` exists as the next-step delivery/payment form placeholder; full delivery/payment persistence remains for the customer confirmation milestone.
+- Playwright e2e covers owner product creation, owner order link creation, and public review of the selected product list.
 
 ## Core flows
 
@@ -189,6 +198,7 @@ Migration files:
 - `drizzle/0000_spotty_golden_guardian.sql`
 - `drizzle/0001_secret_the_fallen.sql`
 - `drizzle/0002_romantic_sway.sql`
+- `drizzle/0003_kind_deathstrike.sql`
 
 Money values are stored in integer minor units. The historical product price column is `products.price_cents`; new order and payment amount columns use `_minor` naming.
 
@@ -196,8 +206,9 @@ Order item product snapshots are stored in:
 - `product_name_snapshot`
 - `product_sku_snapshot`
 - `unit_price_minor`
+- `product_image_urls_snapshot`
 
-Public order links use a random URL-safe `orders.public_token` with a unique database constraint.
+Public order links use a random URL-safe `orders.public_token` with a unique database constraint and `orders.public_token_expires_at`.
 
 ## Quality requirements
 
@@ -214,10 +225,10 @@ Public order links use a random URL-safe `orders.public_token` with a unique dat
 Latest local quality status on 2026-04-30:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
-- `pnpm test:coverage` passed with 96.23% statements, 81.2% branches, 97.11% functions, and 96.23% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium, including seeded owner product creation and user-role dashboard denial.
+- `pnpm test:coverage` passed with 94.94% statements, 81.39% branches, 96.71% functions, and 94.94% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium, including seeded owner product creation, user-role dashboard denial, owner order link creation, and public order review.
 - `pnpm build` passed.
-- `pnpm db:generate` passed and created `drizzle/0002_romantic_sway.sql`.
+- `pnpm db:generate` passed and created `drizzle/0003_kind_deathstrike.sql`.
 
 ## Commands
 
@@ -237,7 +248,7 @@ pnpm worker:start
 
 Current command status:
 - `package.json`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml` are present.
-- `pnpm db:generate` was verified and generated `drizzle/0000_spotty_golden_guardian.sql` and `drizzle/0001_secret_the_fallen.sql`.
+- `pnpm db:generate` was verified and generated Drizzle migrations through `drizzle/0003_kind_deathstrike.sql`.
 - `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway verification is blocked by Railway authentication and no local `DATABASE_URL`/`DATABASE_URL_TEST` is set in this shell.
 - `pnpm worker:start` requires a secure `DATABASE_URL` before the worker can connect to PostgreSQL.
 - Required local checks are available through pnpm scripts.
@@ -285,6 +296,7 @@ Expected result:
 Current Railway status on 2026-04-30:
 - Railway MCP tools are available.
 - `list_projects` failed during Prompt 02 and Prompt 03 because the Railway token is invalid or expired.
+- `list_services` failed during Prompt 04 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -338,7 +350,7 @@ Status: completed locally on 2026-04-30; Railway migration verification is block
 
 ### Milestone 3 - Owner catalog and order draft flow
 
-Status: owner authentication and catalog management completed locally on 2026-04-30; order draft creation remains pending.
+Status: completed locally on 2026-04-30; Railway migration verification remains blocked by invalid Railway authentication.
 
 - Implement owner authentication and dashboard access for `owner` role only.
 - Implement product catalog CRUD with external image URLs.
@@ -346,6 +358,8 @@ Status: owner authentication and catalog management completed locally on 2026-04
 - Generate secure public order tokens.
 
 ### Milestone 4 - Public customer confirmation
+
+Status: public order review completed locally on 2026-04-30; customer delivery/payment submission remains pending.
 
 - Implement public order page.
 - Add Ukrainian delivery and payment form validation.

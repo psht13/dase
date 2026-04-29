@@ -22,6 +22,7 @@ describe("DrizzleOrderRepository", () => {
     id: "order-1",
     ownerId: "owner-1",
     publicToken: "public-token",
+    publicTokenExpiresAt: new Date("2026-05-14T00:00:00.000Z"),
     sentAt: null,
     status: "DRAFT",
     totalMinor: 240_00,
@@ -33,6 +34,7 @@ describe("DrizzleOrderRepository", () => {
     lineTotalMinor: 240_00,
     orderId: "order-1",
     productId: "product-1",
+    productImageUrlsSnapshot: ["https://example.com/ring.jpg"],
     productNameSnapshot: "Каблучка",
     productSkuSnapshot: "RING-1",
     quantity: 2,
@@ -72,6 +74,7 @@ describe("DrizzleOrderRepository", () => {
         {
           lineTotalMinor: 240_00,
           productId: "product-1",
+          productImageUrlsSnapshot: ["https://example.com/ring.jpg"],
           productNameSnapshot: "Каблучка",
           productSkuSnapshot: "RING-1",
           quantity: 2,
@@ -80,6 +83,7 @@ describe("DrizzleOrderRepository", () => {
       ],
       ownerId: "owner-1",
       publicToken: "public-token",
+      publicTokenExpiresAt: new Date("2026-05-14T00:00:00.000Z"),
       totalMinor: 240_00,
     });
 

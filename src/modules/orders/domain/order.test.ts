@@ -15,6 +15,7 @@ describe("order totals", () => {
       createOrderItemFromProductSnapshot(
         {
           id: "product-1",
+          imageUrls: ["https://example.com/ring.jpg"],
           name: "Каблучка",
           sku: "RING-1",
           unitPriceMinor: 125_00,
@@ -59,6 +60,7 @@ describe("product snapshots in order items", () => {
   it("stores product name, SKU, and unit price snapshot", () => {
     const product = {
       id: "product-1",
+      imageUrls: ["https://example.com/pendant.jpg"],
       name: "Підвіска",
       sku: "PENDANT-1",
       unitPriceMinor: 800_00,
@@ -69,10 +71,12 @@ describe("product snapshots in order items", () => {
     product.name = "Нова назва";
     product.sku = "NEW-SKU";
     product.unitPriceMinor = 1;
+    product.imageUrls = ["https://example.com/changed.jpg"];
 
     expect(item).toMatchObject({
       lineTotalMinor: 1_600_00,
       productId: "product-1",
+      productImageUrlsSnapshot: ["https://example.com/pendant.jpg"],
       productNameSnapshot: "Підвіска",
       productSkuSnapshot: "PENDANT-1",
       quantity: 2,

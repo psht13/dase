@@ -20,6 +20,9 @@ describe("DashboardLayout", () => {
     expect(screen.getByText("Кабінет власника")).toBeVisible();
     expect(screen.getByRole("link", { name: /Огляд/i })).toBeVisible();
     expect(screen.getByRole("link", { name: /Каталог товарів/i })).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /Створити замовлення/i }),
+    ).toBeVisible();
     expect(screen.getByText("Роль: власник")).toBeVisible();
     expect(screen.getByText("Вміст сторінки")).toBeVisible();
   });

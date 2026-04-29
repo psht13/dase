@@ -7,6 +7,8 @@ export type CreateOrderInput = {
   items: OrderItemSnapshot[];
   ownerId: string;
   publicToken: string;
+  publicTokenExpiresAt: Date;
+  sentAt?: Date | null;
   status?: OrderStatus;
   totalMinor: number;
 };
@@ -26,6 +28,7 @@ export type PersistedOrder = {
   items: PersistedOrderItem[];
   ownerId: string;
   publicToken: string;
+  publicTokenExpiresAt: Date;
   sentAt: Date | null;
   status: OrderStatus;
   totalMinor: number;

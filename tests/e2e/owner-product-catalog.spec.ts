@@ -5,6 +5,7 @@ const cookieUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
 test("owner creates a product from the dashboard catalog", async ({ page }) => {
   await seedSession(page, "owner");
   const sku = `RING-E2E-${Date.now()}`;
+  const productName = `Каблучка Playwright ${Date.now()}`;
 
   await page.goto("/dashboard/products");
   await expect(
@@ -12,7 +13,7 @@ test("owner creates a product from the dashboard catalog", async ({ page }) => {
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Створити товар" }).click();
-  await page.getByLabel("Назва товару").fill("Каблучка Playwright");
+  await page.getByLabel("Назва товару").fill(productName);
   await page.getByLabel("Артикул").fill(sku);
   await page.getByLabel("Опис").fill("Срібна каблучка для e2e перевірки");
   await page.getByLabel("Ціна, грн").fill("1499,50");
@@ -23,9 +24,11 @@ test("owner creates a product from the dashboard catalog", async ({ page }) => {
   await page.getByRole("button", { name: "Створити товар" }).click();
 
   await expect(page).toHaveURL(/\/dashboard\/products$/);
-  await expect(page.getByText("Каблучка Playwright")).toBeVisible();
-  await expect(page.getByText(sku)).toBeVisible();
-  await expect(page.getByText("Активний")).toBeVisible();
+  const productRow = page.getByRole("row", {
+    name: new RegExp(`${productName}.*${sku}`),
+  });
+  await expect(productRow).toBeVisible();
+  await expect(productRow.getByText("Активний")).toBeVisible();
 });
 
 test("user role cannot access the owner dashboard", async ({ page }) => {

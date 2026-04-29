@@ -2,6 +2,7 @@ export type MoneyMinor = number;
 
 export type ProductSnapshotSource = {
   id: string;
+  imageUrls?: readonly string[];
   name: string;
   sku: string;
   unitPriceMinor: MoneyMinor;
@@ -10,6 +11,7 @@ export type ProductSnapshotSource = {
 export type OrderItemSnapshot = {
   lineTotalMinor: MoneyMinor;
   productId: string | null;
+  productImageUrlsSnapshot: string[];
   productNameSnapshot: string;
   productSkuSnapshot: string;
   quantity: number;
@@ -38,6 +40,7 @@ export function createOrderItemFromProductSnapshot(
   return {
     lineTotalMinor: product.unitPriceMinor * quantity,
     productId: product.id,
+    productImageUrlsSnapshot: [...(product.imageUrls ?? [])],
     productNameSnapshot: product.name,
     productSkuSnapshot: product.sku,
     quantity,

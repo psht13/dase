@@ -228,6 +228,9 @@ export const orders = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     publicToken: text("public_token").notNull().unique(),
+    publicTokenExpiresAt: timestamp("public_token_expires_at", {
+      withTimezone: true,
+    }).notNull(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     status: orderStatus("status").default("DRAFT").notNull(),
     totalMinor: integer("total_minor").default(0).notNull(),
@@ -257,6 +260,10 @@ export const orderItems = pgTable(
     productId: uuid("product_id").references(() => products.id, {
       onDelete: "set null",
     }),
+    productImageUrlsSnapshot: jsonb("product_image_urls_snapshot")
+      .$type<string[]>()
+      .default(sql`'[]'::jsonb`)
+      .notNull(),
     productNameSnapshot: text("product_name_snapshot").notNull(),
     productSkuSnapshot: text("product_sku_snapshot").notNull(),
     quantity: integer("quantity").notNull(),
