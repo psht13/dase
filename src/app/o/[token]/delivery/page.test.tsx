@@ -9,8 +9,14 @@ vi.mock("@/modules/orders/infrastructure/order-repository-factory", () => ({
   getOrderRepository: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+  }),
+}));
+
 describe("PublicDeliveryPage", () => {
-  it("renders the Ukrainian delivery and payment form placeholder", async () => {
+  it("renders the Ukrainian delivery and payment form", async () => {
     vi.mocked(getOrderRepository).mockReturnValue({
       findByPublicToken: vi.fn(async () => createOrder()),
     } as never);
@@ -25,7 +31,9 @@ describe("PublicDeliveryPage", () => {
       screen.getByRole("heading", { name: "Доставка та оплата" }),
     ).toBeVisible();
     expect(screen.getByText("Повне ім’я")).toBeVisible();
-    expect(screen.getByText("Спосіб доставки")).toBeVisible();
+    expect(screen.getByText("Служба доставки")).toBeVisible();
+    expect(screen.getByText("Місто або населений пункт")).toBeVisible();
+    expect(screen.getByText("Відділення або поштове відділення")).toBeVisible();
     expect(screen.getByText("Спосіб оплати")).toBeVisible();
     expect(screen.getByRole("link", { name: "Назад" })).toHaveAttribute(
       "href",

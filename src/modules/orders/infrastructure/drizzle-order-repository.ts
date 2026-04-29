@@ -15,6 +15,22 @@ type DbOrderItem = typeof schema.orderItems.$inferSelect;
 export class DrizzleOrderRepository implements OrderRepository {
   constructor(private readonly db: Database) {}
 
+  async confirmCustomerDelivery(input: {
+    confirmedAt: Date;
+    customerId: string;
+    orderId: string;
+  }): Promise<void> {
+    await this.db
+      .update(schema.orders)
+      .set({
+        confirmedAt: input.confirmedAt,
+        customerId: input.customerId,
+        status: "CONFIRMED_BY_CUSTOMER",
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.orders.id, input.orderId));
+  }
+
   async create(input: CreateOrderInput): Promise<PersistedOrder> {
     return this.db.transaction(async (tx) => {
       const [order] = await tx

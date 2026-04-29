@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, product catalog, owner order builder, and public order review implemented locally
+Status: owner authentication, product catalog, owner order builder, public order review, and customer delivery confirmation implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -80,8 +80,21 @@ Owner order builder and public order link update on 2026-04-30:
 - Order items store product snapshots for name, SKU, unit price, line total, quantity, and image URLs, so public pages do not depend on later catalog changes.
 - Order creation appends an `ORDER_CREATED` audit event with owner actor metadata and non-secret order summary payload.
 - `/o/[token]` renders a public Ukrainian order review page using only the token URL. Missing, malformed, expired, and cancelled links render a safe Ukrainian unavailable page.
-- `/o/[token]/delivery` exists as the next-step delivery/payment form placeholder; full delivery/payment persistence remains for the customer confirmation milestone.
+- `/o/[token]/delivery` originally existed as the next-step delivery/payment form placeholder.
 - Playwright e2e covers owner product creation, owner order link creation, and public review of the selected product list.
+
+Customer delivery confirmation update on 2026-04-30:
+- `/o/[token]/delivery` now renders the full customer delivery and payment form with Ukrainian labels, placeholders, validation errors, loading states, empty states, and success/error states.
+- The form collects full name, phone, delivery carrier, city/locality, branch/warehouse/post office, and payment method.
+- React Hook Form and Zod validate the delivery form; server actions re-validate submitted data before calling application use cases.
+- Customer confirmation is implemented through `confirmPublicOrderUseCase`, repository ports, and infrastructure adapters rather than business logic in React components.
+- Valid confirmation creates a `customers` row, stores a pending `payments` row, stores a pending `shipments` row with internal carrier DTO data, links the order to the customer, sets `confirmed_at`, and changes order status to `CONFIRMED_BY_CUSTOMER`.
+- `ShippingCarrier` application port defines `searchCities`, `searchWarehouses`, `createShipment`, and `getShipmentStatus`.
+- Nova Poshta and Ukrposhta infrastructure adapters map external API shapes into internal city, warehouse, shipment, and status DTOs.
+- `/api/carriers/cities` and `/api/carriers/warehouses` are thin route handlers that call cached carrier search use cases and return internal DTOs only.
+- City and warehouse lookups use `carrier_directory_cache`; Playwright and test runs use deterministic in-memory mocked carrier data and never call live carrier APIs.
+- MSW contract tests cover Nova Poshta and Ukrposhta adapter response mapping, status mapping, and carrier error handling.
+- Playwright e2e covers a customer confirming delivery with mocked carrier lookup.
 
 ## Core flows
 
@@ -113,7 +126,7 @@ Owner order builder and public order link update on 2026-04-30:
    - MonoPay
    - cash on delivery
 7. Customer submits form.
-8. App saves confirmation data.
+8. App saves confirmation data, sets the order to `CONFIRMED_BY_CUSTOMER`, and prepares pending payment/shipment records.
 
 ### Payment
 
@@ -210,6 +223,23 @@ Order item product snapshots are stored in:
 
 Public order links use a random URL-safe `orders.public_token` with a unique database constraint and `orders.public_token_expires_at`.
 
+Confirmed customer delivery data is stored through existing tables:
+- `orders.customer_id`
+- `orders.confirmed_at`
+- `orders.status`
+- `customers.full_name`
+- `customers.phone`
+- `payments.provider`
+- `payments.status`
+- `shipments.carrier`
+- `shipments.city_ref`
+- `shipments.city_name`
+- `shipments.carrier_office_id`
+- `shipments.address_text`
+- `shipments.carrier_payload`
+
+No new migration was required for the customer delivery form milestone because the foundation schema already included these columns and `carrier_directory_cache`.
+
 ## Quality requirements
 
 - TypeScript strict mode.
@@ -225,8 +255,8 @@ Public order links use a random URL-safe `orders.public_token` with a unique dat
 Latest local quality status on 2026-04-30:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
-- `pnpm test:coverage` passed with 94.94% statements, 81.39% branches, 96.71% functions, and 94.94% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium, including seeded owner product creation, user-role dashboard denial, owner order link creation, and public order review.
+- `pnpm test:coverage` passed with 93.53% statements, 81.56% branches, 95.84% functions, and 93.53% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium, including seeded owner product creation, user-role dashboard denial, owner order link creation, public order review, and customer delivery confirmation with mocked carriers.
 - `pnpm build` passed.
 - `pnpm db:generate` passed and created `drizzle/0003_kind_deathstrike.sql`.
 
@@ -276,6 +306,7 @@ UKRPOSHTA_API_URL=
 AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24
 
 PLAYWRIGHT_E2E=
+USE_MOCK_SHIPPING_CARRIERS=
 ```
 
 No S3/storage bucket env vars are required for the initial version.
@@ -297,6 +328,7 @@ Current Railway status on 2026-04-30:
 - Railway MCP tools are available.
 - `list_projects` failed during Prompt 02 and Prompt 03 because the Railway token is invalid or expired.
 - `list_services` failed during Prompt 04 because the Railway token is invalid or expired.
+- `list_projects` failed again during Prompt 05 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -359,12 +391,14 @@ Status: completed locally on 2026-04-30; Railway migration verification remains 
 
 ### Milestone 4 - Public customer confirmation
 
-Status: public order review completed locally on 2026-04-30; customer delivery/payment submission remains pending.
+Status: completed locally on 2026-04-30; Railway migration verification remains blocked by invalid Railway authentication.
 
 - Implement public order page.
 - Add Ukrainian delivery and payment form validation.
 - Integrate carrier directory adapters through ports with mocked tests.
 - Persist customer confirmation data.
+- Cache city and warehouse directory lookups.
+- Add Playwright e2e for customer confirmation with mocked carriers.
 
 ### Milestone 5 - Payments, shipments, and worker
 

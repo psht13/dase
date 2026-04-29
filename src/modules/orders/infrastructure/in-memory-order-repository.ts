@@ -10,6 +10,26 @@ import type { OrderStatus } from "@/modules/orders/domain/status";
 export class InMemoryOrderRepository implements OrderRepository {
   private readonly orders = new Map<string, PersistedOrder>();
 
+  async confirmCustomerDelivery(input: {
+    confirmedAt: Date;
+    customerId: string;
+    orderId: string;
+  }): Promise<void> {
+    const order = this.orders.get(input.orderId);
+
+    if (!order) {
+      return;
+    }
+
+    this.orders.set(input.orderId, {
+      ...order,
+      confirmedAt: input.confirmedAt,
+      customerId: input.customerId,
+      status: "CONFIRMED_BY_CUSTOMER",
+      updatedAt: new Date(),
+    });
+  }
+
   async create(input: CreateOrderInput): Promise<PersistedOrder> {
     const now = new Date();
     const orderId = randomUUID();

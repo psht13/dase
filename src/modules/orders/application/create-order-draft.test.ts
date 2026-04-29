@@ -145,6 +145,7 @@ function createProductRepository(
 
 function createOrderRepository(): OrderRepository {
   return {
+    confirmCustomerDelivery: vi.fn(),
     create: vi.fn(async (input: CreateOrderInput) => {
       const now = new Date("2026-04-30T10:00:00.000Z");
 

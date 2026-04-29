@@ -35,7 +35,14 @@ export type PersistedOrder = {
   updatedAt: Date;
 };
 
+export type ConfirmCustomerDeliveryInput = {
+  confirmedAt: Date;
+  customerId: string;
+  orderId: string;
+};
+
 export interface OrderRepository {
+  confirmCustomerDelivery(input: ConfirmCustomerDeliveryInput): Promise<void>;
   create(input: CreateOrderInput): Promise<PersistedOrder>;
   findByPublicToken(publicToken: string): Promise<PersistedOrder | null>;
   updateStatus(orderId: string, status: OrderStatus): Promise<void>;
