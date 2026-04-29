@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: foundation implemented
+Status: database and domain foundation implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -58,8 +58,10 @@ Repository audit on 2026-04-30:
 - `/api/health` returns a no-store JSON health response.
 - Environment validation is implemented in `src/shared/config/env.ts`.
 - Starter UI copy is Ukrainian and covered by unit and E2E tests.
-- Initial Drizzle migration creates `users`, `products`, and `product_images`.
+- Initial Drizzle migrations create users, products, product images, orders, order items, customers, payments, shipments, order tags, audit events, webhook events, and carrier directory cache tables.
 - Roles are restricted to `owner` and `user`; the default user role is `user`.
+- Domain tests cover order total calculation, quantity validation, order status transitions, product snapshots in order items, role rejection for `admin`, image URL validation, and public order token generation.
+- Application repository ports are defined at module boundaries; Drizzle repository implementations live under infrastructure modules.
 
 ## Core flows
 
@@ -154,13 +156,10 @@ Do not store uploaded image files on ephemeral service storage. If uploads becom
 
 ## Data model
 
-Implemented foundation migration:
+Implemented foundation migrations:
 - users
 - products
 - product_images
-
-Still to be implemented in later milestones:
-
 - orders
 - order_items
 - customers
@@ -172,6 +171,19 @@ Still to be implemented in later milestones:
 - webhook_events
 - carrier_directory_cache
 
+Migration files:
+- `drizzle/0000_spotty_golden_guardian.sql`
+- `drizzle/0001_secret_the_fallen.sql`
+
+Money values are stored in integer minor units. The historical product price column is `products.price_cents`; new order and payment amount columns use `_minor` naming.
+
+Order item product snapshots are stored in:
+- `product_name_snapshot`
+- `product_sku_snapshot`
+- `unit_price_minor`
+
+Public order links use a random URL-safe `orders.public_token` with a unique database constraint.
+
 ## Quality requirements
 
 - TypeScript strict mode.
@@ -182,14 +194,15 @@ Still to be implemented in later milestones:
 - CI must run lint, typecheck, coverage, e2e, and build.
 - UI must be Ukrainian.
 - No `admin` role.
+- Automated tests must use pure domain tests, fake adapters, or `DATABASE_URL_TEST`; they must not reset or mutate production data.
 
 Latest local quality status on 2026-04-30:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
-- `pnpm test:coverage` passed with 100% statements, 91.3% branches, 100% functions, and 100% lines across the configured coverage scope.
+- `pnpm test:coverage` passed with 99.02% statements, 89.24% branches, 100% functions, and 99.02% lines across the configured coverage scope.
 - `pnpm test:e2e` passed with Chromium.
 - `pnpm build` passed.
-- `pnpm db:generate` passed and created the initial Drizzle migration.
+- `pnpm db:generate` passed and created `drizzle/0001_secret_the_fallen.sql`.
 
 ## Commands
 
@@ -209,8 +222,8 @@ pnpm worker:start
 
 Current command status:
 - `package.json`, `pnpm-lock.yaml`, and `pnpm-workspace.yaml` are present.
-- `pnpm db:generate` was verified and generated `drizzle/0000_spotty_golden_guardian.sql`.
-- `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway verification is blocked by Railway authentication.
+- `pnpm db:generate` was verified and generated `drizzle/0000_spotty_golden_guardian.sql` and `drizzle/0001_secret_the_fallen.sql`.
+- `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway verification is blocked by Railway authentication and no local `DATABASE_URL`/`DATABASE_URL_TEST` is set in this shell.
 - `pnpm worker:start` requires a secure `DATABASE_URL` before the worker can connect to PostgreSQL.
 - Required local checks are available through pnpm scripts.
 
@@ -254,8 +267,7 @@ Expected result:
 
 Current Railway status on 2026-04-30:
 - Railway MCP tools are available.
-- `list_services` for this workspace failed because the Railway token is invalid or expired.
-- `list_projects` also failed because the Railway token is invalid or expired.
+- `list_projects` failed during Prompt 02 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -299,6 +311,8 @@ Status: completed on 2026-04-30.
 - Added `/api/health` and tests.
 
 ### Milestone 2 - Database and domain foundation
+
+Status: completed locally on 2026-04-30; Railway migration verification is blocked by invalid Railway authentication.
 
 - Add Drizzle PostgreSQL setup and migrations.
 - Model users, products, product images, orders, order items, customers, payments, shipments, tags, audit events, webhook events, and carrier cache.

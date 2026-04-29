@@ -8,6 +8,13 @@
       "when": 1777497087190,
       "tag": "0000_spotty_golden_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777497617536,
+      "tag": "0001_secret_the_fallen",
+      "breakpoints": true
     }
   ]
 }
