@@ -57,7 +57,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         </div>
         <Button asChild>
           <Link href="/dashboard/orders/new">
-            <Plus className="size-4" />
+            <Plus aria-hidden="true" className="size-4" />
             Створити замовлення
           </Link>
         </Button>

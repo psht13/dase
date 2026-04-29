@@ -59,6 +59,7 @@ export function OwnerOrderStatusForm({
               ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
               : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           }
+          aria-live="polite"
           role={message.ok ? "status" : "alert"}
         >
           {message.message}
@@ -69,6 +70,7 @@ export function OwnerOrderStatusForm({
         <label className="grid flex-1 gap-2 text-sm font-medium">
           Новий статус
           <select
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={currentStatus}
             name="status"
@@ -82,8 +84,8 @@ export function OwnerOrderStatusForm({
         </label>
 
         <Button className="self-end" disabled={isPending} type="submit">
-          <Save className="size-4" />
-          {isPending ? "Збереження..." : "Оновити статус"}
+          <Save aria-hidden="true" className="size-4" />
+          {isPending ? "Збереження…" : "Оновити статус"}
         </Button>
       </form>
     </section>

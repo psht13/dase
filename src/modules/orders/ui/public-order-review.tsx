@@ -14,7 +14,7 @@ export function PublicOrderReview({
   order,
 }: PublicOrderReviewProps) {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background" id="main-content">
       <section className="mx-auto grid w-full max-w-4xl gap-8 px-5 py-10">
         <div className="grid gap-2">
           <p className="text-sm font-medium uppercase text-muted-foreground">
@@ -64,7 +64,7 @@ export function PublicOrderReview({
           </div>
           <Button asChild>
             <Link href={deliveryHref}>
-              <Truck className="size-4" />
+              <Truck aria-hidden="true" className="size-4" />
               Перейти до доставки й оплати
             </Link>
           </Button>
@@ -85,7 +85,11 @@ function PaymentStatusNotice({ order }: { order: PublicOrderReviewData }) {
   }
 
   return (
-    <p className="rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+    <p
+      aria-live="polite"
+      className="rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground"
+      role="status"
+    >
       {message}
     </p>
   );
@@ -93,7 +97,7 @@ function PaymentStatusNotice({ order }: { order: PublicOrderReviewData }) {
 
 export function PublicOrderUnavailable() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background" id="main-content">
       <section className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center gap-4 px-5 py-10 text-center">
         <p className="text-sm font-medium uppercase text-muted-foreground">
           Dase
@@ -120,7 +124,10 @@ function PublicOrderItemImage({
   if (!imageUrl) {
     return (
       <div className="flex size-20 items-center justify-center rounded-md bg-muted">
-        <ImageIcon className="size-7 text-muted-foreground" />
+        <ImageIcon
+          aria-hidden="true"
+          className="size-7 text-muted-foreground"
+        />
       </div>
     );
   }
@@ -130,7 +137,10 @@ function PublicOrderItemImage({
     <img
       alt={item.productNameSnapshot}
       className="size-20 rounded-md object-cover"
+      height="80"
+      loading="lazy"
       src={imageUrl}
+      width="80"
     />
   );
 }

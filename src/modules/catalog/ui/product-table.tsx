@@ -57,7 +57,7 @@ export function ProductTable({ products, toggleAction }: ProductTableProps) {
                 <div className="flex justify-end gap-2">
                   <Button asChild size="sm" variant="outline">
                     <Link href={`/dashboard/products/${product.id}/edit`}>
-                      <Edit3 className="size-4" />
+                      <Edit3 aria-hidden="true" className="size-4" />
                       Редагувати
                     </Link>
                   </Button>
@@ -70,9 +70,9 @@ export function ProductTable({ products, toggleAction }: ProductTableProps) {
                   >
                     <Button size="sm" type="submit" variant="outline">
                       {product.isActive ? (
-                        <PowerOff className="size-4" />
+                        <PowerOff aria-hidden="true" className="size-4" />
                       ) : (
-                        <Power className="size-4" />
+                        <Power aria-hidden="true" className="size-4" />
                       )}
                       {product.isActive ? "Вимкнути" : "Увімкнути"}
                     </Button>
@@ -103,7 +103,10 @@ function ProductImage({ product }: { product: ProductRecord }) {
     <img
       alt={image.altText ?? product.name}
       className="size-14 rounded-md object-cover"
+      height="56"
+      loading="lazy"
       src={image.url}
+      width="56"
     />
   );
 }

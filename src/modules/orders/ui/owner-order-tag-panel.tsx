@@ -64,6 +64,7 @@ export function OwnerOrderTagPanel({
               ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
               : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           }
+          aria-live="polite"
           role={message.ok ? "status" : "alert"}
         >
           {message.message}
@@ -85,9 +86,9 @@ export function OwnerOrderTagPanel({
                 type="submit"
                 variant="outline"
               >
-                <Tag className="size-4" />
+                <Tag aria-hidden="true" className="size-4" />
                 {tag.name}
-                <X className="size-4" />
+                <X aria-hidden="true" className="size-4" />
               </Button>
             </form>
           ))
@@ -113,13 +114,14 @@ export function OwnerOrderTagPanel({
           </label>
           <div className="flex gap-2">
             <input
+              autoComplete="off"
               className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
               id="new-order-tag"
               name="tagName"
               placeholder="Наприклад: Подарунок"
             />
             <Button disabled={isPending} type="submit">
-              <Plus className="size-4" />
+              <Plus aria-hidden="true" className="size-4" />
               Додати
             </Button>
           </div>
@@ -134,6 +136,7 @@ export function OwnerOrderTagPanel({
           </label>
           <div className="flex gap-2">
             <select
+              autoComplete="off"
               className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
               disabled={!unassignedTags.length}
               id="existing-order-tag"

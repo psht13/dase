@@ -47,7 +47,7 @@ export function OwnerOrderDetailsView({
         <div>
           <Button asChild size="sm" variant="outline">
             <Link href="/dashboard/orders">
-              <ArrowLeft className="size-4" />
+              <ArrowLeft aria-hidden="true" className="size-4" />
               До списку замовлень
             </Link>
           </Button>
@@ -60,7 +60,7 @@ export function OwnerOrderDetailsView({
         </div>
         <Button asChild variant="outline">
           <Link href={publicUrl}>
-            <ExternalLink className="size-4" />
+            <ExternalLink aria-hidden="true" className="size-4" />
             Публічна сторінка
           </Link>
         </Button>

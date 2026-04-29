@@ -57,10 +57,10 @@ describe("getSessionUserFromHeaders", () => {
       api: {
         getSession: vi.fn(async () => ({
           user: {
-            email: "admin@example.com",
+            email: "legacy@example.com",
             id: "user-1",
             name: "Користувач",
-            role: "admin",
+            role: "legacy",
           },
         })),
       },

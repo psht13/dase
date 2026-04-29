@@ -80,7 +80,7 @@ export function OwnerOrdersTable({ orders }: OwnerOrdersTableProps) {
                 <div className="flex justify-end">
                   <Button asChild size="sm" variant="outline">
                     <Link href={`/dashboard/orders/${order.id}`}>
-                      <ExternalLink className="size-4" />
+                      <ExternalLink aria-hidden="true" className="size-4" />
                       Відкрити
                     </Link>
                   </Button>

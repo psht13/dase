@@ -44,6 +44,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
   });
   const carrier = form.watch("carrier");
   const selectedCityId = form.watch("cityId");
+  const selectedWarehouseId = form.watch("warehouseId");
   const carrierField = form.register("carrier");
 
   useEffect(() => {
@@ -197,6 +198,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
               ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
               : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           }
+          aria-live="polite"
           role={isConfirmed ? "status" : "alert"}
         >
           {serverMessage}
@@ -209,12 +211,22 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             Повне ім’я
           </label>
           <input
+            aria-describedby={
+              form.formState.errors.fullName
+                ? "delivery-full-name-error"
+                : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.fullName)}
+            autoComplete="name"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-full-name"
             placeholder="Ім’я та прізвище"
             {...form.register("fullName")}
           />
-          <FieldError message={form.formState.errors.fullName?.message} />
+          <FieldError
+            id="delivery-full-name-error"
+            message={form.formState.errors.fullName?.message}
+          />
         </div>
 
         <div className="grid gap-2">
@@ -222,13 +234,22 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             Телефон
           </label>
           <input
+            aria-describedby={
+              form.formState.errors.phone ? "delivery-phone-error" : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.phone)}
+            autoComplete="tel"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-phone"
             inputMode="tel"
             placeholder="+380XXXXXXXXX"
+            type="tel"
             {...form.register("phone")}
           />
-          <FieldError message={form.formState.errors.phone?.message} />
+          <FieldError
+            id="delivery-phone-error"
+            message={form.formState.errors.phone?.message}
+          />
         </div>
       </section>
 
@@ -238,6 +259,13 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             Служба доставки
           </label>
           <select
+            aria-describedby={
+              form.formState.errors.carrier
+                ? "delivery-carrier-error"
+                : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.carrier)}
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-carrier"
             {...carrierField}
@@ -249,7 +277,10 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             <option value="NOVA_POSHTA">Нова Пошта</option>
             <option value="UKRPOSHTA">Укрпошта</option>
           </select>
-          <FieldError message={form.formState.errors.carrier?.message} />
+          <FieldError
+            id="delivery-carrier-error"
+            message={form.formState.errors.carrier?.message}
+          />
         </div>
 
         <input type="hidden" {...form.register("cityId")} />
@@ -263,8 +294,16 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             Місто або населений пункт
           </label>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
+            />
             <input
+              aria-describedby={
+                form.formState.errors.cityId ? "delivery-city-error" : undefined
+              }
+              aria-invalid={Boolean(form.formState.errors.cityId)}
+              autoComplete="address-level2"
               className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               id="delivery-city"
               onChange={(event) => {
@@ -276,23 +315,28 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
               value={cityQuery}
             />
           </div>
-          <FieldError message={form.formState.errors.cityId?.message} />
-          <LookupResults
-            emptyMessage="Місто не знайдено"
-            errorMessage="Не вдалося завантажити міста"
-            loadingMessage="Пошук міст..."
-            onSelect={selectCity}
-            renderItem={(city) => (
-              <>
-                <span>{city.name}</span>
-                {city.region ? (
-                  <span className="text-muted-foreground">{city.region}</span>
-                ) : null}
-              </>
-            )}
-            results={cities}
-            status={cityStatus}
+          <FieldError
+            id="delivery-city-error"
+            message={form.formState.errors.cityId?.message}
           />
+          {!selectedCityId ? (
+            <LookupResults
+              emptyMessage="Місто не знайдено"
+              errorMessage="Не вдалося завантажити міста"
+              loadingMessage="Пошук міст…"
+              onSelect={selectCity}
+              renderItem={(city) => (
+                <>
+                  <span>{city.name}</span>
+                  {city.region ? (
+                    <span className="text-muted-foreground">{city.region}</span>
+                  ) : null}
+                </>
+              )}
+              results={cities}
+              status={cityStatus}
+            />
+          ) : null}
         </div>
 
         <div className="grid gap-2">
@@ -300,8 +344,18 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             Відділення або поштове відділення
           </label>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
+            />
             <input
+              aria-describedby={
+                form.formState.errors.warehouseId
+                  ? "delivery-warehouse-error"
+                  : undefined
+              }
+              aria-invalid={Boolean(form.formState.errors.warehouseId)}
+              autoComplete="off"
               className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               disabled={!selectedCityId}
               id="delivery-warehouse"
@@ -315,25 +369,30 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
               value={warehouseQuery}
             />
           </div>
-          <FieldError message={form.formState.errors.warehouseId?.message} />
-          <LookupResults
-            emptyMessage="Відділення не знайдено"
-            errorMessage="Не вдалося завантажити відділення"
-            loadingMessage="Пошук відділень..."
-            onSelect={selectWarehouse}
-            renderItem={(warehouse) => (
-              <>
-                <span>{warehouse.name}</span>
-                {warehouse.address ? (
-                  <span className="text-muted-foreground">
-                    {warehouse.address}
-                  </span>
-                ) : null}
-              </>
-            )}
-            results={warehouses}
-            status={warehouseStatus}
+          <FieldError
+            id="delivery-warehouse-error"
+            message={form.formState.errors.warehouseId?.message}
           />
+          {!selectedWarehouseId ? (
+            <LookupResults
+              emptyMessage="Відділення не знайдено"
+              errorMessage="Не вдалося завантажити відділення"
+              loadingMessage="Пошук відділень…"
+              onSelect={selectWarehouse}
+              renderItem={(warehouse) => (
+                <>
+                  <span>{warehouse.name}</span>
+                  {warehouse.address ? (
+                    <span className="text-muted-foreground">
+                      {warehouse.address}
+                    </span>
+                  ) : null}
+                </>
+              )}
+              results={warehouses}
+              status={warehouseStatus}
+            />
+          ) : null}
         </div>
       </section>
 
@@ -343,6 +402,13 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             Спосіб оплати
           </label>
           <select
+            aria-describedby={
+              form.formState.errors.paymentMethod
+                ? "delivery-payment-error"
+                : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.paymentMethod)}
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-payment"
             {...form.register("paymentMethod")}
@@ -350,13 +416,16 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             <option value="MONOBANK">MonoPay</option>
             <option value="CASH_ON_DELIVERY">Післяплата</option>
           </select>
-          <FieldError message={form.formState.errors.paymentMethod?.message} />
+          <FieldError
+            id="delivery-payment-error"
+            message={form.formState.errors.paymentMethod?.message}
+          />
         </div>
       </section>
 
       <Button disabled={isPending || isConfirmed} type="submit">
-        <CheckCircle2 className="size-4" />
-        {isPending ? "Підтвердження..." : "Підтвердити замовлення"}
+        <CheckCircle2 aria-hidden="true" className="size-4" />
+        {isPending ? "Підтвердження…" : "Підтвердити замовлення"}
       </Button>
     </form>
   );
@@ -384,15 +453,27 @@ function LookupResults<T>({
   }
 
   if (status === "loading") {
-    return <p className="text-sm text-muted-foreground">{loadingMessage}</p>;
+    return (
+      <p aria-live="polite" className="text-sm text-muted-foreground">
+        {loadingMessage}
+      </p>
+    );
   }
 
   if (status === "error") {
-    return <p className="text-sm text-destructive">{errorMessage}</p>;
+    return (
+      <p aria-live="polite" className="text-sm text-destructive" role="alert">
+        {errorMessage}
+      </p>
+    );
   }
 
   if (!results.length) {
-    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
+    return (
+      <p aria-live="polite" className="text-sm text-muted-foreground">
+        {emptyMessage}
+      </p>
+    );
   }
 
   return (
@@ -411,10 +492,14 @@ function LookupResults<T>({
   );
 }
 
-function FieldError({ message }: { message?: string }) {
+function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) {
     return null;
   }
 
-  return <p className="text-sm text-destructive">{message}</p>;
+  return (
+    <p aria-live="polite" className="text-sm text-destructive" id={id}>
+      {message}
+    </p>
+  );
 }

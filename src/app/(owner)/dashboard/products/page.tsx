@@ -23,7 +23,7 @@ export default async function ProductsPage() {
         </div>
         <Button asChild>
           <Link href="/dashboard/products/new">
-            <Plus className="size-4" />
+            <Plus aria-hidden="true" className="size-4" />
             Створити товар
           </Link>
         </Button>

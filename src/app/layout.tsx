@@ -13,7 +13,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk">
-      <body>{children}</body>
+      <body>
+        <a className="skip-link" href="#main-content">
+          Перейти до основного вмісту
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

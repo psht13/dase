@@ -17,14 +17,14 @@ export default async function DashboardLayout({
   const owner = await requireOwnerSession();
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background" id="main-content">
       <div className="mx-auto grid min-h-screen w-full max-w-7xl md:grid-cols-[16rem_1fr]">
         <aside className="border-b bg-muted/30 px-5 py-4 md:border-b-0 md:border-r">
           <Link
             className="flex items-center gap-2 text-lg font-semibold"
             href="/dashboard"
           >
-            <Gem className="size-5" />
+            <Gem aria-hidden="true" className="size-5" />
             Dase
           </Link>
           <nav className="mt-6 grid gap-1">
@@ -32,28 +32,28 @@ export default async function DashboardLayout({
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
               href="/dashboard"
             >
-              <LayoutDashboard className="size-4" />
+              <LayoutDashboard aria-hidden="true" className="size-4" />
               Огляд
             </Link>
             <Link
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
               href="/dashboard/products"
             >
-              <Package className="size-4" />
+              <Package aria-hidden="true" className="size-4" />
               Каталог товарів
             </Link>
             <Link
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
               href="/dashboard/orders"
             >
-              <ShoppingBag className="size-4" />
+              <ShoppingBag aria-hidden="true" className="size-4" />
               Замовлення
             </Link>
             <Link
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
               href="/dashboard/orders/new"
             >
-              <ShoppingCart className="size-4" />
+              <ShoppingCart aria-hidden="true" className="size-4" />
               Створити замовлення
             </Link>
           </nav>

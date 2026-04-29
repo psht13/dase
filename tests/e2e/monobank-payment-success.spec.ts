@@ -19,6 +19,8 @@ test("customer completes a mocked MonoPay payment success flow", async ({
     .getByLabel("URL зображення")
     .fill("https://example.com/e2e-pendant.jpg");
   await page.getByRole("button", { name: "Створити товар" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/products$/);
+  await expect(page.getByText(productName)).toBeVisible();
 
   await page.goto("/dashboard/orders/new");
   await page.getByLabel(`Додати ${productName}`).check();

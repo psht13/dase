@@ -21,6 +21,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
     Object.fromEntries(products.map((product) => [product.id, "1"])),
   );
   const [message, setMessage] = useState<string | null>(null);
+  const [messageKind, setMessageKind] = useState<"alert" | "status">("status");
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -73,6 +74,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
     setCopyMessage(null);
 
     if (!selectedProductIds.size) {
+      setMessageKind("alert");
       setMessage("Оберіть хоча б один товар");
       return;
     }
@@ -84,6 +86,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
 
     startTransition(() => {
       void action(formData).then((result) => {
+        setMessageKind(result.ok ? "status" : "alert");
         setMessage(result.message);
 
         if (result.ok) {
@@ -121,8 +124,13 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
     <form className="grid gap-6" noValidate onSubmit={submitOrder}>
       {message ? (
         <p
-          className="rounded-md border border-border bg-muted px-3 py-2 text-sm"
-          role="status"
+          aria-live="polite"
+          className={
+            messageKind === "status"
+              ? "rounded-md border border-border bg-muted px-3 py-2 text-sm"
+              : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          }
+          role={messageKind}
         >
           {message}
         </p>
@@ -215,15 +223,15 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
           </p>
         </div>
         <Button disabled={isPending} type="submit">
-          <Send className="size-4" />
-          {isPending ? "Створення..." : "Створити посилання"}
+          <Send aria-hidden="true" className="size-4" />
+          {isPending ? "Створення…" : "Створити посилання"}
         </Button>
       </div>
 
       {publicUrl ? (
         <section className="grid gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
           <div className="flex items-center gap-2 font-medium">
-            <Link2 className="size-4" />
+            <Link2 aria-hidden="true" className="size-4" />
             Публічне посилання готове
           </div>
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -236,11 +244,15 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
               />
             </label>
             <Button onClick={copyPublicUrl} type="button" variant="outline">
-              <Copy className="size-4" />
+              <Copy aria-hidden="true" className="size-4" />
               Копіювати
             </Button>
           </div>
-          {copyMessage ? <p className="text-sm">{copyMessage}</p> : null}
+          {copyMessage ? (
+            <p aria-live="polite" className="text-sm" role="status">
+              {copyMessage}
+            </p>
+          ) : null}
         </section>
       ) : null}
     </form>
@@ -251,7 +263,10 @@ function ProductPreview({ product }: { product: OrderBuilderProduct }) {
   if (!product.imageUrl) {
     return (
       <div className="flex size-14 items-center justify-center rounded-md bg-muted">
-        <ImageIcon className="size-6 text-muted-foreground" />
+        <ImageIcon
+          aria-hidden="true"
+          className="size-6 text-muted-foreground"
+        />
       </div>
     );
   }
@@ -261,7 +276,10 @@ function ProductPreview({ product }: { product: OrderBuilderProduct }) {
     <img
       alt={product.name}
       className="size-14 rounded-md object-cover"
+      height="56"
+      loading="lazy"
       src={product.imageUrl}
+      width="56"
     />
   );
 }

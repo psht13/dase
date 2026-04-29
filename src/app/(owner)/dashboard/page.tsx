@@ -16,7 +16,7 @@ export default function DashboardPage() {
         </div>
         <Button asChild>
           <Link href="/dashboard/products/new">
-            <Package className="size-4" />
+            <Package aria-hidden="true" className="size-4" />
             Додати товар
           </Link>
         </Button>
@@ -27,7 +27,10 @@ export default function DashboardPage() {
           className="rounded-md border p-5 transition-colors hover:bg-accent"
           href="/dashboard/products"
         >
-          <Package className="size-5 text-muted-foreground" />
+          <Package
+            aria-hidden="true"
+            className="size-5 text-muted-foreground"
+          />
           <h2 className="mt-4 text-lg font-semibold">Каталог товарів</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Додавайте вироби, ціни, залишки та посилання на зображення.
@@ -38,7 +41,10 @@ export default function DashboardPage() {
           className="rounded-md border p-5 transition-colors hover:bg-accent"
           href="/dashboard/orders"
         >
-          <ShoppingBag className="size-5 text-muted-foreground" />
+          <ShoppingBag
+            aria-hidden="true"
+            className="size-5 text-muted-foreground"
+          />
           <h2 className="mt-4 text-lg font-semibold">
             Замовлення
           </h2>

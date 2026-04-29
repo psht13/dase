@@ -25,6 +25,7 @@ export function OwnerOrdersFilterForm({
         <label className="grid gap-2 text-sm font-medium">
           Статус
           <select
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.status ?? ""}
             name="status"
@@ -41,6 +42,7 @@ export function OwnerOrdersFilterForm({
         <label className="grid gap-2 text-sm font-medium">
           Служба доставки
           <select
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.deliveryCarrier ?? ""}
             name="deliveryCarrier"
@@ -56,6 +58,7 @@ export function OwnerOrdersFilterForm({
         <label className="grid gap-2 text-sm font-medium">
           Спосіб оплати
           <select
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.paymentMethod ?? ""}
             name="paymentMethod"
@@ -73,6 +76,7 @@ export function OwnerOrdersFilterForm({
         <label className="grid gap-2 text-sm font-medium">
           Тег
           <select
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.tagId ?? ""}
             name="tagId"
@@ -89,6 +93,7 @@ export function OwnerOrdersFilterForm({
         <label className="grid gap-2 text-sm font-medium">
           Дата від
           <input
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={dateInputValue(filters.dateFrom)}
             name="dateFrom"
@@ -99,6 +104,7 @@ export function OwnerOrdersFilterForm({
         <label className="grid gap-2 text-sm font-medium">
           Дата до
           <input
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={dateInputValue(filters.dateTo)}
             name="dateTo"
@@ -109,8 +115,12 @@ export function OwnerOrdersFilterForm({
         <label className="grid gap-2 text-sm font-medium">
           Пошук
           <span className="relative">
-            <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
+            />
             <input
+              autoComplete="off"
               className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm"
               defaultValue={filters.search ?? ""}
               name="search"

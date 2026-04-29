@@ -118,4 +118,40 @@ describe("ProductForm", () => {
     ]);
     expect(push).toHaveBeenCalledWith("/dashboard/products");
   });
+
+  it("shows Ukrainian server field errors next to the matching control", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn(async (): Promise<ProductActionResult> => ({
+      fieldErrors: {
+        name: ["Назва товару вже використовується"],
+      },
+      message: "Перевірте дані товару",
+      ok: false,
+    }));
+
+    render(
+      <ProductForm
+        action={action}
+        cancelHref="/dashboard/products"
+        submitLabel="Створити товар"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Назва товару"), "Каблучка");
+    await user.type(screen.getByLabelText("Артикул"), "RING-1");
+    await user.type(screen.getByLabelText("Ціна, грн"), "1200");
+    await user.type(
+      screen.getByLabelText("URL зображення"),
+      "https://example.com/ring.jpg",
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Створити товар/i }),
+    );
+
+    expect(await screen.findByText("Перевірте дані товару")).toBeVisible();
+    expect(screen.getByText("Назва товару вже використовується")).toBeVisible();
+    expect(screen.getByLabelText("Назва товару")).toHaveAccessibleDescription(
+      "Назва товару вже використовується",
+    );
+  });
 });

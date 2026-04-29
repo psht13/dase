@@ -32,7 +32,7 @@ export default async function PublicDeliveryPage({
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background" id="main-content">
       <section className="mx-auto grid w-full max-w-3xl gap-6 px-5 py-10">
         <div className="grid gap-2">
           <p className="text-sm font-medium uppercase text-muted-foreground">

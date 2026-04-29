@@ -89,8 +89,16 @@ describe("DeliveryForm", () => {
     await user.click(
       await screen.findByRole("button", { name: /Київ.*Київська область/ }),
     );
+    await waitFor(() =>
+      expect(screen.queryByText("Місто не знайдено")).not.toBeInTheDocument(),
+    );
     await user.click(
       await screen.findByRole("button", { name: /Відділення №1/ }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Відділення не знайдено"),
+      ).not.toBeInTheDocument(),
     );
     await user.selectOptions(screen.getByLabelText("Спосіб оплати"), [
       "CASH_ON_DELIVERY",

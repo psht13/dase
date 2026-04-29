@@ -60,7 +60,7 @@ Repository audit on 2026-04-30:
 - Starter UI copy is Ukrainian and covered by unit and E2E tests.
 - Initial Drizzle migrations create users, products, product images, orders, order items, customers, payments, shipments, order tags, audit events, webhook events, and carrier directory cache tables.
 - Roles are restricted to `owner` and `user`; the default user role is `user`.
-- Domain tests cover order total calculation, quantity validation, order status transitions, product snapshots in order items, role rejection for `admin`, image URL validation, and public order token generation.
+- Domain tests cover order total calculation, quantity validation, order status transitions, product snapshots in order items, unsupported role rejection, image URL validation, and public order token generation.
 - Application repository ports are defined at module boundaries; Drizzle repository implementations live under infrastructure modules.
 
 Owner auth and catalog update on 2026-04-30:
@@ -131,6 +131,16 @@ Owner order management update on 2026-04-30:
 - All owner order management labels, filters, table headings, empty states, action messages, status text, and audit labels are Ukrainian.
 - Unit and UI tests cover list orders, filters, tag assignment/removal, audit event creation, manual status update rules, owner order pages, Ukrainian labels, and order tag repositories.
 - Playwright e2e covers owner order filtering, tag creation, manual status update, audit visibility, and the shipment retry entry point.
+
+UI polish and accessibility verification update on 2026-04-30:
+- Added a global Ukrainian skip link to the main content area and visible focus treatment for links, buttons, inputs, selects, and textareas.
+- Product, delivery, order builder, owner status, tag, and retry forms now expose async updates through live regions where relevant; field-level errors are connected to controls with `aria-describedby` and invalid states on the customer/product forms.
+- Loading copy uses Ukrainian text with proper ellipses, decorative icons are hidden from assistive technology, and product/order images include explicit dimensions.
+- Public customer review and delivery pages were checked at a 390px mobile viewport with Playwright MCP; the public customer E2E test asserts no horizontal overflow on critical public screens.
+- Playwright MCP inspected product creation, owner order builder, public order review, customer delivery/payment confirmation, owner orders list, and owner order details.
+- MCP verification found and fixed a stale city lookup empty-state message that could appear after selecting a city.
+- Playwright E2E now asserts the keyboard skip link, product validation error state, public mobile labels, and stable product creation waits before order-builder navigation.
+- Code and test fixtures no longer contain an `admin` role string; unsupported-role tests use a neutral unsupported role.
 
 ## Core flows
 
@@ -330,6 +340,13 @@ Latest local quality status on 2026-04-30 after the owner order management miles
 - `pnpm build` passed.
 - `pnpm db:generate` passed and created `drizzle/0003_kind_deathstrike.sql`.
 
+Latest local quality status on 2026-04-30 after the UI polish milestone:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 90.84% statements, 80.17% branches, 93% functions, and 90.84% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium, including the updated keyboard, mobile public customer, product creation, order builder, delivery/payment, MonoPay, and owner order management checks.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -403,6 +420,7 @@ Current Railway status on 2026-04-30:
 - `list_services` failed again during Prompt 06 because the Railway token is invalid or expired.
 - `list_projects` failed again during Prompt 07 because the Railway token is invalid or expired.
 - `list_projects` and `list_services` failed again during Prompt 08 because the Railway token is invalid or expired.
+- `list_projects` and `list_services` failed again during Prompt 09 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.

@@ -60,6 +60,18 @@ export function ProductForm({
           return;
         }
 
+        for (const [field, messages] of Object.entries(
+          result.fieldErrors ?? {},
+        )) {
+          if (!messages[0]) {
+            continue;
+          }
+
+          form.setError(field as keyof ProductFormValues, {
+            message: messages[0],
+            type: "server",
+          });
+        }
         setServerMessage(result.message);
       });
     });
@@ -72,7 +84,11 @@ export function ProductForm({
       onSubmit={form.handleSubmit(onSubmit)}
     >
       {serverMessage ? (
-        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p
+          aria-live="polite"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
           {serverMessage}
         </p>
       ) : null}
@@ -83,12 +99,20 @@ export function ProductForm({
             Назва товару
           </label>
           <input
+            aria-describedby={
+              form.formState.errors.name ? "product-name-error" : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.name)}
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-name"
             placeholder="Каблучка з перлами"
             {...form.register("name")}
           />
-          <FieldError message={form.formState.errors.name?.message} />
+          <FieldError
+            id="product-name-error"
+            message={form.formState.errors.name?.message}
+          />
         </div>
 
         <div className="grid gap-2">
@@ -96,12 +120,21 @@ export function ProductForm({
             Артикул
           </label>
           <input
+            aria-describedby={
+              form.formState.errors.sku ? "product-sku-error" : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.sku)}
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-sku"
             placeholder="RING-001"
+            spellCheck={false}
             {...form.register("sku")}
           />
-          <FieldError message={form.formState.errors.sku?.message} />
+          <FieldError
+            id="product-sku-error"
+            message={form.formState.errors.sku?.message}
+          />
         </div>
 
         <div className="grid gap-2">
@@ -109,12 +142,22 @@ export function ProductForm({
             Опис
           </label>
           <textarea
+            aria-describedby={
+              form.formState.errors.description
+                ? "product-description-error"
+                : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.description)}
+            autoComplete="off"
             className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-description"
             placeholder="Матеріал, розмір, особливості виробу"
             {...form.register("description")}
           />
-          <FieldError message={form.formState.errors.description?.message} />
+          <FieldError
+            id="product-description-error"
+            message={form.formState.errors.description?.message}
+          />
         </div>
       </section>
 
@@ -124,13 +167,21 @@ export function ProductForm({
             Ціна, грн
           </label>
           <input
+            aria-describedby={
+              form.formState.errors.price ? "product-price-error" : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.price)}
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-price"
             inputMode="decimal"
             placeholder="1200,00"
             {...form.register("price")}
           />
-          <FieldError message={form.formState.errors.price?.message} />
+          <FieldError
+            id="product-price-error"
+            message={form.formState.errors.price?.message}
+          />
         </div>
 
         <div className="grid gap-2">
@@ -138,13 +189,23 @@ export function ProductForm({
             Залишок
           </label>
           <input
+            aria-describedby={
+              form.formState.errors.stockQuantity
+                ? "product-stock-error"
+                : undefined
+            }
+            aria-invalid={Boolean(form.formState.errors.stockQuantity)}
+            autoComplete="off"
             className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-stock"
             inputMode="numeric"
             placeholder="5"
             {...form.register("stockQuantity")}
           />
-          <FieldError message={form.formState.errors.stockQuantity?.message} />
+          <FieldError
+            id="product-stock-error"
+            message={form.formState.errors.stockQuantity?.message}
+          />
         </div>
       </section>
 
@@ -156,7 +217,7 @@ export function ProductForm({
             type="button"
             variant="outline"
           >
-            <Plus className="size-4" />
+            <Plus aria-hidden="true" className="size-4" />
             Додати зображення
           </Button>
         </div>
@@ -178,12 +239,24 @@ export function ProductForm({
                     URL зображення
                   </label>
                   <input
+                    aria-describedby={
+                      form.formState.errors.imageUrls?.[index]?.url
+                        ? `product-image-${index}-error`
+                        : undefined
+                    }
+                    aria-invalid={Boolean(
+                      form.formState.errors.imageUrls?.[index]?.url,
+                    )}
+                    autoComplete="off"
                     className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     id={`product-image-${index}`}
                     placeholder="https://example.com/image.jpg"
+                    spellCheck={false}
+                    type="url"
                     {...form.register(`imageUrls.${index}.url`)}
                   />
                   <FieldError
+                    id={`product-image-${index}-error`}
                     message={
                       form.formState.errors.imageUrls?.[index]?.url?.message
                     }
@@ -196,7 +269,9 @@ export function ProductForm({
                     <img
                       alt={`Зображення товару ${index + 1}`}
                       className="size-full object-cover"
+                      height="144"
                       src={url}
+                      width="144"
                     />
                   ) : (
                     <ImageIcon
@@ -214,7 +289,7 @@ export function ProductForm({
                   type="button"
                   variant="outline"
                 >
-                  <Trash2 className="size-4" />
+                  <Trash2 aria-hidden="true" className="size-4" />
                 </Button>
               </div>
             );
@@ -236,20 +311,24 @@ export function ProductForm({
           <Link href={cancelHref}>Скасувати</Link>
         </Button>
         <Button disabled={isPending} type="submit">
-          <Save className="size-4" />
-          {isPending ? "Збереження..." : submitLabel}
+          <Save aria-hidden="true" className="size-4" />
+          {isPending ? "Збереження…" : submitLabel}
         </Button>
       </div>
     </form>
   );
 }
 
-function FieldError({ message }: { message?: string }) {
+function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) {
     return null;
   }
 
-  return <p className="text-sm text-destructive">{message}</p>;
+  return (
+    <p aria-live="polite" className="text-sm text-destructive" id={id}>
+      {message}
+    </p>
+  );
 }
 
 function isPreviewableUrl(value: string): boolean {

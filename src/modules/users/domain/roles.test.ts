@@ -12,8 +12,8 @@ describe("app roles", () => {
     expect(parseAppRole("owner")).toBe("owner");
   });
 
-  it("rejects admin role", () => {
-    expect(isAppRole("admin")).toBe(false);
-    expect(() => parseAppRole("admin")).toThrow(/Unsupported user role/);
+  it("rejects unsupported roles", () => {
+    expect(isAppRole("legacy")).toBe(false);
+    expect(() => parseAppRole("legacy")).toThrow(/Unsupported user role/);
   });
 });

@@ -11,8 +11,19 @@ test("owner creates a product from the dashboard catalog", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Каталог товарів" }),
   ).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("link", { name: "Перейти до основного вмісту" }),
+  ).toBeFocused();
 
   await page.getByRole("link", { name: "Створити товар" }).click();
+  await page.getByRole("button", { name: "Створити товар" }).click();
+  await expect(page.getByText("Вкажіть назву товару")).toBeVisible();
+  await expect(page.getByText("Вкажіть артикул")).toBeVisible();
+  await expect(
+    page.getByText("Додайте посилання на зображення", { exact: true }),
+  ).toBeVisible();
+
   await page.getByLabel("Назва товару").fill(productName);
   await page.getByLabel("Артикул").fill(sku);
   await page.getByLabel("Опис").fill("Срібна каблучка для e2e перевірки");

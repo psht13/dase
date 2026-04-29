@@ -9,7 +9,7 @@ const starterItems = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background" id="main-content">
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center gap-8 px-6 py-12">
         <div className="max-w-3xl space-y-5">
           <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
@@ -30,7 +30,10 @@ export default function Home() {
               className="flex min-h-24 items-center gap-3 rounded-md border bg-card px-4 py-3 text-card-foreground"
               key={item}
             >
-              <CheckCircle2 className="size-5 shrink-0 text-emerald-600" />
+              <CheckCircle2
+                aria-hidden="true"
+                className="size-5 shrink-0 text-emerald-600"
+              />
               <span className="text-sm font-medium">{item}</span>
             </div>
           ))}

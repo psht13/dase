@@ -48,6 +48,7 @@ export function OwnerOrderRetryShipmentForm({
               ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
               : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           }
+          aria-live="polite"
           role={message.ok ? "status" : "alert"}
         >
           {message.message}
@@ -56,8 +57,8 @@ export function OwnerOrderRetryShipmentForm({
 
       <form action={onSubmit}>
         <Button disabled={!canRetry || isPending} type="submit" variant="outline">
-          <RotateCcw className="size-4" />
-          {isPending ? "Планування..." : "Повторити створення відправлення"}
+          <RotateCcw aria-hidden="true" className="size-4" />
+          {isPending ? "Планування…" : "Повторити створення відправлення"}
         </Button>
       </form>
     </section>

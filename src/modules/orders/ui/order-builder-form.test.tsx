@@ -50,6 +50,22 @@ describe("OrderBuilderForm", () => {
     expect(screen.getByText("Немає активних товарів")).toBeVisible();
     expect(screen.getByText(/Увімкніть товари в каталозі/i)).toBeVisible();
   });
+
+  it("renders a Ukrainian alert when no product is selected", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+
+    render(<OrderBuilderForm action={action} products={[createProduct()]} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Створити посилання" }),
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Оберіть хоча б один товар",
+    );
+    expect(action).not.toHaveBeenCalled();
+  });
 });
 
 function createProduct(): OrderBuilderProduct {

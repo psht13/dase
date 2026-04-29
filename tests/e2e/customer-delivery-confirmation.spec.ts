@@ -17,6 +17,8 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
     .getByLabel("URL зображення")
     .fill("https://example.com/e2e-ring.jpg");
   await page.getByRole("button", { name: "Створити товар" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/products$/);
+  await expect(page.getByText(productName)).toBeVisible();
 
   await page.goto("/dashboard/orders/new");
   await page.getByLabel(`Додати ${productName}`).check();
@@ -25,13 +27,21 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
 
   const publicUrl = await page.getByLabel("Публічне посилання").inputValue();
 
+  await page.setViewportSize({ height: 844, width: 390 });
   await page.goto(publicUrl);
+  await expect(page.getByRole("heading", { name: "Ваше замовлення" })).toBeVisible();
+  await expect(page.getByText(productName)).toBeVisible();
+  await expectNoHorizontalOverflow(page);
   await page
     .getByRole("link", { name: "Перейти до доставки й оплати" })
     .click();
   await expect(
     page.getByRole("heading", { name: "Доставка та оплата" }),
   ).toBeVisible();
+  await expect(page.getByLabel("Повне ім’я")).toBeVisible();
+  await expect(page.getByLabel("Місто або населений пункт")).toBeVisible();
+  await expect(page.getByLabel("Спосіб оплати")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 
   await page.getByLabel("Повне ім’я").fill("Олена Петренко");
   await page.getByLabel("Телефон").fill("+380671234567");
@@ -46,6 +56,16 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
     page.getByText("Замовлення підтверджено. Оплата при отриманні."),
   ).toBeVisible();
 });
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    )
+    .toBe(true);
+}
 
 async function seedSession(page: Page, role: "owner" | "user") {
   await page.context().addCookies([
