@@ -37,6 +37,7 @@ Required for production `web` and `worker`:
 - `BETTER_AUTH_SECRET` - at least 32 characters.
 - `BETTER_AUTH_URL` - canonical deployed web URL.
 - `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` - default `24` if omitted.
+- `NODE_ENV` - normally set to `production` by the runtime.
 
 Required for MonoPay / Monobank production payment flow:
 - `MONOBANK_TOKEN`
@@ -55,8 +56,12 @@ Required for Ukrposhta production shipment flow:
 
 Test-only variables that must not be enabled in production:
 - `PLAYWRIGHT_E2E`
+- `PLAYWRIGHT_BASE_URL`
 - `USE_MOCK_SHIPPING_CARRIERS`
 - `DATABASE_URL_TEST`
+
+Tooling-managed CI variable:
+- `CI` - set by GitHub Actions and used by Playwright for retry/reporting behavior.
 
 `DATABASE_URL` must be available to both `web` and `worker`. The `postgres` service should expose it through Railway variable references rather than copied plaintext credentials.
 
@@ -104,4 +109,4 @@ Do not call live external APIs in CI. After production variables are configured,
 
 ## Current Blocker
 
-Railway MCP was attempted from this workspace on 2026-04-30, but the Railway CLI token is invalid or expired. Because of that, live service creation, GitHub linking, variable configuration, PostgreSQL provisioning, autodeploy settings, and migration verification could not be completed from this session.
+Railway MCP was attempted from this workspace on 2026-04-30, including during release-candidate hardening, but the Railway CLI token is invalid or expired. Because of that, live service creation, GitHub linking, variable configuration, PostgreSQL provisioning, autodeploy settings, and migration verification could not be completed from this session.

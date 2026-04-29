@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, shipment worker automation, owner order management, UI polish, and repository-side Railway deployment configuration implemented locally
+Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, shipment worker automation, owner order management, UI polish, repository-side Railway deployment configuration, and release-candidate hardening implemented locally
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -151,6 +151,19 @@ Railway deployment readiness update on 2026-04-30:
 - Added `DEPLOYMENT.md` with Railway services, env vars, deployment flow, rollback notes, migration notes, manual external API verification, and the external-image-URL-only image strategy.
 - Added a deployment configuration test to keep web and worker Railway commands aligned with the documented deployment plan.
 - Railway MCP was attempted during Prompt 10, but live Railway configuration is blocked because the Railway CLI token is invalid or expired.
+
+Release candidate hardening update on 2026-04-30:
+- Production domain/application layer imports were audited; no production domain/application files import React, Next.js, Drizzle, infrastructure, or UI code.
+- Dashboard catalog read paths now go through catalog application use cases for owner product listing and owner-scoped product lookup.
+- Source, schema, and tests were audited for forbidden roles; only `owner` and `user` roles are present outside documentation describing the forbidden-role rule.
+- User-facing UI copy was audited and remains Ukrainian, with brand names such as Dase and MonoPay kept as proper names.
+- Product image handling remains external URL only through `product_images`; no object storage service or upload path was added.
+- Worker error logging now formats errors through a safe logger that redacts credentialed URLs and sensitive environment assignments before printing.
+- Environment documentation now includes every app/tooling variable read by the repository, including `PLAYWRIGHT_BASE_URL`, `NODE_ENV`, and `CI`.
+- External API adapters remain covered by MSW contract tests and fixture adapters; CI does not call live Monobank, Nova Poshta, or Ukrposhta APIs.
+- Public order routes still expose only token-scoped public order review/payment status data and do not expose internal order IDs.
+- Owner dashboard routes continue to require an authenticated `owner`; `user` role sessions are redirected away from `/dashboard`.
+- Railway MCP was attempted again during Prompt 11 with `check_railway_status`, but live Railway configuration remains blocked by invalid or expired Railway authentication.
 
 ## Core flows
 
@@ -365,6 +378,14 @@ Latest local quality status on 2026-04-30 after the Railway deployment readiness
 - `pnpm build` passed.
 - Railway live deployment, PostgreSQL provisioning, GitHub autodeploy configuration, secure variable configuration, and Railway migration verification remain blocked by invalid or expired Railway authentication.
 
+Latest local quality status on 2026-04-30 after the release candidate hardening milestone:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 90.88% statements, 80.17% branches, 93.06% functions, and 90.88% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 8 tests covering health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and `user` role dashboard denial.
+- `pnpm build` passed.
+- Railway live deployment, PostgreSQL provisioning, GitHub autodeploy configuration, secure variable configuration, and Railway migration verification remain blocked by invalid or expired Railway authentication.
+
 ## Commands
 
 Configured commands:
@@ -413,11 +434,17 @@ UKRPOSHTA_API_URL=
 
 AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24
 
+NODE_ENV=development
+CI=
+
 PLAYWRIGHT_E2E=
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000
 USE_MOCK_SHIPPING_CARRIERS=
 ```
 
 No S3/storage bucket env vars are required for the initial version.
+
+`NODE_ENV` is normally managed by Next.js/Railway and `CI` by GitHub Actions; they are documented here because local tooling reads them.
 
 Never commit `.env` files or secret values.
 
@@ -442,6 +469,7 @@ Current Railway status on 2026-04-30:
 - `list_projects` and `list_services` failed again during Prompt 08 because the Railway token is invalid or expired.
 - `list_projects` and `list_services` failed again during Prompt 09 because the Railway token is invalid or expired.
 - `check_railway_status`, `list_services`, and `list_variables` failed again during Prompt 10 because the Railway token is invalid or expired.
+- `check_railway_status` failed again during Prompt 11 because the Railway token is invalid or expired.
 - No Railway project could be connected or created from this session.
 - PostgreSQL could not be provisioned from this session.
 - `DATABASE_URL` could not be retrieved or configured.
@@ -564,3 +592,28 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 - Whether to reserve stock when order link is created or only after customer confirms.
 - Cash on delivery now enqueues shipment creation after customer confirmation.
 - Whether image uploads are needed later or external URLs are enough.
+
+## Known limitations
+
+- Live Railway project/service creation, PostgreSQL provisioning, secure variable setup, GitHub autodeploy setup, and Railway migration verification are blocked until Railway authentication is refreshed.
+- Production external API credentials and sender/counterparty settings are not present in the repository and must be configured only as Railway variables.
+- Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank, Nova Poshta, and Ukrposhta behavior still needs a low-risk production smoke test after variables are configured.
+- Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.
+- Stock reservation timing is still an open product decision.
+
+## Manual production verification checklist
+
+After Railway authentication and production variables are configured:
+
+1. Confirm Railway services `web`, `worker`, and `postgres` exist; do not create object storage.
+2. Confirm `DATABASE_URL` is provided to `web` and `worker` through Railway secure variables or references.
+3. Run `pnpm db:migrate` against a safe Railway development/staging PostgreSQL database before production promotion.
+4. Verify `/api/health` returns a healthy no-store response on the deployed web URL.
+5. Sign in as an `owner` and confirm `/dashboard` loads; confirm a `user` role cannot access dashboard routes.
+6. Create a product using external image URLs only, then create an order link and open the `/o/[token]` public page.
+7. Confirm an invalid, expired, or cancelled public token shows the Ukrainian unavailable state and does not reveal other order data.
+8. Complete a customer delivery confirmation with Nova Poshta lookup and shipment creation on a low-risk test order.
+9. Complete a customer delivery confirmation with Ukrposhta lookup and shipment creation on a low-risk test order.
+10. Create a MonoPay invoice, complete payment, verify signed Monobank webhook processing, duplicate webhook idempotency, and stale event handling.
+11. Confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
+12. Confirm owner order filters, tags, status updates, audit history, and shipment retry work with Ukrainian labels in production.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getOwnerProductUseCase } from "@/modules/catalog/application/read-owner-products";
 import { updateProductAction } from "@/modules/catalog/ui/product-actions";
 import { ProductForm } from "@/modules/catalog/ui/product-form";
 import { priceMinorToFormValue } from "@/modules/catalog/application/product-validation";
@@ -17,9 +18,17 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     params,
     requireOwnerSession(),
   ]);
-  const product = await getProductRepository().findById(productId);
+  const product = await getOwnerProductUseCase(
+    {
+      ownerId: owner.id,
+      productId,
+    },
+    {
+      productRepository: getProductRepository(),
+    },
+  );
 
-  if (!product || product.ownerId !== owner.id) {
+  if (!product) {
     return (
       <div className="mx-auto grid max-w-3xl gap-4">
         <h1 className="text-2xl font-semibold tracking-normal">

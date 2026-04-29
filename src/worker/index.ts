@@ -1,6 +1,7 @@
 import { getServerEnv } from "@/shared/config/env";
 import { createPgBoss } from "@/modules/shipping/infrastructure/pg-boss-shipment-job-queue";
 import { registerShipmentWorkers } from "@/worker/jobs/shipment-jobs";
+import { formatSafeError } from "@/shared/logger/safe-error";
 
 async function main() {
   const env = getServerEnv();
@@ -12,7 +13,7 @@ async function main() {
   const boss = createPgBoss(env.DATABASE_URL);
 
   boss.on("error", (error) => {
-    console.error("Worker queue error", error);
+    console.error("Worker queue error:", formatSafeError(error));
   });
 
   await boss.start();
@@ -34,6 +35,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(error);
+  console.error(formatSafeError(error));
   process.exitCode = 1;
 });

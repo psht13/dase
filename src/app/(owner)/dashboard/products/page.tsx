@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { listOwnerProductsUseCase } from "@/modules/catalog/application/read-owner-products";
 import { getProductRepository } from "@/modules/catalog/infrastructure/product-repository-factory";
 import { toggleProductActiveAction } from "@/modules/catalog/ui/product-actions";
 import { ProductTable } from "@/modules/catalog/ui/product-table";
@@ -8,7 +9,14 @@ import { Button } from "@/shared/ui/button";
 
 export default async function ProductsPage() {
   const owner = await requireOwnerSession();
-  const products = await getProductRepository().listByOwnerId(owner.id);
+  const products = await listOwnerProductsUseCase(
+    {
+      ownerId: owner.id,
+    },
+    {
+      productRepository: getProductRepository(),
+    },
+  );
 
   return (
     <div className="grid gap-6">
