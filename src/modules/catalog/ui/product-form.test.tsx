@@ -36,6 +36,23 @@ describe("ProductForm", () => {
     expect(screen.getByLabelText("Активний товар")).toBeInTheDocument();
   });
 
+  it("renders product image delete as a large touch target", () => {
+    render(
+      <ProductForm
+        action={vi.fn()}
+        cancelHref="/dashboard/products"
+        submitLabel="Створити товар"
+      />,
+    );
+
+    const deleteButton = screen.getByRole("button", {
+      name: "Видалити зображення",
+    });
+
+    expect(deleteButton).toHaveClass("size-12");
+    expect(deleteButton.querySelector("svg")).toHaveClass("size-5");
+  });
+
   it("shows Ukrainian validation messages and does not submit invalid data", async () => {
     const user = userEvent.setup();
     const action = vi.fn();

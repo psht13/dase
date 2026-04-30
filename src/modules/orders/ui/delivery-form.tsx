@@ -205,7 +205,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-md border bg-card p-4 text-card-foreground">
+      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor="delivery-full-name">
             Повне ім’я
@@ -253,7 +253,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-md border bg-card p-4 text-card-foreground">
+      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor="delivery-carrier">
             Служба доставки
@@ -396,7 +396,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-md border bg-card p-4 text-card-foreground">
+      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor="delivery-payment">
             Спосіб оплати
@@ -477,7 +477,7 @@ function LookupResults<T>({
   }
 
   return (
-    <div className="grid gap-2 rounded-md border bg-background p-2">
+    <div className="grid gap-2 rounded-md border border-border/80 bg-background p-2 shadow-sm">
       {results.map((result, index) => (
         <button
           className="grid gap-1 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

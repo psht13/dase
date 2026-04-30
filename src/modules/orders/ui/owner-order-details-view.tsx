@@ -51,7 +51,7 @@ export function OwnerOrderDetailsView({
               До списку замовлень
             </Link>
           </Button>
-          <h1 className="mt-4 text-2xl font-semibold tracking-normal">
+          <h1 className="mt-4 font-display text-3xl font-semibold">
             Замовлення #{shortOrderId(order.id)}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -66,8 +66,8 @@ export function OwnerOrderDetailsView({
         </Button>
       </div>
 
-      <section className="grid gap-4 rounded-md border p-4">
-        <h2 className="text-lg font-semibold">Товари</h2>
+      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 shadow-sm">
+        <h2 className="font-display text-xl font-semibold">Товари</h2>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead className="bg-muted text-muted-foreground">

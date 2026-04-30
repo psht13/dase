@@ -211,7 +211,9 @@ export function ProductForm({
 
       <section className="grid gap-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold">Зображення товару</h2>
+          <h2 className="font-display text-xl font-semibold">
+            Зображення товару
+          </h2>
           <Button
             onClick={() => append({ url: "" })}
             type="button"
@@ -228,7 +230,7 @@ export function ProductForm({
 
             return (
               <div
-                className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-[1fr_9rem_auto] sm:items-start"
+                className="grid gap-4 rounded-md border border-border/80 bg-card p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_10rem_3.5rem] sm:items-start"
                 key={field.id}
               >
                 <div className="grid gap-2">
@@ -263,7 +265,7 @@ export function ProductForm({
                   />
                 </div>
 
-                <div className="flex aspect-square items-center justify-center overflow-hidden rounded-md border bg-muted">
+                <div className="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-input bg-muted">
                   {isPreviewableUrl(url) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -284,12 +286,13 @@ export function ProductForm({
                 <Button
                   aria-label="Видалити зображення"
                   disabled={fields.length === 1}
+                  className="justify-self-start text-muted-foreground hover:text-destructive sm:justify-self-end"
                   onClick={() => remove(index)}
-                  size="icon"
+                  size="iconLg"
                   type="button"
                   variant="outline"
                 >
-                  <Trash2 aria-hidden="true" className="size-4" />
+                  <Trash2 aria-hidden="true" className="size-5" />
                 </Button>
               </div>
             );

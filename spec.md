@@ -599,6 +599,18 @@ Status: completed on 2026-04-30; live Railway configuration and migration verifi
 - Add deployment documentation. Completed in `DEPLOYMENT.md`.
 - Run full required checks and Railway migration verification. Local checks passed during the release candidate milestone; Railway migration/database verification passed after authentication was refreshed.
 
+### Milestone 8 - Dase brand UI refinement
+
+Status: completed on 2026-04-30.
+
+- Refined shared visual tokens to match the Dase logo direction with ivory, blush, black, and restrained gold accents.
+- Added a reusable Dase wordmark treatment for owner and customer-facing surfaces while keeping user-facing copy Ukrainian.
+- Reworked the owner dashboard shell so the sidebar is flush with the viewport edge and sticky on desktop.
+- Refined owner dashboard headings, cards, product image controls, public order review, and delivery form surfaces.
+- Enlarged the product image delete action to a 48 px touch target with a larger icon.
+- Added focused regression tests for the dashboard shell alignment and product image delete control.
+- Verified the visual fixes in Chromium with screenshots under ignored `output/playwright/` artifacts.
+
 ## Commit message format
 
 Use English imperative sentence case without prefixes.

@@ -215,10 +215,10 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
         </table>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-md border bg-card p-4 text-card-foreground sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-md border border-accent bg-accent/25 p-4 text-card-foreground shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">Разом до сплати</p>
-          <p className="text-2xl font-semibold tracking-normal">
+          <p className="font-display text-3xl font-semibold">
             {formatPrice(totalMinor, products[0]?.currency ?? "UAH")}
           </p>
         </div>

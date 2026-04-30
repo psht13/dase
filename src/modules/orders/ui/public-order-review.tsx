@@ -2,6 +2,7 @@ import { ImageIcon, Truck } from "lucide-react";
 import Link from "next/link";
 import type { PublicOrderReview as PublicOrderReviewData } from "@/modules/orders/application/lookup-public-order";
 import { getCustomerPaymentStatusMessage } from "@/modules/payments/application/payment-status";
+import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
 
 type PublicOrderReviewProps = {
@@ -14,13 +15,14 @@ export function PublicOrderReview({
   order,
 }: PublicOrderReviewProps) {
   return (
-    <main className="min-h-screen bg-background" id="main-content">
+    <main
+      className="min-h-screen bg-[hsl(var(--brand-shell))]"
+      id="main-content"
+    >
       <section className="mx-auto grid w-full max-w-4xl gap-8 px-5 py-10">
         <div className="grid gap-2">
-          <p className="text-sm font-medium uppercase text-muted-foreground">
-            Dase
-          </p>
-          <h1 className="text-3xl font-semibold tracking-normal">
+          <BrandMark subtitle="підтвердження замовлення" />
+          <h1 className="font-display text-4xl font-semibold">
             Ваше замовлення
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -34,7 +36,7 @@ export function PublicOrderReview({
         <div className="grid gap-4">
           {order.items.map((item) => (
             <article
-              className="grid gap-4 rounded-md border bg-card p-4 text-card-foreground sm:grid-cols-[5rem_1fr_auto]"
+              className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm sm:grid-cols-[5rem_1fr_auto]"
               key={`${item.productSkuSnapshot}-${item.productNameSnapshot}`}
             >
               <PublicOrderItemImage item={item} />
@@ -55,10 +57,10 @@ export function PublicOrderReview({
           ))}
         </div>
 
-        <div className="flex flex-col gap-4 rounded-md border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-md border border-accent bg-accent/25 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Разом</p>
-            <p className="text-2xl font-semibold tracking-normal">
+            <p className="font-display text-3xl font-semibold">
               {formatPrice(order.totalMinor, order.currency)}
             </p>
           </div>
@@ -87,7 +89,7 @@ function PaymentStatusNotice({ order }: { order: PublicOrderReviewData }) {
   return (
     <p
       aria-live="polite"
-      className="rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground"
+      className="rounded-md border border-accent bg-accent/25 px-4 py-3 text-sm text-foreground shadow-sm"
       role="status"
     >
       {message}
@@ -97,12 +99,16 @@ function PaymentStatusNotice({ order }: { order: PublicOrderReviewData }) {
 
 export function PublicOrderUnavailable() {
   return (
-    <main className="min-h-screen bg-background" id="main-content">
+    <main
+      className="min-h-screen bg-[hsl(var(--brand-shell))]"
+      id="main-content"
+    >
       <section className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center gap-4 px-5 py-10 text-center">
-        <p className="text-sm font-medium uppercase text-muted-foreground">
-          Dase
-        </p>
-        <h1 className="text-3xl font-semibold tracking-normal">
+        <BrandMark
+          className="justify-center"
+          subtitle="підтвердження замовлення"
+        />
+        <h1 className="font-display text-4xl font-semibold">
           Посилання недоступне
         </h1>
         <p className="text-muted-foreground">
@@ -123,7 +129,7 @@ function PublicOrderItemImage({
 
   if (!imageUrl) {
     return (
-      <div className="flex size-20 items-center justify-center rounded-md bg-muted">
+      <div className="flex size-20 items-center justify-center rounded-md border border-input bg-muted">
         <ImageIcon
           aria-hidden="true"
           className="size-7 text-muted-foreground"
@@ -136,7 +142,7 @@ function PublicOrderItemImage({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       alt={item.productNameSnapshot}
-      className="size-20 rounded-md object-cover"
+      className="size-20 rounded-md border border-input object-cover"
       height="80"
       loading="lazy"
       src={imageUrl}
