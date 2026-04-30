@@ -5,8 +5,10 @@ import type {
   PaymentRepository,
   PaymentStatus,
 } from "@/modules/payments/application/payment-repository";
+import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
 
 export type PublicOrderReview = {
+  canRetryMonobankPayment: boolean;
   currency: string;
   items: PublicOrderReviewItem[];
   paymentProvider: PaymentProviderCode | null;
@@ -87,6 +89,9 @@ export async function lookupPublicOrderUseCase(
   return {
     available: true,
     order: {
+      canRetryMonobankPayment: monobankPayment
+        ? canCreateMonobankInvoiceForPayment(order.status, monobankPayment)
+        : false,
       currency: order.currency,
       items: order.items.map((item) => ({
         lineTotalMinor: item.lineTotalMinor,

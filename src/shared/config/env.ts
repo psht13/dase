@@ -23,6 +23,7 @@ export const serverEnvSchema = z
       .default("development"),
     NOVA_POSHTA_API_KEY: z.string().optional(),
     NOVA_POSHTA_API_URL: optionalUrl,
+    OWNER_SETUP_TOKEN: optionalSecret,
     UKRPOSHTA_API_URL: optionalUrl,
     UKRPOSHTA_BEARER_TOKEN: z.string().optional(),
     UKRPOSHTA_COUNTERPARTY_TOKEN: z.string().optional(),
@@ -36,6 +37,7 @@ export const serverEnvSchema = z
       "BETTER_AUTH_SECRET",
       "BETTER_AUTH_URL",
       "DATABASE_URL",
+      "OWNER_SETUP_TOKEN",
     ] as const;
 
     for (const key of requiredProductionKeys) {
@@ -56,6 +58,7 @@ export const serverEnvSchema = z
     DATABASE_URL_TEST: env.DATABASE_URL_TEST || undefined,
     MONOBANK_API_URL: env.MONOBANK_API_URL || undefined,
     NOVA_POSHTA_API_URL: env.NOVA_POSHTA_API_URL || undefined,
+    OWNER_SETUP_TOKEN: env.OWNER_SETUP_TOKEN || undefined,
     UKRPOSHTA_API_URL: env.UKRPOSHTA_API_URL || undefined,
   }));
 

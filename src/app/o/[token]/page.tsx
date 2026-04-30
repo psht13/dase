@@ -5,6 +5,7 @@ import {
   PublicOrderReview,
   PublicOrderUnavailable,
 } from "@/modules/orders/ui/public-order-review";
+import { retryPublicMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 
 type PublicOrderPageProps = {
   params: Promise<{
@@ -32,6 +33,10 @@ export default async function PublicOrderPage({ params }: PublicOrderPageProps) 
     <PublicOrderReview
       deliveryHref={`/o/${result.order.publicToken}/delivery`}
       order={result.order}
+      paymentRetryAction={retryPublicMonobankPaymentAction.bind(
+        null,
+        result.order.publicToken,
+      )}
     />
   );
 }

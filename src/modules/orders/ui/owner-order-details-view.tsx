@@ -27,6 +27,9 @@ import {
 import { OwnerOrderRetryShipmentForm } from "@/modules/orders/ui/owner-order-retry-shipment-form";
 import { OwnerOrderStatusForm } from "@/modules/orders/ui/owner-order-status-form";
 import { OwnerOrderTagPanel } from "@/modules/orders/ui/owner-order-tag-panel";
+import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
+import { retryOwnerMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
+import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
 import { retryShipmentCreationAction } from "@/modules/shipping/ui/shipment-actions";
 import { Button } from "@/shared/ui/button";
 
@@ -40,6 +43,9 @@ export function OwnerOrderDetailsView({
   order,
 }: OwnerOrderDetailsViewProps) {
   const publicUrl = `/o/${order.publicToken}`;
+  const canRetryMonobankPayment = order.payments.some((payment) =>
+    canCreateMonobankInvoiceForPayment(order.status, payment),
+  );
 
   return (
     <div className="grid gap-6">
@@ -204,6 +210,25 @@ export function OwnerOrderDetailsView({
           action={updateOwnerOrderStatusAction.bind(null, order.id)}
           currentStatus={order.status}
         />
+      </section>
+
+      <section className="grid gap-6 rounded-md border p-4">
+        <div className="grid gap-2">
+          <h2 className="text-lg font-semibold">Повтор оплати MonoPay</h2>
+          <p className="text-sm text-muted-foreground">
+            Повторне посилання доступне, якщо рахунок MonoPay не створився або
+            попередня оплата завершилась помилкою.
+          </p>
+        </div>
+        {canRetryMonobankPayment ? (
+          <PaymentRetryForm
+            action={retryOwnerMonobankPaymentAction.bind(null, order.id)}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Повтор оплати зараз недоступний.
+          </p>
+        )}
       </section>
 
       <section className="grid gap-6 rounded-md border p-4">

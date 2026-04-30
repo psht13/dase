@@ -11,6 +11,7 @@ import {
 import { safeParseDeliveryFormValues } from "@/modules/orders/application/delivery-form-validation";
 import { getAuditEventRepository } from "@/modules/orders/infrastructure/audit-event-repository-factory";
 import { getCustomerRepository } from "@/modules/orders/infrastructure/customer-repository-factory";
+import { getCustomerConfirmationUnitOfWork } from "@/modules/orders/infrastructure/customer-confirmation-unit-of-work-factory";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { deliveryFormValuesFromFormData } from "@/modules/orders/ui/delivery-form-data";
 import {
@@ -61,6 +62,7 @@ export async function confirmDeliveryAction(
       },
       {
         auditEventRepository: getAuditEventRepository(),
+        customerConfirmationUnitOfWork: getCustomerConfirmationUnitOfWork(),
         customerRepository: getCustomerRepository(),
         orderRepository: getOrderRepository(),
         paymentRepository: getPaymentRepository(),

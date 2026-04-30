@@ -3,6 +3,10 @@ import type {
   PersistedOrder,
 } from "@/modules/orders/application/order-repository";
 import { lookupPublicOrderUseCase } from "@/modules/orders/application/lookup-public-order";
+import type {
+  PaymentRecord,
+  PaymentRepository,
+} from "@/modules/payments/application/payment-repository";
 
 const validToken = "secure_public_token_123456789012345";
 
@@ -29,6 +33,7 @@ describe("lookupPublicOrderUseCase", () => {
             quantity: 2,
           },
         ],
+        canRetryMonobankPayment: false,
         paymentProvider: "MONOBANK",
         paymentStatus: "PAID",
         publicToken: validToken,
@@ -53,6 +58,31 @@ describe("lookupPublicOrderUseCase", () => {
     ).resolves.toEqual({
       available: false,
       reason: "expired",
+    });
+  });
+
+  it("marks MonoPay invoice retry available when provider invoice is missing", async () => {
+    const result = await lookupPublicOrderUseCase(
+      {
+        now: new Date("2026-04-30T10:00:00.000Z"),
+        publicToken: validToken,
+      },
+      {
+        orderRepository: createOrderRepository(
+          createOrder({ status: "CONFIRMED_BY_CUSTOMER" }),
+        ),
+        paymentRepository: createPaymentRepository({
+          providerInvoiceId: null,
+          status: "PENDING",
+        }),
+      },
+    );
+
+    expect(result).toMatchObject({
+      available: true,
+      order: {
+        canRetryMonobankPayment: true,
+      },
     });
   });
 
@@ -148,7 +178,13 @@ function createOrderRepository(order: PersistedOrder | null): OrderRepository {
   };
 }
 
-function createPaymentRepository() {
+function createPaymentRepository(
+  input: Partial<Pick<PaymentRecord, "providerInvoiceId" | "status">> = {},
+): PaymentRepository {
+  const providerInvoiceId: string | null =
+    "providerInvoiceId" in input ? input.providerInvoiceId ?? null : "invoice-1";
+  const status = input.status ?? "PAID";
+
   return {
     findByOrderId: vi.fn(async () => [
       {
@@ -160,9 +196,9 @@ function createPaymentRepository() {
         orderId: "order-1",
         paidAt: new Date("2026-04-30T12:00:00.000Z"),
         provider: "MONOBANK" as const,
-        providerInvoiceId: "invoice-1",
+        providerInvoiceId,
         providerModifiedAt: new Date("2026-04-30T12:00:00.000Z"),
-        status: "PAID" as const,
+        status,
         updatedAt: new Date("2026-04-30T12:00:00.000Z"),
       },
     ]),

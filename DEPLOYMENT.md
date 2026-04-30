@@ -36,6 +36,7 @@ Required for production `web` and `worker`:
 - `DATABASE_URL` - Railway PostgreSQL private connection string.
 - `BETTER_AUTH_SECRET` - at least 32 characters.
 - `BETTER_AUTH_URL` - canonical deployed web URL.
+- `OWNER_SETUP_TOKEN` - at least 32 characters; required by shared production env validation. The `web` service uses it to protect `/setup` before the first owner exists.
 - `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` - default `24` if omitted.
 - `NODE_ENV` - normally set to `production` by the runtime.
 
@@ -97,7 +98,10 @@ If the worker causes shipment or tracking errors, stop or roll back the `worker`
 ## Manual External API Verification
 
 Do not call live external APIs in CI. After production variables are configured, verify manually in Railway using a low-risk test order:
+- Open `/setup?token=<OWNER_SETUP_TOKEN>` before any owner exists, create the first owner, then confirm `/setup` shows the Ukrainian unavailable state.
+- Confirm `/login` accepts the owner credentials, `/logout` ends the session, and a `user` role cannot access `/dashboard`.
 - MonoPay invoice creation redirects to the expected Monobank payment URL.
+- MonoPay retry shows `Повторити оплату` when a confirmed order is missing a provider invoice or when payment failed.
 - Monobank webhook signature verification accepts a signed provider callback.
 - Duplicate Monobank webhooks are idempotent.
 - Stale Monobank webhook events do not overwrite newer payment state.
@@ -120,6 +124,7 @@ Completed live setup:
 - `web` uses `/railway.json`, `pnpm build`, `pnpm db:migrate`, `pnpm start`, and `/api/health`.
 - `worker` uses `/railway.worker.json`, `pnpm build`, and `pnpm worker:start`.
 - Required runtime variables were set securely in Railway variables, including `DATABASE_URL` as a Railway reference to `Postgres`.
+- `OWNER_SETUP_TOKEN` was configured securely for `web` and `worker` production variables on 2026-04-30 with deploy triggering skipped; do not expose the value in logs or commits.
 - Railway web domain: https://web-production-26609.up.railway.app
 - Web health check verified: `/api/health` returns `status: ok`.
 - Worker runtime verified: deployment logs include `Shipment worker is ready.`

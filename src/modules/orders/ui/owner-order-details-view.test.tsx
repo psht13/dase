@@ -19,6 +19,10 @@ vi.mock("@/modules/shipping/ui/shipment-actions", () => ({
   retryShipmentCreationAction: vi.fn(),
 }));
 
+vi.mock("@/modules/payments/ui/payment-actions", () => ({
+  retryOwnerMonobankPaymentAction: vi.fn(),
+}));
+
 describe("OwnerOrderDetailsView", () => {
   it("renders order details, tags, status history, and audit labels in Ukrainian", () => {
     render(
@@ -47,6 +51,8 @@ describe("OwnerOrderDetailsView", () => {
     expect(screen.getAllByText("Нова Пошта")[0]).toBeVisible();
     expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
     expect(screen.getByText("Післяплата")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Повтор оплати MonoPay" })).toBeVisible();
+    expect(screen.getByText("Повтор оплати зараз недоступний.")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Теги замовлення" })).toBeVisible();
     expect(screen.getByLabelText("Зняти тег Подарунок")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Ручна зміна статусу" })).toBeVisible();
@@ -57,9 +63,42 @@ describe("OwnerOrderDetailsView", () => {
     expect(screen.getAllByText("Статус змінено вручну")[0]).toBeVisible();
     expect(screen.getByRole("heading", { name: "Аудит подій" })).toBeVisible();
   });
+
+  it("exposes the MonoPay retry action for failed payments", () => {
+    render(
+      <OwnerOrderDetailsView
+        availableTags={[]}
+        order={createOrderDetails({
+          payments: [
+            {
+              amountMinor: 2_400_00,
+              createdAt: new Date("2026-04-30T10:00:00.000Z"),
+              currency: "UAH",
+              failureReason: "Оплату відхилено",
+              id: "payment-2",
+              orderId: "order-1",
+              paidAt: null,
+              provider: "MONOBANK",
+              providerInvoiceId: "invoice-old",
+              providerModifiedAt: null,
+              status: "FAILED",
+              updatedAt: new Date("2026-04-30T10:00:00.000Z"),
+            },
+          ],
+          status: "PAYMENT_FAILED",
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Повторити оплату" }),
+    ).toBeVisible();
+  });
 });
 
-function createOrderDetails(): OwnerOrderDetails {
+function createOrderDetails(
+  input: Partial<OwnerOrderDetails> = {},
+): OwnerOrderDetails {
   const now = new Date("2026-04-30T10:00:00.000Z");
 
   return {
@@ -165,5 +204,6 @@ function createOrderDetails(): OwnerOrderDetails {
     ],
     totalMinor: 2_400_00,
     updatedAt: now,
+    ...input,
   };
 }

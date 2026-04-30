@@ -25,6 +25,15 @@ describe("validateServerEnv", () => {
         NODE_ENV: "production",
       }),
     ).toThrow(/DATABASE_URL is required in production/);
+
+    expect(() =>
+      validateServerEnv({
+        BETTER_AUTH_SECRET: "a".repeat(32),
+        BETTER_AUTH_URL: "https://dase.example.com",
+        DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
+        NODE_ENV: "production",
+      }),
+    ).toThrow(/OWNER_SETUP_TOKEN is required in production/);
   });
 
   it("accepts production settings when required values are present", () => {
@@ -33,12 +42,14 @@ describe("validateServerEnv", () => {
       BETTER_AUTH_URL: "https://dase.example.com",
       DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
       NODE_ENV: "production",
+      OWNER_SETUP_TOKEN: "b".repeat(32),
     });
 
     expect(env.BETTER_AUTH_URL).toBe("https://dase.example.com");
     expect(env.DATABASE_URL).toBe(
       "postgres://user:pass@example.com:5432/dase",
     );
+    expect(env.OWNER_SETUP_TOKEN).toBe("b".repeat(32));
   });
 
   it("caches validated process environment values", () => {

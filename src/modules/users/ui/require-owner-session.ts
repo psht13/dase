@@ -10,7 +10,7 @@ export async function requireOwnerSession(): Promise<DashboardSessionUser> {
   const access = authorizeOwnerDashboardAccess(user);
 
   if (!access.allowed) {
-    redirect("/");
+    redirect(access.reason === "unauthenticated" ? "/login" : "/");
   }
 
   return access.user;

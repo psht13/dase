@@ -1,4 +1,5 @@
 import type { CustomerRepository } from "@/modules/orders/application/customer-repository";
+import type { CustomerConfirmationUnitOfWork } from "@/modules/orders/application/customer-confirmation-unit-of-work";
 import type { AuditEventRepository } from "@/modules/orders/application/audit-event-repository";
 import type {
   OrderRepository,
@@ -36,6 +37,7 @@ export type ConfirmPublicOrderResult = {
 
 type ConfirmPublicOrderDependencies = {
   auditEventRepository: AuditEventRepository;
+  customerConfirmationUnitOfWork?: CustomerConfirmationUnitOfWork;
   customerRepository: CustomerRepository;
   now?: () => Date;
   orderRepository: OrderRepository;
@@ -61,6 +63,28 @@ export class PublicOrderCannotBeConfirmedError extends Error {
 export async function confirmPublicOrderUseCase(
   input: ConfirmPublicOrderInput,
   dependencies: ConfirmPublicOrderDependencies,
+): Promise<ConfirmPublicOrderResult> {
+  if (dependencies.customerConfirmationUnitOfWork) {
+    const { customerConfirmationUnitOfWork, shipmentJobQueue, now } = dependencies;
+
+    return customerConfirmationUnitOfWork.run((repositories) =>
+      confirmPublicOrderWithoutUnitOfWork(input, {
+        ...repositories,
+        now,
+        shipmentJobQueue,
+      }),
+    );
+  }
+
+  return confirmPublicOrderWithoutUnitOfWork(input, dependencies);
+}
+
+async function confirmPublicOrderWithoutUnitOfWork(
+  input: ConfirmPublicOrderInput,
+  dependencies: Omit<
+    ConfirmPublicOrderDependencies,
+    "customerConfirmationUnitOfWork"
+  >,
 ): Promise<ConfirmPublicOrderResult> {
   if (!isValidPublicOrderToken(input.publicToken)) {
     throw new PublicOrderConfirmationUnavailableError();

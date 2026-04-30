@@ -1,4 +1,5 @@
 import {
+  canCreateMonobankInvoiceForPayment,
   createPaymentInvoiceUseCase,
   PaymentInvoiceCannotBeCreatedError,
 } from "@/modules/payments/application/create-payment-invoice";
@@ -74,6 +75,86 @@ describe("createPaymentInvoiceUseCase", () => {
       ),
     ).rejects.toBeInstanceOf(PaymentInvoiceCannotBeCreatedError);
   });
+
+  it("retries failed MonoPay payments and resets payment status", async () => {
+    const paymentRepository = createPaymentRepository({
+      failureReason: "Оплату відхилено",
+      providerInvoiceId: "old-invoice",
+      status: "FAILED",
+    });
+    const dependencies = createDependencies({
+      orderRepository: createOrderRepository({
+        status: "PAYMENT_FAILED",
+      }),
+      paymentRepository,
+    });
+
+    await expect(
+      createPaymentInvoiceUseCase(
+        {
+          orderId: "order-1",
+          redirectUrl: "https://dase.test/o/public-token",
+          webhookUrl: "https://dase.test/api/webhooks/monobank",
+        },
+        dependencies,
+      ),
+    ).resolves.toMatchObject({
+      invoiceId: "invoice-1",
+      status: "PAYMENT_PENDING",
+    });
+    expect(paymentRepository.updateStatus).toHaveBeenCalledWith({
+      failureReason: null,
+      paidAt: null,
+      paymentId: "payment-1",
+      providerModifiedAt: null,
+      status: "PENDING",
+    });
+    expect(dependencies.orderRepository.updateStatus).toHaveBeenCalledWith(
+      "order-1",
+      "PAYMENT_PENDING",
+    );
+  });
+
+  it("rejects pending payments that already have a provider invoice", async () => {
+    const dependencies = createDependencies({
+      paymentRepository: createPaymentRepository({
+        providerInvoiceId: "invoice-existing",
+        status: "PENDING",
+      }),
+    });
+
+    await expect(
+      createPaymentInvoiceUseCase(
+        {
+          orderId: "order-1",
+          redirectUrl: "https://dase.test/o/public-token",
+          webhookUrl: "https://dase.test/api/webhooks/monobank",
+        },
+        dependencies,
+      ),
+    ).rejects.toBeInstanceOf(PaymentInvoiceCannotBeCreatedError);
+  });
+
+  it("detects MonoPay retry eligibility", () => {
+    expect(
+      canCreateMonobankInvoiceForPayment(
+        "CONFIRMED_BY_CUSTOMER",
+        createPayment({ providerInvoiceId: null, status: "PENDING" }),
+      ),
+    ).toBe(true);
+    expect(
+      canCreateMonobankInvoiceForPayment(
+        "PAYMENT_FAILED",
+        createPayment({ providerInvoiceId: "invoice-1", status: "FAILED" }),
+      ),
+    ).toBe(true);
+    expect(
+      canCreateMonobankInvoiceForPayment(
+        "PAYMENT_PENDING",
+        createPayment({ providerInvoiceId: "invoice-1", status: "PENDING" }),
+      ),
+    ).toBe(false);
+  });
 });
 
 function createDependencies(
@@ -90,8 +171,10 @@ function createDependencies(
   };
 }
 
-function createOrderRepository(): OrderRepository {
-  const order = createOrder();
+function createOrderRepository(
+  input: Partial<PersistedOrder> = {},
+): OrderRepository {
+  const order = createOrder(input);
 
   return {
     confirmCustomerDelivery: vi.fn(),
@@ -115,8 +198,38 @@ function createPaymentProvider(): PaymentProvider {
   };
 }
 
-function createPaymentRepository(): PaymentRepository {
-  const payment = {
+function createPaymentRepository(
+  input: Partial<PaymentRepositoryPayment> = {},
+): PaymentRepository {
+  const payment = createPayment(input);
+
+  return {
+    findByOrderId: vi.fn(async () => [payment]),
+    findByProviderInvoiceId: vi.fn(),
+    save: vi.fn(),
+    updateProviderInvoice: vi.fn(async (updateInput) => ({
+      ...payment,
+      providerInvoiceId: updateInput.providerInvoiceId,
+      providerModifiedAt: updateInput.providerModifiedAt,
+    })),
+    updateStatus: vi.fn(async (updateInput) => ({
+      ...payment,
+      failureReason: updateInput.failureReason,
+      paidAt: updateInput.paidAt,
+      providerModifiedAt: updateInput.providerModifiedAt,
+      status: updateInput.status,
+    })),
+  };
+}
+
+type PaymentRepositoryPayment = Awaited<
+  ReturnType<PaymentRepository["findByOrderId"]>
+>[number];
+
+function createPayment(
+  input: Partial<PaymentRepositoryPayment> = {},
+): PaymentRepositoryPayment {
+  return {
     amountMinor: 2_400_00,
     createdAt: now,
     currency: "UAH",
@@ -129,22 +242,11 @@ function createPaymentRepository(): PaymentRepository {
     providerModifiedAt: null,
     status: "PENDING" as const,
     updatedAt: now,
-  };
-
-  return {
-    findByOrderId: vi.fn(async () => [payment]),
-    findByProviderInvoiceId: vi.fn(),
-    save: vi.fn(),
-    updateProviderInvoice: vi.fn(async (input) => ({
-      ...payment,
-      providerInvoiceId: input.providerInvoiceId,
-      providerModifiedAt: input.providerModifiedAt,
-    })),
-    updateStatus: vi.fn(),
+    ...input,
   };
 }
 
-function createOrder(): PersistedOrder {
+function createOrder(input: Partial<PersistedOrder> = {}): PersistedOrder {
   return {
     confirmedAt: now,
     createdAt: now,
@@ -172,5 +274,6 @@ function createOrder(): PersistedOrder {
     status: "CONFIRMED_BY_CUSTOMER",
     totalMinor: 2_400_00,
     updatedAt: now,
+    ...input,
   };
 }

@@ -83,6 +83,37 @@ describe("confirmPublicOrderUseCase", () => {
     );
   });
 
+  it("runs confirmation writes through a unit of work when provided", async () => {
+    const baseDependencies = createDependencies(createOrder());
+    const transactionalDependencies = createDependencies(createOrder());
+    const customerConfirmationUnitOfWork = {
+      run: vi.fn(async (work) => work(transactionalDependencies)),
+    };
+
+    await expect(
+      confirmPublicOrderUseCase(createInput(), {
+        ...baseDependencies,
+        customerConfirmationUnitOfWork,
+        now: () => now,
+      }),
+    ).resolves.toEqual({
+      confirmedAt: now,
+      orderId: "order-1",
+      status: "CONFIRMED_BY_CUSTOMER",
+    });
+
+    expect(customerConfirmationUnitOfWork.run).toHaveBeenCalledTimes(1);
+    expect(baseDependencies.customerRepository.save).not.toHaveBeenCalled();
+    expect(transactionalDependencies.customerRepository.save).toHaveBeenCalled();
+    expect(
+      transactionalDependencies.auditEventRepository.append,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "ORDER_CONFIRMED_BY_CUSTOMER",
+      }),
+    );
+  });
+
   it("rejects expired public tokens", async () => {
     await expect(
       confirmPublicOrderUseCase(createInput(), {

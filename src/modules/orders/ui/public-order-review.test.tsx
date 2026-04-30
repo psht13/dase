@@ -54,12 +54,32 @@ describe("PublicOrderReview", () => {
       screen.getByText("Очікуємо підтвердження оплати MonoPay."),
     ).toBeVisible();
   });
+
+  it("renders a Ukrainian MonoPay retry action when retry is available", () => {
+    render(
+      <PublicOrderReview
+        deliveryHref="/o/public-token/delivery"
+        order={createPublicOrder({
+          canRetryMonobankPayment: true,
+          paymentProvider: "MONOBANK",
+          paymentStatus: "FAILED",
+          status: "PAYMENT_FAILED",
+        })}
+        paymentRetryAction={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Повторити оплату" }),
+    ).toBeVisible();
+  });
 });
 
 function createPublicOrder(
   input: Partial<PublicOrderReviewData> = {},
 ): PublicOrderReviewData {
   return {
+    canRetryMonobankPayment: false,
     currency: "UAH",
     items: [
       {

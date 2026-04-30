@@ -12,6 +12,8 @@ export type UserRecord = {
 };
 
 export interface UserRepository {
+  countByRole(role: AppRole): Promise<number>;
   findByEmail(email: string): Promise<UserRecord | null>;
   findById(id: string): Promise<UserRecord | null>;
+  updateRole(userId: string, role: AppRole): Promise<UserRecord>;
 }

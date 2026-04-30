@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  LogOut,
   Package,
   ShoppingBag,
   ShoppingCart,
@@ -82,7 +83,16 @@ export default async function DashboardLayout({
                 </p>
                 <p className="font-medium">{owner.email}</p>
               </div>
-              <p className="text-sm text-muted-foreground">Роль: власник</p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-muted-foreground">Роль: власник</p>
+                <Link
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  href="/logout"
+                >
+                  <LogOut aria-hidden="true" className="size-4" />
+                  Вийти
+                </Link>
+              </div>
             </div>
           </header>
           <div className="mx-auto w-full max-w-6xl px-5 py-7 sm:px-8">

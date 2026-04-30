@@ -1,4 +1,5 @@
 import type { OrderRepository } from "@/modules/orders/application/order-repository";
+import type { OrderStatus } from "@/modules/orders/domain/status";
 import { assertOrderStatusTransition } from "@/modules/orders/domain/status";
 import type { PaymentProvider } from "@/modules/payments/application/payment-provider";
 import type {
@@ -53,6 +54,12 @@ export async function createPaymentInvoiceUseCase(
     );
   }
 
+  if (!canCreateMonobankInvoiceForPayment(order.status, payment)) {
+    throw new PaymentInvoiceCannotBeCreatedError(
+      "Monobank payment cannot be retried",
+    );
+  }
+
   const invoice = await dependencies.paymentProvider.createInvoice({
     amountMinor: payment.amountMinor,
     currency: payment.currency,
@@ -77,8 +84,24 @@ export async function createPaymentInvoiceUseCase(
       providerModifiedAt: invoice.providerModifiedAt,
     });
 
-  assertOrderStatusTransition(order.status, "PAYMENT_PENDING");
-  await dependencies.orderRepository.updateStatus(order.id, "PAYMENT_PENDING");
+  if (
+    updatedPayment.status !== "PENDING" ||
+    updatedPayment.failureReason ||
+    updatedPayment.paidAt
+  ) {
+    await dependencies.paymentRepository.updateStatus({
+      failureReason: null,
+      paidAt: null,
+      paymentId: updatedPayment.id,
+      providerModifiedAt: invoice.providerModifiedAt,
+      status: "PENDING",
+    });
+  }
+
+  if (order.status !== "PAYMENT_PENDING") {
+    assertOrderStatusTransition(order.status, "PAYMENT_PENDING");
+    await dependencies.orderRepository.updateStatus(order.id, "PAYMENT_PENDING");
+  }
 
   return {
     invoiceId: invoice.invoiceId,
@@ -86,6 +109,33 @@ export async function createPaymentInvoiceUseCase(
     paymentRedirectUrl: invoice.pageUrl,
     status: "PAYMENT_PENDING",
   };
+}
+
+export function canCreateMonobankInvoiceForPayment(
+  orderStatus: OrderStatus,
+  payment: PaymentRecord,
+): boolean {
+  if (payment.provider !== "MONOBANK") {
+    return false;
+  }
+
+  if (["PAID", "CANCELLED", "REFUNDED"].includes(payment.status)) {
+    return false;
+  }
+
+  if (
+    !["CONFIRMED_BY_CUSTOMER", "PAYMENT_PENDING", "PAYMENT_FAILED"].includes(
+      orderStatus,
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    payment.providerInvoiceId === null ||
+    payment.status === "FAILED" ||
+    orderStatus === "PAYMENT_FAILED"
+  );
 }
 
 async function findMonobankPayment(

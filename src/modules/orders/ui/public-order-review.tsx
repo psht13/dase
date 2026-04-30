@@ -2,17 +2,21 @@ import { ImageIcon, Truck } from "lucide-react";
 import Link from "next/link";
 import type { PublicOrderReview as PublicOrderReviewData } from "@/modules/orders/application/lookup-public-order";
 import { getCustomerPaymentStatusMessage } from "@/modules/payments/application/payment-status";
+import type { PaymentRetryActionResult } from "@/modules/payments/ui/payment-actions";
+import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
 
 type PublicOrderReviewProps = {
   deliveryHref: string;
   order: PublicOrderReviewData;
+  paymentRetryAction?: () => Promise<PaymentRetryActionResult>;
 };
 
 export function PublicOrderReview({
   deliveryHref,
   order,
+  paymentRetryAction,
 }: PublicOrderReviewProps) {
   return (
     <main
@@ -32,6 +36,12 @@ export function PublicOrderReview({
         </div>
 
         <PaymentStatusNotice order={order} />
+
+        {order.canRetryMonobankPayment && paymentRetryAction ? (
+          <div className="rounded-md border border-accent bg-card/95 p-4 shadow-sm">
+            <PaymentRetryForm action={paymentRetryAction} />
+          </div>
+        ) : null}
 
         <div className="grid gap-4">
           {order.items.map((item) => (

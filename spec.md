@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, and release-candidate hardening implemented
+Status: owner authentication, first-owner setup hardening, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, and release-candidate hardening implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -165,6 +165,17 @@ Release candidate hardening update on 2026-04-30:
 - Owner dashboard routes continue to require an authenticated `owner`; `user` role sessions are redirected away from `/dashboard`.
 - Railway MCP was attempted again during Prompt 11 with `check_railway_status`, but live Railway configuration was initially blocked by invalid or expired Railway authentication.
 
+Production owner access and payment/shipment safety update on 2026-04-30:
+- Added production Ukrainian auth UI at `/login`, `/logout`, and `/setup`.
+- `/setup` creates the first `owner` only while no owner exists; after an owner exists it shows the Ukrainian unavailable state.
+- Production `/setup` requires `OWNER_SETUP_TOKEN`; invalid or missing setup tokens show a Ukrainian unavailable state before any creation form is exposed.
+- `OWNER_SETUP_TOKEN` is validated as a production env var, documented in `.env.example` and `DEPLOYMENT.md`, and configured securely in Railway production variables for `web` and `worker` without committing the value.
+- Dashboard access now redirects unauthenticated visitors to `/login`; authenticated `user` role sessions remain denied dashboard access.
+- Customer confirmation writes now support a customer-confirmation unit of work so customer, order, payment, shipment, and audit rows use transaction-scoped repositories in PostgreSQL.
+- MonoPay invoice creation now supports retry when a confirmed order has a MonoPay payment without `providerInvoiceId`, or when a previous MonoPay payment failed.
+- Public order review and owner order details expose the Ukrainian `Повторити оплату` action when MonoPay retry is available.
+- Tests cover first owner setup, setup blocked after an owner exists, invalid setup token handling, Ukrainian login labels, owner dashboard access, user dashboard denial, transaction wiring, MonoPay retry eligibility, and public/owner retry UI.
+
 Railway live setup retry on 2026-04-30:
 - Railway authentication was refreshed and Railway MCP `check_railway_status` passed.
 - Created and linked Railway project `dase`: https://railway.com/project/42c716e7-674c-4ca6-bafc-2bc59fabb79a
@@ -233,6 +244,7 @@ For MonoPay:
 6. App stores event idempotently.
 7. App ignores stale events by provider `modifiedDate`.
 8. App updates payment and order status.
+9. If the confirmed order has no provider invoice id or the previous MonoPay payment failed, the customer or owner can use `Повторити оплату` to create a new invoice and move the payment/order back to pending.
 
 For cash on delivery:
 
@@ -409,6 +421,14 @@ Latest local quality status on 2026-04-30 after the Railway live setup retry:
 - `pnpm build` passed.
 - Railway MCP/CLI live verification passed for project creation, service creation, PostgreSQL provisioning, GitHub autodeploy, secure variable configuration, web health, worker startup, and read-only database connectivity/schema verification.
 
+Latest local quality status on 2026-04-30 after production owner access and payment/shipment safety:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 87.24% statements, 80.35% branches, 91.5% functions, and 87.24% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 10 tests covering health, Ukrainian home UI, Ukrainian login UI, owner dashboard access, `user` dashboard denial, owner product/order flows, mocked customer delivery, mocked MonoPay, and owner order management.
+- `pnpm build` passed.
+- Railway CLI verification passed for adding `OWNER_SETUP_TOKEN` securely to production `web` and `worker` variables with deploy triggering skipped.
+
 ## Commands
 
 Configured commands:
@@ -442,6 +462,7 @@ DATABASE_URL_TEST=
 
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=
+OWNER_SETUP_TOKEN=
 
 MONOBANK_TOKEN=
 MONOBANK_API_URL=
@@ -498,6 +519,7 @@ Current Railway status on 2026-04-30:
 - Services `web`, `worker`, and `Postgres` exist in the `production` environment.
 - PostgreSQL was provisioned through Railway MCP template deployment.
 - `DATABASE_URL` is configured securely for `web` and `worker` through Railway service variables as a reference to the `Postgres` service.
+- `OWNER_SETUP_TOKEN` is configured securely for `web` and `worker` production variables; the value is intentionally not documented or committed.
 - `web` is connected to `psht13/dase` on `main`, autodeploy is enabled, and the latest deployment succeeded from `/railway.json`.
 - `worker` is connected to `psht13/dase` on `main`, autodeploy is enabled, and the latest deployment succeeded from `/railway.worker.json`.
 - Web health check verification passed at https://web-production-26609.up.railway.app/api/health.
@@ -626,8 +648,8 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Open questions
 
 - Production MonoPay credentials, public key, and final callback domain.
-- Exact Nova Poshta sender/counterparty settings.
-- Exact Ukrposhta sender/client/address setup.
+- Exact Nova Poshta sender/counterparty settings: current adapter can search cities/warehouses and create a draft InternetDocument-shaped request, but production shipment creation still needs configured sender city, sender warehouse/address, sender contact, sender phone, payer/payment method, cargo weight/dimensions policy, and any required counterparty refs.
+- Exact Ukrposhta sender/client/address setup: current adapter can search/filter offices and map shipment responses, but production shipment creation still needs sender client UUID/token, sender address UUID, recipient client/address workflow confirmation, shipment type/package details, payer settings, and any required label/printing endpoint decisions.
 - Whether to reserve stock when order link is created or only after customer confirms.
 - Cash on delivery now enqueues shipment creation after customer confirmation.
 - Whether image uploads are needed later or external URLs are enough.
@@ -648,11 +670,13 @@ After external production variables are configured:
 2. Confirm `DATABASE_URL` is provided to `web` and `worker` through Railway secure variables or references.
 3. Run `pnpm db:migrate` against a safe Railway development/staging PostgreSQL database before production promotion.
 4. Verify `/api/health` returns a healthy no-store response on the deployed web URL.
-5. Sign in as an `owner` and confirm `/dashboard` loads; confirm a `user` role cannot access dashboard routes.
-6. Create a product using external image URLs only, then create an order link and open the `/o/[token]` public page.
-7. Confirm an invalid, expired, or cancelled public token shows the Ukrainian unavailable state and does not reveal other order data.
-8. Complete a customer delivery confirmation with Nova Poshta lookup and shipment creation on a low-risk test order.
-9. Complete a customer delivery confirmation with Ukrposhta lookup and shipment creation on a low-risk test order.
-10. Create a MonoPay invoice, complete payment, verify signed Monobank webhook processing, duplicate webhook idempotency, and stale event handling.
-11. Confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
-12. Confirm owner order filters, tags, status updates, audit history, and shipment retry work with Ukrainian labels in production.
+5. Before the first owner exists, open `/setup?token=<OWNER_SETUP_TOKEN>` and create the owner; after that confirm `/setup` shows the Ukrainian unavailable state.
+6. Sign in as an `owner` at `/login` and confirm `/dashboard` loads; confirm `/logout` ends the session and a `user` role cannot access dashboard routes.
+7. Create a product using external image URLs only, then create an order link and open the `/o/[token]` public page.
+8. Confirm an invalid, expired, or cancelled public token shows the Ukrainian unavailable state and does not reveal other order data.
+9. Complete a customer delivery confirmation with Nova Poshta lookup and shipment creation on a low-risk test order.
+10. Complete a customer delivery confirmation with Ukrposhta lookup and shipment creation on a low-risk test order.
+11. Create a MonoPay invoice, complete payment, verify signed Monobank webhook processing, duplicate webhook idempotency, and stale event handling.
+12. Confirm `Повторити оплату` creates a new MonoPay invoice when a confirmed order is missing a provider invoice id or the previous payment failed.
+13. Confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
+14. Confirm owner order filters, tags, status updates, audit history, payment retry, and shipment retry work with Ukrainian labels in production.
