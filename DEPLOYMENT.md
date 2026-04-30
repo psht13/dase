@@ -107,6 +107,24 @@ Do not call live external APIs in CI. After production variables are configured,
 - Ukrposhta shipment creation returns a provider shipment reference for a test shipment.
 - Shipment tracking updates move orders through Ukrainian dashboard statuses.
 
-## Current Blocker
+## Current Railway Status
 
-Railway MCP was attempted from this workspace on 2026-04-30, including during release-candidate hardening, but the Railway CLI token is invalid or expired. Because of that, live service creation, GitHub linking, variable configuration, PostgreSQL provisioning, autodeploy settings, and migration verification could not be completed from this session.
+Railway authentication was refreshed and Railway MCP was retried on 2026-04-30.
+
+Completed live setup:
+- Railway project `dase` was created and linked: https://railway.com/project/42c716e7-674c-4ca6-bafc-2bc59fabb79a
+- Services exist in the `production` environment: `web`, `worker`, and `Postgres`.
+- No S3, R2, Railway Storage Bucket, or object storage service was created.
+- `web` and `worker` are connected to GitHub repository `psht13/dase` on branch `main`.
+- GitHub autodeploy is enabled for both `web` and `worker`.
+- `web` uses `/railway.json`, `pnpm build`, `pnpm db:migrate`, `pnpm start`, and `/api/health`.
+- `worker` uses `/railway.worker.json`, `pnpm build`, and `pnpm worker:start`.
+- Required runtime variables were set securely in Railway variables, including `DATABASE_URL` as a Railway reference to `Postgres`.
+- Railway web domain: https://web-production-26609.up.railway.app
+- Web health check verified: `/api/health` returns `status: ok`.
+- Worker runtime verified: deployment logs include `Shipment worker is ready.`
+- Railway PostgreSQL connectivity and migrations were verified with a read-only table count check through the Railway public database proxy.
+
+Remaining manual production verification:
+- Configure real Monobank, Nova Poshta, and Ukrposhta credentials in Railway variables.
+- Run the external API checklist above with low-risk production test data.
