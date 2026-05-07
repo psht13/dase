@@ -7,6 +7,7 @@ import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 import { retryShipmentCreationAction } from "@/modules/shipping/ui/shipment-actions";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
+import { resetServerEnvForTests } from "@/shared/config/env";
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
@@ -117,7 +118,9 @@ describe("retryShipmentCreationAction", () => {
   });
 
   afterEach(() => {
+    resetServerEnvForTests();
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("returns Ukrainian success feedback and queues a retry", async () => {
@@ -147,6 +150,24 @@ describe("retryShipmentCreationAction", () => {
       message: "Повторну спробу створення відправлення недоступно",
       ok: false,
     });
+  });
+
+  it("returns a Ukrainian disabled-shipping message without queueing retry", async () => {
+    vi.stubEnv("SHIPPING_LABEL_CREATION_MODE", "disabled");
+    const enqueueCreateShipment = vi.fn();
+    vi.mocked(getShipmentJobQueue).mockReturnValue({
+      enqueueAutoCompleteDeliveredOrder: vi.fn(),
+      enqueueCreateShipment,
+      enqueueSyncShipmentStatus: vi.fn(),
+    } as never);
+
+    await expect(retryShipmentCreationAction("order-1")).resolves.toEqual({
+      message:
+        "Створення відправлень вимкнено до завершення виробничих налаштувань доставки.",
+      ok: false,
+    });
+    expect(getShipmentJobQueue).not.toHaveBeenCalled();
+    expect(enqueueCreateShipment).not.toHaveBeenCalled();
   });
 });
 

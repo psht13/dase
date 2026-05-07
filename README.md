@@ -28,6 +28,14 @@ In production, set `OWNER_SETUP_TOKEN` as a secure environment variable and ente
 
 After the first owner is created, `/setup` becomes unavailable and owner access starts from `/login`.
 
+## Shipping Demo Modes
+
+Use `SHIPPING_LABEL_CREATION_MODE=disabled` for demos and staging when Nova Post sender settings are not complete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.
+
+Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local development and Playwright e2e. This keeps carrier directory data and shipment numbers deterministic without Nova Post live calls.
+
+To enable live Nova Post later, set `SHIPPING_LABEL_CREATION_MODE=live` and configure the required `NOVA_POST_*` sender, payer, parcel, and API variables from `.env.example` in secure environment variables.
+
 ## Verification
 
 ```bash

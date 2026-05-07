@@ -9,8 +9,10 @@ import {
 import { getAuditEventRepository } from "@/modules/orders/infrastructure/audit-event-repository-factory";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
+import { shippingLabelCreationDisabledMessage } from "@/modules/shipping/application/shipping-label-creation-mode";
 import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
+import { getShippingLabelCreationMode } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 
 export type ShipmentRetryActionResult =
@@ -27,6 +29,14 @@ export async function retryShipmentCreationAction(
   orderId: string,
 ): Promise<ShipmentRetryActionResult> {
   const owner = await requireOwnerSession();
+  const shippingMode = getShippingLabelCreationMode();
+
+  if (shippingMode === "disabled") {
+    return {
+      message: shippingLabelCreationDisabledMessage,
+      ok: false,
+    };
+  }
 
   try {
     await retryShipmentCreationUseCase(

@@ -37,6 +37,7 @@ Required for production `web` and `worker`:
 - `BETTER_AUTH_SECRET` - at least 32 characters.
 - `BETTER_AUTH_URL` - canonical deployed web URL.
 - `OWNER_SETUP_TOKEN` - at least 32 characters; required by shared production env validation. The `web` service validates it only when the `/setup` form is submitted before the first owner exists. Never place this token in URLs, redirects, logs, query strings, or client-side state.
+- `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Production defaults to `disabled` when omitted. Use `disabled` for production/demo deployments until Nova Post sender settings are complete. `mock` is rejected in production and is only for local/e2e.
 - `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` - default `24` if omitted.
 - `NODE_ENV` - normally set to `production` by the runtime.
 
@@ -46,7 +47,7 @@ Required for MonoPay / Monobank production payment flow:
 - `MONOBANK_PUBLIC_KEY`
 - `MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY`
 
-Required for Nova Post production shipment flow:
+Required only when `SHIPPING_LABEL_CREATION_MODE=live` for Nova Post production shipment flow:
 - `NOVA_POST_API_KEY` - secret API key used only server-side to generate temporary JWT tokens.
 - `NOVA_POST_API_URL` - default `https://api.novapost.com/v.1.0/`; use `https://api-stage.novapost.pl/v.1.0/` for stage/test verification.
 - `NOVA_POST_AUTH_URL` - optional override for the authorization endpoint when it cannot be derived from `NOVA_POST_API_URL`; by default the app calls `/clients/authorization`.
@@ -61,6 +62,8 @@ Required for Nova Post production shipment flow:
 - `NOVA_POST_PAYER_CONTRACT_NUMBER` - required by Nova Post for some non-cash or third-person payer scenarios.
 - `NOVA_POST_DEFAULT_WIDTH_MM`, `NOVA_POST_DEFAULT_LENGTH_MM`, `NOVA_POST_DEFAULT_HEIGHT_MM`
 - `NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS`, `NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS`
+
+`NOVA_POST_PAYMENT_METHOD`, legacy sender contact ids, and Ukrposhta variables are not required for the current Nova Post v.1.0 integration. The live request model is built from the official sender/recipient, payer, and parcel fields in the infrastructure adapter. Recipient counterparty data comes from the confirmed customer delivery form for each order.
 
 Deprecated compatibility names:
 - `NOVA_POSHTA_API_KEY`
@@ -113,13 +116,14 @@ If the worker causes shipment or tracking errors, stop or roll back the `worker`
 Do not call live external APIs in CI. After production variables are configured, verify manually in Railway using a low-risk test order:
 - Open `/setup` before any owner exists, enter `OWNER_SETUP_TOKEN` into the Ukrainian setup-token field, create the first owner, then confirm `/setup` shows the Ukrainian unavailable state. Do not put `OWNER_SETUP_TOKEN` in the URL.
 - Confirm `/login` accepts the owner credentials, `/logout` ends the session, and a `user` role cannot access `/dashboard`.
+- With `SHIPPING_LABEL_CREATION_MODE=disabled`, confirm the owner order details page shows the Ukrainian disabled-shipping notice and no live Nova Post shipment is created.
 - MonoPay invoice creation redirects to the expected Monobank payment URL.
 - MonoPay retry shows `Повторити оплату` when a confirmed order is missing a provider invoice or when payment failed.
 - Monobank webhook signature verification accepts a signed provider callback.
 - Duplicate Monobank webhooks are idempotent.
 - Stale Monobank webhook events do not overwrite newer payment state.
 - Nova Post city and warehouse search works for a known city through mocked CI tests and a low-risk manual production check.
-- Nova Post shipment creation returns a tracking number for a test shipment after sender config is present.
+- Nova Post shipment creation returns a tracking number for a test shipment only after `SHIPPING_LABEL_CREATION_MODE=live` and the full sender/payer/parcel config are present.
 - Nova Post tracking sync maps provider status codes into Ukrainian dashboard shipment statuses.
 - The stored label reference points to Nova Post `/shipments/print`; downloading/serving labels requires a server-side authorized request because the provider endpoint requires JWT authorization.
 - Ukrposhta is not shown in the public customer form during the Nova Post MVP; historical records are labeled `Укрпошта (вимкнено)`.

@@ -9,11 +9,13 @@ import { Button } from "@/shared/ui/button";
 type OwnerOrderRetryShipmentFormProps = {
   action: () => Promise<ShipmentRetryActionResult>;
   canRetry: boolean;
+  notice?: string | null;
 };
 
 export function OwnerOrderRetryShipmentForm({
   action,
   canRetry,
+  notice,
 }: OwnerOrderRetryShipmentFormProps) {
   const router = useRouter();
   const [message, setMessage] = useState<ShipmentRetryActionResult | null>(null);
@@ -52,6 +54,12 @@ export function OwnerOrderRetryShipmentForm({
           role={message.ok ? "status" : "alert"}
         >
           {message.message}
+        </p>
+      ) : null}
+
+      {notice ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          {notice}
         </p>
       ) : null}
 

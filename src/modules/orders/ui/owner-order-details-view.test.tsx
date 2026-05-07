@@ -117,6 +117,25 @@ describe("OwnerOrderDetailsView", () => {
       screen.getByRole("button", { name: "Повторити створення відправлення" }),
     ).toBeDisabled();
   });
+
+  it("shows a Ukrainian disabled-shipping message to the owner", () => {
+    render(
+      <OwnerOrderDetailsView
+        availableTags={[]}
+        order={createOrderDetails()}
+        shippingLabelCreationMode="disabled"
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Створення відправлень вимкнено до завершення виробничих налаштувань доставки.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Повторити створення відправлення" }),
+    ).toBeDisabled();
+  });
 });
 
 function createOrderDetails(

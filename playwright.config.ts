@@ -12,7 +12,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: `PLAYWRIGHT_E2E=1 BETTER_AUTH_URL=${baseURL} pnpm dev`,
+    command: `PLAYWRIGHT_E2E=1 SHIPPING_LABEL_CREATION_MODE=disabled BETTER_AUTH_URL=${baseURL} pnpm dev`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

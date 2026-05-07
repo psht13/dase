@@ -13,7 +13,11 @@ import { getCustomerRepository } from "@/modules/orders/infrastructure/customer-
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { PgBossShipmentJobQueue } from "@/modules/shipping/infrastructure/pg-boss-shipment-job-queue";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
-import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
+import {
+  getShippingCarrier,
+  getShippingLabelCreationMode,
+  validateLiveShipmentCreationConfig,
+} from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 import { getServerEnv } from "@/shared/config/env";
 
 type ShipmentWorkerDependencies = {
@@ -38,8 +42,10 @@ export async function registerShipmentWorkers(boss: PgBoss): Promise<void> {
             customerRepository: dependencies.customerRepository,
             getShippingCarrier,
             orderRepository: dependencies.orderRepository,
+            shippingLabelCreationMode: getShippingLabelCreationMode(),
             shipmentJobQueue: dependencies.shipmentJobQueue,
             shipmentRepository: dependencies.shipmentRepository,
+            validateLiveShipmentCreationConfig,
           });
         }
       },

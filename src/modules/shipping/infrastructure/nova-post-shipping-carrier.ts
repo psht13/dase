@@ -32,16 +32,19 @@ type NovaPostClientOptions = {
 
 export type NovaPostPayerType = "Recipient" | "Sender" | "ThirdPerson";
 
-export type NovaPostSenderConfig = {
+export type NovaPostCounterpartyConfig = {
   companyName?: string;
   companyTin?: string;
   countryCode: string;
   divisionId: string;
   email?: string;
   name: string;
+  phone: string;
+};
+
+export type NovaPostSenderConfig = NovaPostCounterpartyConfig & {
   payerContractNumber?: string;
   payerType?: NovaPostPayerType;
-  phone: string;
 };
 
 export type NovaPostShipmentDefaults = {

@@ -67,6 +67,11 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await expect(
     page.getByRole("button", { name: "Повторити створення відправлення" }),
   ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Створення відправлень вимкнено до завершення виробничих налаштувань доставки.",
+    ),
+  ).toBeVisible();
 
   await page.getByLabel("Новий тег").fill(tagName);
   await page.getByRole("button", { name: "Додати" }).first().click();

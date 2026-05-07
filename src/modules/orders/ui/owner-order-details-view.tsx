@@ -30,6 +30,10 @@ import { OwnerOrderTagPanel } from "@/modules/orders/ui/owner-order-tag-panel";
 import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
 import { retryOwnerMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
+import {
+  shippingLabelCreationDisabledMessage,
+  type ShippingLabelCreationMode,
+} from "@/modules/shipping/application/shipping-label-creation-mode";
 import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import { retryShipmentCreationAction } from "@/modules/shipping/ui/shipment-actions";
 import { Button } from "@/shared/ui/button";
@@ -37,16 +41,20 @@ import { Button } from "@/shared/ui/button";
 type OwnerOrderDetailsViewProps = {
   availableTags: OrderTagRecord[];
   order: OwnerOrderDetails;
+  shippingLabelCreationMode?: ShippingLabelCreationMode;
 };
 
 export function OwnerOrderDetailsView({
   availableTags,
   order,
+  shippingLabelCreationMode = "live",
 }: OwnerOrderDetailsViewProps) {
   const publicUrl = `/o/${order.publicToken}`;
   const canRetryMonobankPayment = order.payments.some((payment) =>
     canCreateMonobankInvoiceForPayment(order.status, payment),
   );
+  const isShippingLabelCreationDisabled =
+    shippingLabelCreationMode === "disabled";
 
   return (
     <div className="grid gap-6">
@@ -235,11 +243,19 @@ export function OwnerOrderDetailsView({
       <section className="grid gap-6 rounded-md border p-4">
         <OwnerOrderRetryShipmentForm
           action={retryShipmentCreationAction.bind(null, order.id)}
-          canRetry={order.shipments.some(
-            (shipment) =>
-              shipment.status === "FAILED" &&
-              isShipmentCreationEnabled(shipment.carrier),
-          )}
+          canRetry={
+            !isShippingLabelCreationDisabled &&
+            order.shipments.some(
+              (shipment) =>
+                shipment.status === "FAILED" &&
+                isShipmentCreationEnabled(shipment.carrier),
+            )
+          }
+          notice={
+            isShippingLabelCreationDisabled
+              ? shippingLabelCreationDisabledMessage
+              : null
+          }
         />
       </section>
 

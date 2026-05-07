@@ -4,6 +4,11 @@ import type { OrderRepository } from "@/modules/orders/application/order-reposit
 import { assertOrderStatusTransition } from "@/modules/orders/domain/status";
 import type { CreateShipmentJobData } from "@/modules/shipping/application/shipment-job-queue";
 import type { ShipmentJobQueue } from "@/modules/shipping/application/shipment-job-queue";
+import {
+  shippingLabelCreationDisabledMessage,
+  type ShipmentCreationConfigValidation,
+  type ShippingLabelCreationMode,
+} from "@/modules/shipping/application/shipping-label-creation-mode";
 import type {
   ShippingCarrier,
 } from "@/modules/shipping/application/shipping-carrier";
@@ -20,8 +25,14 @@ type CreateShipmentJobDependencies = {
   getShippingCarrier: (carrier: ShipmentCarrier) => ShippingCarrier;
   now?: () => Date;
   orderRepository: OrderRepository;
+  shippingLabelCreationMode?: ShippingLabelCreationMode;
   shipmentJobQueue: ShipmentJobQueue;
   shipmentRepository: ShipmentRepository;
+  validateLiveShipmentCreationConfig?: (
+    carrier: ShipmentCarrier,
+  ) =>
+    | Promise<ShipmentCreationConfigValidation>
+    | ShipmentCreationConfigValidation;
 };
 
 export class ShipmentJobCannotBeProcessedError extends Error {
@@ -82,6 +93,45 @@ export async function createShipmentJobUseCase(
         shipmentId: shipment.id,
       },
     );
+  }
+
+  const labelCreationMode = dependencies.shippingLabelCreationMode ?? "live";
+
+  if (labelCreationMode === "disabled") {
+    return markShipmentCreationFailed(
+      {
+        auditEventRepository: dependencies.auditEventRepository,
+        shipmentRepository: dependencies.shipmentRepository,
+      },
+      {
+        mode: labelCreationMode,
+        orderId: order.id,
+        reason: shippingLabelCreationDisabledMessage,
+        shipmentId: shipment.id,
+      },
+    );
+  }
+
+  if (labelCreationMode === "live") {
+    const validation =
+      (await dependencies.validateLiveShipmentCreationConfig?.(shipment.carrier)) ??
+      ({ ok: true } as const);
+
+    if (!validation.ok) {
+      return markShipmentCreationFailed(
+        {
+          auditEventRepository: dependencies.auditEventRepository,
+          shipmentRepository: dependencies.shipmentRepository,
+        },
+        {
+          missingConfigKeys: validation.missingKeys,
+          mode: labelCreationMode,
+          orderId: order.id,
+          reason: validation.reason,
+          shipmentId: shipment.id,
+        },
+      );
+    }
   }
 
   const carrier = dependencies.getShippingCarrier(shipment.carrier);
@@ -161,6 +211,8 @@ async function markShipmentCreationFailed(
     "auditEventRepository" | "shipmentRepository"
   >,
   input: {
+    missingConfigKeys?: string[];
+    mode?: ShippingLabelCreationMode;
     orderId: string;
     reason: string;
     shipmentId: string;
@@ -169,6 +221,7 @@ async function markShipmentCreationFailed(
   const updatedShipment = await dependencies.shipmentRepository.updateStatus({
     shipmentId: input.shipmentId,
     status: "FAILED",
+    trackingNumber: null,
   });
 
   await dependencies.auditEventRepository.append({
@@ -179,6 +232,8 @@ async function markShipmentCreationFailed(
     orderId: input.orderId,
     payload: {
       message: "Створення відправлення не вдалося",
+      missingConfigKeys: input.missingConfigKeys,
+      mode: input.mode,
       reason: input.reason,
       shipmentId: input.shipmentId,
     },

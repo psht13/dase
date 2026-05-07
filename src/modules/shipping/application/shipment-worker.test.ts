@@ -8,6 +8,8 @@ import { enqueueShipmentCreationForReadyOrderUseCase } from "@/modules/shipping/
 import { ShipmentCreationRetryUnavailableError } from "@/modules/shipping/application/enqueue-shipment-creation";
 import { syncShipmentStatusJobUseCase } from "@/modules/shipping/application/sync-shipment-status-job";
 import type { ShippingCarrier } from "@/modules/shipping/application/shipping-carrier";
+import { shippingLabelCreationDisabledMessage } from "@/modules/shipping/application/shipping-label-creation-mode";
+import { FixtureShippingCarrier } from "@/modules/shipping/infrastructure/fixture-shipping-carrier";
 import { InMemoryShipmentJobQueue } from "@/modules/shipping/infrastructure/in-memory-shipment-job-queue";
 import { InMemoryShipmentRepository } from "@/modules/shipping/infrastructure/in-memory-shipment-repository";
 
@@ -227,6 +229,142 @@ describe("shipment worker use cases", () => {
         status: "FAILED",
       }),
     ]);
+  });
+
+  it("handles disabled label creation mode without calling a provider", async () => {
+    const context = await createContext({ orderStatus: "SHIPMENT_PENDING" });
+    const getShippingCarrier = vi.fn(() => createCarrier());
+
+    await expect(
+      createShipmentJobUseCase(
+        {
+          orderId: context.order.id,
+          requestedAt: now.toISOString(),
+          requestedBy: "system",
+          shipmentId: context.shipment.id,
+        },
+        {
+          ...context,
+          getShippingCarrier,
+          now: () => now,
+          shippingLabelCreationMode: "disabled",
+        },
+      ),
+    ).resolves.toMatchObject({
+      status: "FAILED",
+      trackingNumber: null,
+    });
+    expect(getShippingCarrier).not.toHaveBeenCalled();
+    await expect(
+      context.auditEventRepository.listForOrder(context.order.id),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        eventType: "SHIPMENT_CREATION_FAILED",
+        payload: expect.objectContaining({
+          mode: "disabled",
+          reason: shippingLabelCreationDisabledMessage,
+        }),
+      }),
+    ]);
+  });
+
+  it("does not let retry bypass disabled label creation mode", async () => {
+    const context = await createContext({
+      orderStatus: "SHIPMENT_PENDING",
+      shipmentStatus: "FAILED",
+    });
+    const getShippingCarrier = vi.fn(() => createCarrier());
+
+    await expect(
+      createShipmentJobUseCase(
+        {
+          orderId: context.order.id,
+          requestedAt: now.toISOString(),
+          requestedBy: "owner",
+          shipmentId: context.shipment.id,
+        },
+        {
+          ...context,
+          getShippingCarrier,
+          now: () => now,
+          shippingLabelCreationMode: "disabled",
+        },
+      ),
+    ).resolves.toMatchObject({ status: "FAILED" });
+    expect(getShippingCarrier).not.toHaveBeenCalled();
+  });
+
+  it("fails live shipment creation before provider calls when config is missing", async () => {
+    const context = await createContext({ orderStatus: "SHIPMENT_PENDING" });
+    const getShippingCarrier = vi.fn(() => createCarrier());
+    const validateLiveShipmentCreationConfig = vi.fn(() => ({
+      missingKeys: ["NOVA_POST_SENDER_DIVISION_ID"],
+      ok: false as const,
+      reason:
+        "Налаштування Нова пошта для створення відправлень неповні: NOVA_POST_SENDER_DIVISION_ID. Відправлення не створено.",
+    }));
+
+    await expect(
+      createShipmentJobUseCase(
+        {
+          orderId: context.order.id,
+          requestedAt: now.toISOString(),
+          requestedBy: "system",
+          shipmentId: context.shipment.id,
+        },
+        {
+          ...context,
+          getShippingCarrier,
+          now: () => now,
+          shippingLabelCreationMode: "live",
+          validateLiveShipmentCreationConfig,
+        },
+      ),
+    ).resolves.toMatchObject({
+      status: "FAILED",
+      trackingNumber: null,
+    });
+    expect(validateLiveShipmentCreationConfig).toHaveBeenCalledWith(
+      "NOVA_POSHTA",
+    );
+    expect(getShippingCarrier).not.toHaveBeenCalled();
+    await expect(
+      context.auditEventRepository.listForOrder(context.order.id),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        eventType: "SHIPMENT_CREATION_FAILED",
+        payload: expect.objectContaining({
+          missingConfigKeys: ["NOVA_POST_SENDER_DIVISION_ID"],
+          mode: "live",
+        }),
+      }),
+    ]);
+  });
+
+  it("uses deterministic shipment creation in mock mode", async () => {
+    const context = await createContext({ orderStatus: "SHIPMENT_PENDING" });
+
+    await expect(
+      createShipmentJobUseCase(
+        {
+          orderId: context.order.id,
+          requestedAt: now.toISOString(),
+          requestedBy: "system",
+          shipmentId: context.shipment.id,
+        },
+        {
+          ...context,
+          getShippingCarrier: () => new FixtureShippingCarrier("NOVA_POSHTA"),
+          now: () => now,
+          shippingLabelCreationMode: "mock",
+        },
+      ),
+    ).resolves.toMatchObject({
+      carrierShipmentId: `NOVA_POSHTA-${context.order.id}`,
+      labelUrl: null,
+      status: "CREATED",
+      trackingNumber: "20450000000000",
+    });
   });
 
   it("refuses disabled carrier shipment creation without calling a live adapter", async () => {

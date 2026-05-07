@@ -206,6 +206,16 @@ Nova Post API replacement update on 2026-05-07:
 - Public customer delivery now exposes `Нова пошта` as the only active carrier. The database/internal enum value remains `NOVA_POSHTA` for compatibility with existing rows and worker code.
 - MSW tests cover JWT generation, JWT caching, JWT refresh, city/warehouse mapping, shipment creation mapping, tracking status mapping, safe provider errors, no credential logging, and missing sender config blocking live shipment calls.
 
+Shipping label safety update on 2026-05-07:
+- Added explicit `SHIPPING_LABEL_CREATION_MODE=disabled|mock|live`.
+- Production defaults to `disabled` unless Railway variables explicitly set `SHIPPING_LABEL_CREATION_MODE=live`; production rejects `mock`.
+- `mock` mode is local/e2e-only and uses deterministic fixture shipment creation instead of Nova Post live label creation.
+- `disabled` mode stops create-shipment jobs before any carrier adapter is called, marks the shipment failed without a tracking number, appends a Ukrainian audit event, and shows owners the Ukrainian disabled-shipping notice.
+- `live` mode requires complete Nova Post API, sender, payer, and parcel defaults before the app can validate production env. The worker also validates live shipment readiness before resolving the carrier adapter.
+- Nova Post sender/counterparty data is modeled around the official v.1.0 sender/recipient payload shape. Sender settings are env-backed for now; recipient counterparty data comes from each confirmed customer delivery form.
+- Ukrposhta remains disabled legacy data and was not reintroduced.
+- Tests cover disabled mode provider avoidance, missing live config provider avoidance, deterministic mock mode, disabled retry safety, disabled owner copy, and production env validation.
+
 Ukrposhta active-MVP removal update on 2026-05-07:
 - Added a central shipping carrier registry at `src/modules/shipping/application/shipping-carrier-registry.ts`.
 - The active customer-facing carrier list contains only Nova Post with the Ukrainian label `Нова пошта`.
@@ -547,6 +557,8 @@ MONOBANK_API_URL=
 MONOBANK_PUBLIC_KEY=
 MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
 
+SHIPPING_LABEL_CREATION_MODE=mock
+
 NOVA_POST_API_KEY=
 NOVA_POST_API_URL=https://api.novapost.com/v.1.0/
 NOVA_POST_AUTH_URL=
@@ -741,6 +753,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 - Production MonoPay credentials, public key, and final callback domain.
 - Nova Post production values must still be supplied in Railway before live shipment smoke tests: sender division id, sender name/phone, optional company fields, payer settings, and parcel dimension/weight defaults. Missing required sender config now blocks shipment creation before a live provider call.
+- Production shipping label creation remains disabled by default through `SHIPPING_LABEL_CREATION_MODE=disabled`; switch to `live` only after Nova Post sender, payer, and parcel settings are configured securely.
 - Future Ukrposhta reintroduction requires practical test/production API access, sender/client/address workflow confirmation, shipment/package details, payer settings, label decisions, and enabling the carrier through the central registry.
 - Whether to reserve stock when order link is created or only after customer confirms.
 - Cash on delivery now enqueues shipment creation after customer confirmation.
@@ -748,7 +761,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
-- Real Monobank and Nova Post production credentials are not yet configured in Railway, so live payment and carrier smoke tests remain manual.
+- Real Monobank and Nova Post production credentials are not yet configured in Railway, so live payment and carrier smoke tests remain manual. Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured with complete settings.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.

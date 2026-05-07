@@ -10,6 +10,7 @@ import { getOrderTagRepository } from "@/modules/orders/infrastructure/order-tag
 import { OwnerOrderDetailsView } from "@/modules/orders/ui/owner-order-details-view";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
+import { getShippingLabelCreationMode } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 
 type OrderDetailsPageProps = {
@@ -51,5 +52,11 @@ export default async function OrderDetailsPage({
     notFound();
   }
 
-  return <OwnerOrderDetailsView availableTags={availableTags} order={order} />;
+  return (
+    <OwnerOrderDetailsView
+      availableTags={availableTags}
+      order={order}
+      shippingLabelCreationMode={getShippingLabelCreationMode()}
+    />
+  );
 }
