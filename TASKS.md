@@ -1,1015 +1,178 @@
-# Codex prompts - Jewelry order confirmation app v2
+# Dase audit and Codex repair prompts - v3
 
-Цей файл містить оновлений набір промптів для Codex, щоб побудувати комерційний веб-застосунок для продажу прикрас через кастомні order links.
-
-## Що змінилось у v2
-
-- Немає ролі `admin`.
-- Дозволені тільки ролі `owner` та `user`.
-- Dashboard належить власнику, тому в коді й маршрутах краще використовувати `owner` / `dashboard`, а не `admin`.
-- Увесь користувацький контент у UI має бути українською мовою.
-- Codex має одразу підняти PostgreSQL на Railway через Railway MCP і використовувати цю БД для перевірки міграцій та роботи repository/use case шарів.
-- S3 / R2 / Railway Storage Bucket не створювати на старті.
-- Для зображень товарів на старті використовувати URL-и у таблиці `product_images`. Завантаження файлів залишити як майбутнє рішення.
-- Назви комітів мають бути англійською в imperative sentence case, без Conventional Commits префіксів. Приклад: `Add class selection logic`.
+Цей файл містить аудитні висновки та набір промптів для Codex після перевірки репозиторію `psht13/dase`.
 
 ## Як використовувати
 
 1. Почни з **PROMPT 00**.
-2. Після кожного успішного коміту переходь до наступного промпта.
-3. Якщо тести, лінтер, typecheck або build падають, не переходь далі. Використай **PROMPT 12 - recovery prompt**.
-4. Вручну створювати `AGENTS.md`, `spec.md` або архітектурні файли не потрібно. **PROMPT 00** змушує Codex створити або оновити їх самостійно.
-5. Усі наступні промпти теж містять правило: якщо `AGENTS.md`, `spec.md` або ADR-файл відсутні, Codex має їх відновити перед роботою.
+2. Далі виконуй промпти по порядку.
+3. Після кожного промпта Codex має:
+   - оновити `spec.md`, `AGENTS.md`, `DEPLOYMENT.md`, якщо поведінка або env vars змінилися;
+   - додати або оновити тести;
+   - запустити релевантні перевірки;
+   - зробити коміт тільки після green checks.
+4. Якщо будь-яка перевірка падає, не переходь до наступного промпта. Використай **PROMPT 07 - recovery prompt**.
+5. Назви комітів мають бути англійською, imperative sentence case, без Conventional Commits prefix.
+   - Добре: `Fix owner authentication navigation`
+   - Погано: `fix: owner navigation`
 
-## Які документаційні файли потрібні
+## Короткий аудит
 
-Мінімально достатньо:
+Підтверджені проблеми:
 
-- `AGENTS.md` - постійні інструкції для Codex та інших агентів.
-- `spec.md` - жива специфікація продукту, статус реалізації, env vars, команди, відкриті питання.
-- `docs/adr/0001-architecture.md` - коротке архітектурне рішення. Не обовʼязково для запуску, але корисно для стабільної роботи Codex у нових сесіях.
-
-Пізніше окремо створюється:
-
-- `DEPLOYMENT.md` - на етапі Railway deployment.
+- Початкова CTA-кнопка `Перейти до налаштування` на home page є просто `<Button>`, без `Link` або `onClick`, тому вона нікуди не веде.
+- `/setup` зараз очікує setup token у query параметрі `?token=...` і не показує форму, якщо token відсутній. Це поганий UX і небажано з точки зору безпеки, бо secret потрапляє в URL/history/logs.
+- Після auth update треба окремо перевірити session cookie persistence: login -> dashboard -> navigation between dashboard pages -> hard reload. Не можна покладатися тільки на Playwright fallback cookies.
+- Nova Poshta adapter зараз використовує legacy `https://api.novaposhta.ua/v2.0/json/`.
+- Потрібно перейти на новий Nova Post API `v.1.0` з API key -> JWT flow.
+- Ukrposhta треба повністю прибрати з активного MVP, але залишити `ShippingCarrier` port і carrier registry так, щоб її можна було повернути пізніше.
+- Поточний delivery UI, validation, schema, env docs і factory все ще містять `UKRPOSHTA`.
+- Поточні shipment adapters не мають достатньо sender/counterparty configuration для безпечного production label creation.
+- Потрібен README або короткий operations guide для запуску, owner setup, Railway env vars і demo flow.
+- Варто розділити env validation за runtime: `web`, `worker`, `test`, бо зараз production worker може бути змушений мати web-only secrets.
 
 ---
 
 ================================================================================
-PROMPT 00 - repository audit, Railway PostgreSQL, AGENTS.md, spec.md, architecture ADR
+PROMPT 00 - audit current repo and create repair checklist
 ================================================================================
 
-````text
-You are working in an existing GitHub repository.
-
-Project goal:
-Build a small commercial order-confirmation web app for jewelry sellers.
-
-Important product correction:
-There must be no `admin` role. The only allowed auth roles are:
-- `owner` - authenticated seller/owner who can access the dashboard and manage products/orders.
-- `user` - regular user/customer role. Public customers usually do not need to log in to confirm an order link, but if the auth system needs a default role, it must be `user`.
-
-Do not create `admin`, `manager`, `staff`, or similar roles.
-Do not call the dashboard an admin dashboard in user-facing UI. Use owner/dashboard wording instead.
-
-Language rule:
-All user-facing UI content must be in Ukrainian:
-- page titles
-- buttons
-- labels
-- placeholders
-- validation messages
-- loading states
-- empty states
-- error states
-- confirmation messages
-- order/payment/delivery status labels shown to users
-
-Code identifiers, file names, tests, and commit messages can be in English.
-
-The app should support:
-- Owner dashboard.
-- Product catalog management.
-- Adding products with price, SKU, description, stock, and image URLs.
-- Selecting multiple products and quantities to create an order.
-- Creating a public order confirmation link.
-- Customer opens the link, reviews products, and confirms the order.
-- Customer fills delivery data: full name, phone, carrier, city/locality, branch/warehouse/post office.
-- Delivery carriers: Nova Poshta and Ukrposhta.
-- Carrier location data must come from official APIs through app adapters.
-- Payment methods: MonoPay / Monobank acquiring or cash on delivery.
-- After confirmation, data must be saved in PostgreSQL.
-- The app should create the corresponding shipping document/label for Nova Poshta or Ukrposhta.
-- Owner can view orders, tags, statuses, payments, shipments, and audit history.
-- Owner can apply tags like completed, returned, needs attention, etc.
-- Where possible, orders should automatically become completed after successful parcel delivery.
-
-Existing context:
-- The project already has a GitHub repository.
-- Playwright MCP is available for UI inspection and testing.
-- Railway MCP is available for deployment and PostgreSQL setup.
-- Target deployment is Railway with automatic deploy from the GitHub repository.
-
-Your task in this prompt:
-1. Inspect the repository structure, package manager, framework, test setup, CI files, deployment files, and existing code.
-2. Do not assume the repository is empty. Adapt to what exists.
-3. Use Railway MCP immediately to create or connect a Railway project and provision a PostgreSQL service for development/staging verification.
-4. Retrieve the Railway PostgreSQL connection string securely and configure it through environment variables only. Never commit secrets.
-5. Use the Railway PostgreSQL database to verify DB connectivity and future migrations. Do not run destructive tests against a production database.
-6. If Railway MCP or Railway credentials are unavailable, document the blocker in `spec.md` and continue with a local/mock database setup only as a fallback.
-7. If `AGENTS.md` does not exist, create it using the content below. If it exists, update it carefully while preserving useful existing instructions.
-8. If `spec.md` does not exist, create it using the content below. If it exists, update it carefully while preserving useful existing information.
-9. If `docs/adr/0001-architecture.md` does not exist, create it using the content below.
-10. Add a concise implementation plan split into milestones.
-11. Do not implement product features yet, except minimal scaffolding only if the repository is empty and cannot run checks at all.
-12. Run existing checks if available.
-13. Commit the documentation, Railway PostgreSQL setup notes, and audit result.
-
-Commit message rule:
-Use English imperative sentence case without Conventional Commits prefixes.
-Examples:
-- `Add project specification`
-- `Create architecture decision record`
-- `Update Railway database setup notes`
-Do not use messages like `docs: add spec` or `feat: add product catalog`.
-
-Important:
-- Never commit secrets.
-- Do not skip repository inspection.
-- Do not ask the user to manually create `AGENTS.md`, `spec.md`, or architecture files. Create or update them yourself.
-- Keep changes small and focused.
-- Do not create S3, R2, or Railway Storage Bucket at this stage.
-- Product images should initially be stored as external image URLs in the database.
-
-Create or update `AGENTS.md` with this content, adapted only where the existing repository requires it:
-
-~~~md
-# AGENTS.md
-
-## Project
-
-This repository contains a commercial order-confirmation web app for jewelry sellers.
-
-The app has:
-- Owner dashboard.
-- Product catalog management.
-- Product selection and quantity-based order building.
-- Owner-created public order links.
-- Public customer confirmation page.
-- Delivery form with Nova Poshta and Ukrposhta integrations.
-- MonoPay / Monobank acquiring integration.
-- Shipment creation and tracking.
-- Order tags, statuses, and audit history.
-- Railway deployment with GitHub-based deploy flow.
-
-## Roles
-
-Only these roles are allowed:
-
-- `owner` - authenticated seller/owner with dashboard access.
-- `user` - regular user/customer role.
-
-Forbidden roles:
-
-- `admin`
-- `manager`
-- `staff`
-- any other dashboard role unless the user explicitly requests it later.
-
-If existing code contains `admin`, migrate it to `owner` or remove it.
-
-## Language and UI content
-
-All user-facing content must be Ukrainian:
-
-- page titles
-- navigation labels
-- buttons
-- form labels
-- placeholders
-- validation messages
-- loading states
-- empty states
-- error states
-- success messages
-- status labels
-- public customer-facing copy
-
-Code identifiers, file names, tests, and commit messages can be English.
-
-Tests for UI flows should assert important Ukrainian labels to prevent accidental English UI copy.
-
-## Non-negotiable rules
-
-1. Always read `spec.md` and this `AGENTS.md` before making changes.
-2. If `spec.md` is missing, recreate it from the latest known project specification before implementing features.
-3. Keep architecture clean and feature-oriented.
-4. Do not put business logic directly inside React components, Next.js route handlers, or server actions.
-5. Domain layer must not import Next.js, React, Drizzle, external API clients, or UI code.
-6. Application layer coordinates use cases and depends on ports/interfaces.
-7. Infrastructure layer implements repositories, payment providers, shipping carriers, storage, and external API adapters.
-8. UI layer uses use cases through safe server actions or API handlers.
-9. Every feature must include tests.
-10. Minimum coverage is 80% for lines, statements, branches, and functions.
-11. Do not mark work as complete until required checks pass.
-12. Update `spec.md` after each completed milestone.
-13. Make small meaningful commits after each green milestone.
-14. Commit messages must be English imperative sentence case, for example `Add product catalog form`.
-15. Do not use Conventional Commits prefixes such as `feat:`, `fix:`, `docs:`, or `chore:`.
-16. Never commit secrets.
-17. Do not weaken tests or reduce coverage thresholds to make checks pass.
-18. Do not call live external APIs in CI. Use MSW, fixtures, mocks, or test adapters.
-19. If blocked by missing credentials, implement mocked/contract-tested adapters and document the missing credential and manual verification step in `spec.md`.
-20. Do not create S3/R2/Railway Storage Bucket unless the user explicitly asks later.
-21. For product images, initially store validated external image URLs in `product_images`.
-22. Do not store uploaded image files on ephemeral service storage.
-
-## Railway PostgreSQL rule
-
-Railway MCP is available and should be used early.
-
-Required behavior:
-
-1. Create or connect a Railway project.
-2. Provision PostgreSQL on Railway for development/staging verification.
-3. Store `DATABASE_URL` only in secure environment variables.
-4. Use Railway PostgreSQL to verify DB connectivity and migrations.
-5. Do not commit `.env` files containing secrets.
-6. Do not run destructive tests against a production database.
-7. If Railway MCP is unavailable, document the blocker in `spec.md` and continue with local/test DB as a fallback.
-
-## Required final checks
-
-Run before claiming completion:
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-If the repository uses another package manager, adapt commands consistently and document them in `spec.md`.
-
-If a check fails:
-1. Fix the issue.
-2. Run the check again.
-3. Do not claim completion until it passes or a real external blocker is documented.
-
-## Preferred stack
-
-Use the existing stack if the repository already has a clear one. Otherwise use:
-
-- Next.js App Router
-- TypeScript strict mode
-- pnpm
-- Tailwind CSS
-- shadcn/ui-compatible components
-- Drizzle ORM
-- PostgreSQL
-- Better Auth
-- Vitest
-- Testing Library
-- MSW
-- Playwright
-- pg-boss or another Postgres-backed job queue for workers
-- Railway for PostgreSQL and deployment
-
-## Architecture
-
-Use feature-oriented onion architecture:
-
-```txt
-src/
-  app/
-    (owner)/
-      dashboard/
-    o/
-      [token]/
-    api/
-      webhooks/
-      health/
-  modules/
-    catalog/
-      domain/
-      application/
-      infrastructure/
-      ui/
-    orders/
-      domain/
-      application/
-      infrastructure/
-      ui/
-    payments/
-      domain/
-      application/
-      infrastructure/
-    shipping/
-      domain/
-      application/
-      infrastructure/
-    users/
-      domain/
-      application/
-      infrastructure/
-  shared/
-    db/
-    config/
-    errors/
-    logger/
-    ui/
-    utils/
-  worker/
-    jobs/
-```
-
-Do not use `(admin)` route groups unless existing framework constraints make it unavoidable. Prefer `(owner)` or `(dashboard)`.
-
-## Layer rules
-
-### Domain
-
-Allowed:
-- Entities
-- Value objects
-- Domain services
-- Domain errors
-- Pure functions
-- Type definitions
-
-Forbidden:
-- React
-- Next.js
-- Drizzle
-- Database clients
-- HTTP clients
-- External API SDKs
-- Environment variables
-
-### Application
-
-Allowed:
-- Use cases
-- Ports/interfaces
-- DTOs
-- Transaction boundaries through interfaces
-- Calling repositories and providers through ports
-
-Forbidden:
-- React components
-- Direct external API calls
-- Raw database queries unless behind a repository interface
-
-### Infrastructure
-
-Allowed:
-- Drizzle repositories
-- Better Auth adapter setup
-- Monobank provider implementation
-- Nova Poshta provider implementation
-- Ukrposhta provider implementation
-- Job queue implementation
-- Environment-specific adapters
-
-### UI
-
-Allowed:
-- React components
-- Forms
-- Tables
-- Server actions or route calls
-- Ukrainian user-facing copy
-
-Forbidden:
-- Business rules that belong in domain/application
-- Direct external carrier/payment calls
-- Direct SQL queries
-
-## Image handling
-
-Initial image strategy:
-
-- Do not create object storage.
-- Do not implement binary image uploads unless explicitly requested later.
-- Store image URLs in `product_images`.
-- Validate image URLs.
-- Allow multiple image URLs per product.
-- Keep an `ImageStoragePort` only if useful for future extension, but the initial implementation should be an external URL strategy.
-
-Future possible strategies, not for initial implementation:
-
-- Railway Volume for small persistent uploads.
-- Railway Storage Bucket or another S3-compatible bucket for scalable object storage.
-
-## Testing strategy
-
-- Unit test domain logic.
-- Integration test application use cases.
-- Use MSW for Monobank, Nova Poshta, and Ukrposhta API mocks.
-- Use Playwright for end-to-end flows.
-- Use Playwright MCP to inspect and verify UI behavior where useful.
-- Keep tests deterministic.
-- Do not rely on real external APIs in CI.
-- UI tests should verify important Ukrainian copy.
-
-## Commit behavior
-
-Commit often, but only after relevant checks pass.
-
-Commit message format:
-
-- English
-- imperative
-- sentence case
-- no Conventional Commits prefix
-- no trailing period
-
-Good examples:
-- `Add project specification`
-- `Create product catalog schema`
-- `Add order confirmation flow`
-- `Fix payment webhook idempotency`
-- `Update Railway deployment notes`
-
-Bad examples:
-- `feat: add product catalog`
-- `docs: update spec`
-- `WIP`
-- `fixed stuff`
-
-## External integrations
-
-### Monobank / MonoPay
-
-- Verify webhook signatures.
-- Store webhook events idempotently.
-- Use provider modified date to avoid applying stale events.
-- Never store card data.
-
-### Nova Poshta
-
-- Implement through `ShippingCarrier` port.
-- Support city search, warehouse search, shipment creation, and tracking.
-
-### Ukrposhta
-
-- Implement through `ShippingCarrier` port.
-- Support address/client/shipment workflow.
-- Filter unavailable post offices where the API indicates they are inactive.
-
-## Railway
-
-Expected services:
-- `web`
-- `worker`
-- `postgres`
-
-Do not create object storage services by default.
-Use GitHub autodeploy from protected `main` when deployment is configured.
-
-## Documentation
-
-Keep `spec.md` updated with:
-- implemented features;
-- open decisions;
-- env vars;
-- commands;
-- test coverage status;
-- Railway PostgreSQL setup status;
-- deployment notes;
-- external API assumptions.
-~~~
-
-Create or update `spec.md` with this content, adapted to the existing repository:
-
-~~~md
-# spec.md
-
-## Product goal
-
-Build a small commercial web app for jewelry sellers.
-
-Owners can manage products, create custom order links, send those links to customers, collect delivery/payment information, create shipping labels, and track fulfillment.
-
-## Language
-
-All user-facing UI text must be Ukrainian.
-
-This includes:
-- dashboard pages;
-- public order pages;
-- forms;
-- buttons;
-- validation messages;
-- loading, empty, error, and success states;
-- status labels.
-
-Code identifiers and commit messages can be English.
-
-## Roles
-
-Only these roles are allowed:
-
-### owner
-
-Authenticated seller/owner.
-
-Can:
-- access dashboard;
-- manage products;
-- create order links;
-- view orders;
-- update statuses and tags;
-- view payments and shipments;
-- retry shipment creation;
-- manage owner-level settings if implemented.
-
-### user
-
-Regular user/customer role.
-
-Notes:
-- A public customer does not need to authenticate to open an order link.
-- If the auth library requires a default role for newly created accounts, use `user`.
-- Do not create or use `admin`.
-
-## Current status
-
-Status: initial planning
-
-## Core flows
-
-### Product management
-
-1. Owner logs in.
-2. Owner opens dashboard catalog.
-3. Owner creates product with name, SKU, description, price, stock quantity, and image URLs.
-4. Product becomes available for order creation.
-
-### Owner order creation
-
-1. Owner selects products and quantities.
-2. App calculates total.
-3. Owner creates order draft.
-4. App creates secure public token.
-5. Owner sends public link to customer.
-
-### Customer confirmation
-
-1. Customer opens public order link.
-2. Customer reviews product list and totals.
-3. Customer fills full name and phone.
-4. Customer chooses delivery carrier:
-   - Nova Poshta
-   - Ukrposhta
-5. Customer selects city and branch/office from official carrier data.
-6. Customer chooses payment:
-   - MonoPay
-   - cash on delivery
-7. Customer submits form.
-8. App saves confirmation data.
-
-### Payment
-
-For MonoPay:
-
-1. App creates payment invoice.
-2. Customer is redirected to payment.
-3. Monobank sends webhook.
-4. App verifies signature.
-5. App stores event idempotently.
-6. App updates payment and order status.
-
-For cash on delivery:
-
-1. App skips online payment.
-2. App moves order to shipment creation.
-
-### Shipment
-
-1. App creates shipment job.
-2. Worker calls selected carrier API.
-3. App stores tracking number and label/reference.
-4. Worker periodically syncs shipment status.
-5. App auto-completes order when delivered according to configured rules.
-
-## Order statuses
-
-- DRAFT
-- SENT_TO_CUSTOMER
-- CONFIRMED_BY_CUSTOMER
-- PAYMENT_PENDING
-- PAID
-- PAYMENT_FAILED
-- SHIPMENT_PENDING
-- SHIPMENT_CREATED
-- IN_TRANSIT
-- DELIVERED
-- COMPLETED
-- RETURN_REQUESTED
-- RETURNED
-- CANCELLED
-
-## Image strategy
-
-Initial strategy:
-
+```text
+You are working in the existing GitHub repository `psht13/dase`.
+
+Read these files first:
+- AGENTS.md
+- spec.md
+- DEPLOYMENT.md
+- docs/adr/0001-architecture.md
+- package.json
+- .env.example
+- src/app/page.tsx
+- src/app/login/page.tsx
+- src/app/setup/page.tsx
+- src/modules/users/**
+- src/modules/shipping/**
+- src/modules/orders/application/delivery-form-validation.ts
+- src/modules/orders/ui/delivery-form.tsx
+- src/shared/config/env.ts
+- src/shared/db/schema.ts
+
+Goal:
+Create a precise repair checklist for the current issues before changing large areas of code.
+
+Confirmed issues to account for:
+1. Home page CTA button "Перейти до налаштування" does not navigate anywhere.
+2. `/setup` currently relies on a setup token in the URL query. Replace this with a safer form-based setup token flow.
+3. Dashboard navigation after authentication appears unstable and can redirect to `/login` during normal navigation.
+4. Nova Poshta adapter uses legacy `api.novaposhta.ua/v2.0/json/`.
+5. Active Ukrposhta integration should be removed from MVP, but future reintroduction should remain easy through ports/interfaces.
+6. Shipping label creation needs clearer production configuration and failure handling.
+7. Documentation should be updated after each behavior/env change.
+
+Constraints:
+- Allowed roles remain only `owner` and `user`.
+- Do not add an `admin` role.
+- All user-facing UI text must be Ukrainian.
+- Product images remain external URL-only.
 - Do not create S3/R2/Railway Storage Bucket.
-- Do not implement binary image uploads at the start.
-- Store one or more image URLs per product in `product_images`.
-- Validate image URLs.
-- Keep future storage strategy open.
-
-Rationale:
-
-The expected catalog size is small, around up to 100 products, so object storage is unnecessary for the first version.
-
-Important caveat:
-
-Do not store uploaded image files on ephemeral service storage. If uploads become necessary later, choose either Railway Volume for small single-service storage or an S3-compatible object storage service.
-
-## Data model
-
-To be implemented with Drizzle migrations.
-
-Main entities:
-- users
-- products
-- product_images
-- orders
-- order_items
-- customers
-- payments
-- shipments
-- order_tags
-- order_tag_links
-- audit_events
-- webhook_events
-- carrier_directory_cache
-
-## Quality requirements
-
-- TypeScript strict mode.
-- 80%+ test coverage for lines, statements, branches, and functions.
-- Clean architecture.
-- No business logic in UI components.
-- No direct external API calls from domain/application tests.
-- CI must run lint, typecheck, coverage, e2e, and build.
-- UI must be Ukrainian.
-- No `admin` role.
-
-## Commands
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-pnpm db:generate
-pnpm db:migrate
-pnpm worker:start
-```
-
-## Environment variables
-
-```txt
-DATABASE_URL=
-DATABASE_URL_TEST=
-
-BETTER_AUTH_SECRET=
-BETTER_AUTH_URL=
-
-MONOBANK_TOKEN=
-MONOBANK_PUBLIC_KEY=
-MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
-
-NOVA_POSHTA_API_KEY=
-NOVA_POSHTA_API_URL=
-
-UKRPOSHTA_BEARER_TOKEN=
-UKRPOSHTA_COUNTERPARTY_TOKEN=
-UKRPOSHTA_API_URL=
-
-AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24
-```
-
-No S3/storage bucket env vars are required for the initial version.
-
-## Railway PostgreSQL
-
-Railway MCP should be used immediately to provision PostgreSQL.
-
-Expected result:
-- Railway project exists or is connected.
-- PostgreSQL service exists.
-- `DATABASE_URL` is configured securely.
-- Migrations can run against Railway PostgreSQL.
-- Repository/use case integration checks can use the configured test/development database safely.
-
-## Deployment
-
-Target: Railway
-
-Services:
-- web
-- worker
-- postgres
-
-Deployment:
-- GitHub autodeploy from protected `main`.
-- Run migrations before web deployment.
-- Worker runs separately from web process.
-
-## Commit message format
-
-Use English imperative sentence case without prefixes.
-
-Examples:
-- `Add project specification`
-- `Create product catalog schema`
-- `Add order confirmation form`
-- `Fix shipment status mapping`
-
-Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chore:`.
-
-## Open questions
-
-- Exact MonoPay contract and production credentials.
-- Exact Nova Poshta sender/counterparty settings.
-- Exact Ukrposhta sender/client/address setup.
-- Whether to reserve stock when order link is created or only after customer confirms.
-- Whether cash on delivery should always create shipment immediately.
-- Whether image uploads are needed later or external URLs are enough.
-~~~
-
-Create `docs/adr/0001-architecture.md` if missing:
-
-~~~md
-# ADR 0001 - Feature-oriented onion architecture
-
-## Status
-
-Accepted
-
-## Context
-
-The app needs owner dashboard features, public customer order confirmation, payment integration, shipping integrations, background jobs, and testable business logic.
-
-The app should remain understandable for future Codex sessions and future developers.
-
-## Decision
-
-Use feature-oriented onion architecture.
-
-Each business module should be organized as:
-
-```txt
-module/
-  domain/
-  application/
-  infrastructure/
-  ui/
-```
-
-Domain contains pure business rules.
-Application contains use cases and ports.
-Infrastructure contains database and external API adapters.
-UI contains React/Next.js components and route-level integration.
-
-## Consequences
-
-Benefits:
-- Business logic is testable without Next.js or external APIs.
-- External services can be mocked through ports.
-- UI remains simpler.
-- Future agents can work module-by-module.
-
-Tradeoffs:
-- More files than a simple CRUD app.
-- Requires discipline to keep boundaries clean.
-
-## Rules
-
-- No domain imports from infrastructure or UI.
-- No direct external API calls in UI.
-- No direct database calls in UI.
-- Route handlers and server actions should be thin.
-- User-facing UI copy must be Ukrainian.
-- Only `owner` and `user` roles are allowed.
-~~~
-````
----
-
-================================================================================
-PROMPT 01 - foundation, tooling, CI, Railway database verification
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
-
-If any of those files are missing, recreate them according to the project specification before continuing.
-
-Important constraints:
-- Roles are only `owner` and `user`.
-- Do not create an `admin` role.
-- User-facing UI content must be Ukrainian.
-- Product images are image URLs only for now.
-- Do not create S3/R2/Railway Storage Bucket.
-- Commit messages must look like `Add class selection logic`, not `feat: add class selection logic`.
-
-Implement the project foundation.
-
-Target stack:
-- Next.js App Router
-- TypeScript strict mode
-- pnpm
-- Tailwind CSS
-- shadcn/ui compatible setup
-- Drizzle ORM
-- PostgreSQL
-- Better Auth skeleton
-- Vitest
-- Testing Library
-- MSW
-- Playwright
-- ESLint
-- coverage threshold of 80% for lines, statements, branches, and functions
-
-Railway PostgreSQL requirement:
-1. Use Railway MCP to ensure a Railway PostgreSQL service exists.
-2. Configure `DATABASE_URL` securely for development/staging verification.
-3. Add `DATABASE_URL_TEST` if the project needs a separate test database/schema.
-4. Verify the app can connect to Railway PostgreSQL.
-5. Do not commit secrets.
-6. Document Railway PostgreSQL status in `spec.md`.
-7. If Railway MCP is unavailable, document the blocker and use local/test DB fallback only until MCP is available.
+- Do not commit secrets.
+- Do not call live external APIs in CI.
+- Use MSW/fixtures for external API tests.
+- Use Playwright MCP or Playwright tests for UI/navigation verification.
+- Commit messages must be English imperative sentence case without prefixes.
 
 Tasks:
-1. Add or fix project scripts:
-   - lint
-   - typecheck
-   - test
-   - test:coverage
-   - test:e2e
-   - build
-   - db:generate
-   - db:migrate
-   - worker:start
-2. Configure Vitest coverage thresholds at 80%.
-3. Configure Playwright with trace on retry.
-4. Add GitHub Actions workflow that runs:
-   - pnpm install
+1. Inspect the code and produce a short checklist in `spec.md` under a new section `Repair audit on <today date>`.
+2. Document the intended order of repairs:
+   - auth/setup/navigation;
+   - Nova Post API replacement;
+   - Ukrposhta removal from active MVP;
+   - shipping production configuration;
+   - regression tests and docs.
+3. Do not implement functional changes in this prompt except tiny documentation corrections if necessary.
+4. Run:
    - pnpm lint
    - pnpm typecheck
-   - pnpm test:coverage
-   - pnpm test:e2e
-   - pnpm build
-5. Add `/api/health` route.
-6. Add environment validation module.
-7. Add initial test examples for env validation and health route.
-8. Ensure any starter UI text is Ukrainian.
-9. Update `spec.md` with commands, Railway PostgreSQL status, and current status.
-10. Run all available checks.
-11. Commit after checks pass.
-
-Required checks before final response:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
+5. Commit with:
+   `Document repair audit`
 ```
 
-Use a commit message like:
-`Add project foundation`
-
-Do not mark this complete until all checks pass or until a real blocker is documented in `spec.md`.
-````
 ---
 
 ================================================================================
-PROMPT 02 - database schema, roles cleanup, and domain model
+PROMPT 01 - fix owner setup, login, and dashboard navigation
 ================================================================================
 
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
-Important constraints:
-- Allowed roles: `owner`, `user`.
-- Forbidden role: `admin`.
-- If existing code, schema, tests, or seed files contain `admin`, migrate it to `owner` or remove it.
-- User-facing UI content must be Ukrainian.
-- Product images are image URLs only.
-- Use Railway PostgreSQL for migration verification through secure env vars.
-- Do not commit secrets.
+Goal:
+Fix production owner setup, login persistence, and dashboard navigation.
 
-Implement the initial database schema and domain model.
+Current problems:
+- The home page CTA button "Перейти до налаштування" is not a link and does nothing.
+- `/setup` requires `?token=...` before showing the form. This is poor UX and puts the setup token into URLs.
+- After login, normal navigation between dashboard pages can redirect the owner back to `/login`.
 
-Entities:
-- users
-- products
-- product_images
-- orders
-- order_items
-- customers
-- payments
-- shipments
-- order_tags
-- order_tag_links
-- audit_events
-- webhook_events
-- carrier_directory_cache
+Required behavior:
+1. Home page CTA must be a real link.
+2. If no owner exists:
+   - CTA should lead to `/setup`.
+   - `/setup` should show the first-owner setup form.
+3. If an owner already exists:
+   - CTA should lead to `/login` or show a clear Ukrainian login action.
+4. `/setup` must not require token in the URL.
+5. In production, `/setup` must include a Ukrainian setup token input field in the form.
+6. The setup token must be validated only in the server action.
+7. Do not put `OWNER_SETUP_TOKEN` in URLs, redirects, logs, client state, or query strings.
+8. In non-production, allow setup without token unless the existing tests require another behavior.
+9. After first owner creation, redirect to `/login?setup=created`.
+10. After login, the owner must remain authenticated across:
+    - `/dashboard`;
+    - `/dashboard/products`;
+    - `/dashboard/orders`;
+    - `/dashboard/orders/new`;
+    - hard reload;
+    - client-side navigation;
+    - browser back/forward.
+11. `user` role must still be denied dashboard access.
+12. Unauthenticated users must be redirected to `/login`.
 
-Requirements:
-1. Use Drizzle schema and migrations.
-2. Run migrations against the configured Railway PostgreSQL development/staging database.
-3. Use a safe test database/schema for automated tests. Do not destructively reset production data.
-4. User role enum must only contain `owner` and `user`.
-5. Use minor units for money.
-6. Store product snapshots in order items:
-   - product name
-   - SKU
-   - unit price
-7. Use a random public token for public order links.
-8. Define order status enum:
-   - DRAFT
-   - SENT_TO_CUSTOMER
-   - CONFIRMED_BY_CUSTOMER
-   - PAYMENT_PENDING
-   - PAID
-   - PAYMENT_FAILED
-   - SHIPMENT_PENDING
-   - SHIPMENT_CREATED
-   - IN_TRANSIT
-   - DELIVERED
-   - COMPLETED
-   - RETURN_REQUESTED
-   - RETURNED
-   - CANCELLED
-9. Add product image URL fields/table. Do not add object storage or upload infrastructure.
-10. Add domain tests for:
-   - order total calculation
-   - invalid quantity rejection
-   - status transition rules
-   - product snapshot behavior
-   - role validation rejects `admin`
-   - image URL validation
-11. Add repository interfaces in application/domain boundaries.
-12. Implement Drizzle repositories only in infrastructure.
-13. Update `spec.md`.
-14. Run required checks.
-15. Commit after checks pass.
+Implementation guidance:
+- Investigate the real cause of session loss instead of adding superficial redirects.
+- Inspect `LoginForm`, Better Auth route handler, `getSessionUserFromHeaders`, `requireOwnerSession`, and Better Auth configuration.
+- Prefer a robust Better Auth client or server action approach for sign-in that reliably stores the session cookie.
+- If using direct fetch to `/api/auth/sign-in/email`, verify cookies are actually set and available to server components after navigation.
+- Preserve Ukrainian UI copy.
+- Keep business logic in application/domain layers where possible.
 
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm build
-```
+Tests to add or update:
+1. Unit/application tests:
+   - setup available when no owner exists;
+   - setup blocked when owner exists;
+   - production setup requires token;
+   - token is not accepted from URL as the main flow;
+   - owner role is assigned after setup.
+2. UI/component tests:
+   - home CTA is a link and points to the right destination based on setup state;
+   - setup form shows a Ukrainian token field in production;
+   - login form has Ukrainian labels.
+3. Playwright e2e using real auth flow, not only fallback cookies:
+   - open `/setup`;
+   - create first owner;
+   - log in;
+   - navigate through dashboard pages;
+   - hard reload on `/dashboard/orders`;
+   - verify still authenticated;
+   - log out;
+   - verify dashboard redirects to login.
+4. Existing fallback-cookie e2e tests can remain, but add at least one real setup/login persistence e2e path.
 
-Use a commit message like:
-`Create database schema`
-````
----
-
-================================================================================
-PROMPT 03 - auth and owner product catalog
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
-
-Important constraints:
-- No `admin` role.
-- Only `owner` and `user` roles.
-- Dashboard access belongs to `owner`.
-- Use `/dashboard` or an `(owner)` route group. Avoid `/admin` and `(admin)` unless existing routing makes a temporary migration unavoidable.
-- All user-facing UI content must be Ukrainian.
-- Product images are image URLs only.
-- Do not create S3/R2/Railway Storage Bucket.
-- Use Railway PostgreSQL for DB verification.
-
-Implement owner authentication and product catalog management.
-
-Requirements:
-1. Add Better Auth with Drizzle adapter.
-2. Add roles:
-   - owner
-   - user
-3. Protect dashboard routes so only `owner` can access them.
-4. Add owner dashboard shell.
-5. Add product list page.
-6. Add product creation form.
-7. Add product edit form.
-8. Add product active/inactive toggle.
-9. Add basic image URL support:
-   - one or more image URLs per product;
-   - URL validation;
-   - image preview if simple to implement;
-   - no file upload;
-   - no object storage.
-10. Use React Hook Form and Zod for validation.
-11. Keep UI components separated from use cases.
-12. Ensure all visible UI text is Ukrainian.
-13. Add tests:
-   - product create use case
-   - product update use case
-   - product validation
-   - protected owner dashboard access
-   - user role cannot access dashboard
-   - product form component behavior
-   - important Ukrainian UI labels are present
-14. Add a Playwright test for owner product creation using a seeded owner user.
-15. Use Playwright MCP to inspect the product form and table if available.
-16. Update `spec.md`.
-17. Run all required checks.
-18. Commit after checks pass.
+Docs:
+- Update `spec.md` with final owner setup/login behavior.
+- Update `DEPLOYMENT.md` with secure `OWNER_SETUP_TOKEN` instructions.
+- Update `.env.example` if needed.
+- If `README.md` does not exist, create a minimal one with local setup and first-owner setup instructions.
 
 Required checks:
 ```bash
@@ -1020,265 +183,98 @@ pnpm test:e2e
 pnpm build
 ```
 
-Use a commit message like:
-`Add owner product catalog`
+Commit with:
+`Fix owner authentication navigation`
+```
 
-Do not expose secrets.
-Do not bypass auth in production code.
-````
 ---
 
 ================================================================================
-PROMPT 04 - owner order builder and public order link
+PROMPT 02 - replace legacy Nova Poshta API with new Nova Post API
 ================================================================================
 
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
-Important constraints:
-- No `admin` role or admin wording in UI.
-- Owner creates order links.
-- Public customer pages are accessible by secure token.
-- All user-facing UI content must be Ukrainian.
-- Product images are image URLs only.
-- Use Railway PostgreSQL for DB verification.
+Goal:
+Replace the legacy Nova Poshta `v2.0/json` implementation with the newer Nova Post API `v.1.0` and JWT-based authorization.
 
-Implement owner order builder and public order review link.
+Current problem:
+`src/modules/shipping/infrastructure/nova-poshta-shipping-carrier.ts` uses the legacy JSON API:
+- default URL: `https://api.novaposhta.ua/v2.0/json/`
+- request shape with `apiKey`, `modelName`, `calledMethod`, `methodProperties`
 
-Owner flow:
-1. Owner opens order builder.
-2. Owner selects multiple active products.
-3. Owner sets quantity for each product.
-4. App calculates total.
-5. Owner creates order draft.
-6. App creates a secure public token.
-7. Owner can copy the public order link.
-8. Order status becomes SENT_TO_CUSTOMER.
-
-Public customer flow:
-1. Customer opens `/o/[token]`.
-2. Customer sees selected products, image URLs/previews where available, quantities, prices, and total.
-3. Customer cannot change products or quantities.
-4. Customer can proceed to delivery/payment form.
-
-Requirements:
-1. Do not expose internal order id in public URL.
-2. Expired/cancelled order links must show a safe unavailable page in Ukrainian.
-3. Use product snapshots.
-4. Add audit event for order creation.
-5. Add tests:
-   - create order draft use case
-   - token generation
-   - public order lookup
-   - expired order behavior
-   - owner order builder UI
-   - public order review page
-   - Ukrainian UI labels and messages
-6. Add Playwright e2e:
-   - owner creates product
-   - owner creates order link
-   - public link shows correct product list
-7. Update `spec.md`.
-8. Run all required checks.
-9. Commit after checks pass.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Use a commit message like:
-`Add owner order builder`
-````
----
-
-================================================================================
-PROMPT 05 - delivery form and shipping carrier ports
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
-
-Important constraints:
-- No `admin` role.
-- All user-facing UI content must be Ukrainian.
-- Do not call live external carrier APIs in CI.
-- Use MSW fixtures and adapter tests.
-- Use Railway PostgreSQL for DB verification.
-
-Implement customer delivery form and shipping carrier abstraction.
-
-Requirements:
-1. Create `ShippingCarrier` port with:
-   - searchCities
-   - searchWarehouses
-   - createShipment
-   - getShipmentStatus
-2. Implement Nova Poshta adapter behind the port.
-3. Implement Ukrposhta adapter behind the port.
-4. Do not call live external APIs in CI.
-5. Use MSW fixtures for tests.
-6. Add cache for city/warehouse lookup results.
-7. Customer form fields:
-   - full name
-   - phone
-   - delivery carrier
-   - city/locality
-   - branch/warehouse/post office
-   - payment method
-8. Validate with Zod.
-9. Store confirmed delivery data in the order.
-10. Change status to CONFIRMED_BY_CUSTOMER after valid submit.
-11. All form labels, placeholders, errors, loading states, and empty states must be Ukrainian.
-12. Add tests:
-   - delivery form validation
-   - carrier search use cases
-   - Nova Poshta adapter contract with MSW
-   - Ukrposhta adapter contract with MSW
-   - order confirmation use case
-   - Ukrainian form labels and validation messages
-13. Add Playwright e2e for customer confirmation with mocked carriers.
-14. Update `spec.md`.
-15. Run all required checks.
-16. Commit after checks pass.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
+New target:
+Use Nova Post API v.1.0 with:
+- API key used to generate a temporary JWT token;
+- JWT token cached and reused until near expiration;
+- production endpoint documented by Nova Post;
+- stage/test endpoint documented by Nova Post;
+- no live calls in CI.
 
 Important:
-- Keep carrier-specific response formats out of the UI.
-- Map external API data to internal DTOs.
-- Document required env vars in `spec.md`.
+Before implementation, inspect official Nova Post API documentation and/or official Postman collection for exact endpoint paths, auth header format, request/response fields, and shipment creation requirements. Do not guess field names for shipment creation.
 
-Use a commit message like:
-`Add customer delivery form`
-````
----
+Expected env changes:
+1. Prefer new env names:
+   - `NOVA_POST_API_KEY`
+   - `NOVA_POST_API_URL`
+   - `NOVA_POST_AUTH_URL` if the auth endpoint cannot be derived safely from `NOVA_POST_API_URL`
+2. Remove or deprecate old env names:
+   - `NOVA_POSHTA_API_KEY`
+   - `NOVA_POSHTA_API_URL`
+3. If backward compatibility is temporarily kept, document it as deprecated in `spec.md` and `DEPLOYMENT.md`.
 
-================================================================================
-PROMPT 06 - MonoPay / Monobank payment module
-================================================================================
+Architecture requirements:
+1. Keep the `ShippingCarrier` application port.
+2. Rename infrastructure implementation to something like:
+   - `NovaPostShippingCarrier`
+   - `NovaPostJwtProvider`
+3. Keep internal carrier code stable unless a safe migration is implemented.
+   - It is acceptable to keep DB/internal code `NOVA_POSHTA` for compatibility while the implementation uses Nova Post v.1.0.
+   - User-facing UI should say `Нова пошта`.
+4. Do not expose provider-specific DTOs to UI.
+5. Keep route handlers thin.
 
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
+Implementation tasks:
+1. Replace the legacy adapter with a new Nova Post v.1.0 adapter.
+2. Implement JWT generation:
+   - call the documented authorization endpoint with API key;
+   - parse JWT response;
+   - cache JWT for less than 1 hour;
+   - refresh before expiration;
+   - never log the API key or JWT.
+3. Implement or update:
+   - search cities/localities;
+   - search warehouses/branches;
+   - create shipment;
+   - get shipment status.
+4. If exact production shipment creation requires sender/counterparty fields not currently available, implement explicit configuration validation:
+   - fail with a clear application error;
+   - append safe Ukrainian audit message;
+   - do not call the live create-shipment endpoint with incomplete data.
+5. Add safe error mapping so the public delivery form does not show raw provider errors.
+6. Update factory wiring to use the new adapter.
+7. Update `.env.example`, `spec.md`, and `DEPLOYMENT.md`.
+8. Remove references to the legacy `v2.0/json` URL from production code and docs.
 
-Important constraints:
-- No `admin` role.
-- All user-facing UI content must be Ukrainian.
-- Do not call live Monobank API in CI.
-- Use MSW fixtures and mocked webhook payloads.
-- Use Railway PostgreSQL for DB verification.
-
-Implement Monobank / MonoPay payment module.
-
-Requirements:
-1. Create `PaymentProvider` port with:
-   - createInvoice
-   - getInvoiceStatus
-   - verifyWebhook
-2. Implement Monobank provider.
-3. Add payment creation after customer confirmation when payment method is `monobank`.
-4. Store provider invoice id.
-5. Add webhook route:
-   - POST /api/webhooks/monobank
-6. Verify webhook signature.
-7. Store webhook events idempotently.
-8. Handle unordered webhook events by comparing provider modified date.
-9. Update payment and order status safely.
-10. For cash on delivery, skip online invoice creation.
-11. Ensure customer-facing payment statuses/messages are Ukrainian.
-12. Add tests:
-   - create invoice use case
-   - webhook signature verification
-   - idempotent webhook processing
-   - stale webhook ignored
-   - payment status transition
-   - MSW Monobank API contract tests
-   - Ukrainian payment messages
-13. Add Playwright e2e with mocked payment success.
-14. Update `spec.md`.
-15. Run all required checks.
-16. Commit after checks pass.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Use a commit message like:
-`Add Monobank payment flow`
-
-Do not store card data.
-Do not log secrets or full sensitive webhook headers.
-````
----
-
-================================================================================
-PROMPT 07 - shipment creation worker and status sync
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
-
-Important constraints:
-- No `admin` role.
-- All user-facing UI content must be Ukrainian.
-- Use Railway PostgreSQL for DB and job queue verification.
-- Do not call live carrier APIs in CI.
-
-Implement shipment creation and status sync worker.
-
-Requirements:
-1. Add pg-boss or the already selected Postgres-backed job queue.
-2. Add worker entrypoint:
-   - pnpm worker:start
-3. Add jobs:
-   - create-shipment
-   - sync-shipment-status
-   - auto-complete-delivered-order
-4. When order is ready for shipment:
-   - paid MonoPay order
-   - or confirmed cash-on-delivery order
-   enqueue create-shipment.
-5. create-shipment job:
-   - calls selected ShippingCarrier
-   - stores tracking number
-   - stores carrier document id
-   - stores label URL or label reference
-   - changes order status to SHIPMENT_CREATED
-6. sync-shipment-status job:
-   - calls selected carrier tracking API
-   - maps external status to internal status
-   - changes order status to IN_TRANSIT, DELIVERED, RETURNED, etc.
-7. auto-complete job:
-   - moves DELIVERED orders to COMPLETED after configured delay.
-8. Add retry behavior.
-9. Add manual retry action for failed shipment creation.
-10. Ensure dashboard-facing job/status messages are Ukrainian.
-11. Add tests:
-   - job enqueueing
-   - shipment creation success
-   - shipment creation failure
-   - tracking status mapping
-   - auto-completion rule
-   - Ukrainian status labels where displayed
-12. Update `spec.md`.
-13. Run all required checks.
-14. Commit after checks pass.
+Tests:
+1. MSW contract tests:
+   - JWT is generated from API key;
+   - JWT is cached;
+   - JWT refreshes after expiration;
+   - city search maps provider response to internal `ShippingCity`;
+   - warehouse search maps provider response to internal `ShippingWarehouse`;
+   - create shipment maps tracking number/document id/label;
+   - status mapping works;
+   - provider error maps to safe app error.
+2. Unit tests:
+   - no token/API key is logged;
+   - missing sender config blocks shipment creation safely.
+3. Playwright:
+   - customer delivery form can search/select Nova Post city and warehouse through mocked API;
+   - order confirmation works with Nova Post as the only active carrier.
+4. CI must not call live Nova Post APIs.
 
 Required checks:
 ```bash
@@ -1289,293 +285,85 @@ pnpm test:e2e
 pnpm build
 ```
 
-Do not create shipments directly inside customer request handlers.
-Use jobs to avoid slow or flaky checkout completion.
-
-Use a commit message like:
-`Add shipment worker`
-````
----
-
-================================================================================
-PROMPT 08 - owner orders, tags, filters, audit log
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
-
-Important constraints:
-- No `admin` role or admin wording.
-- Owner manages orders.
-- All user-facing UI content must be Ukrainian.
-- Use Railway PostgreSQL for DB verification.
-
-Implement owner order management.
-
-Requirements:
-1. Add orders list page.
-2. Add filters:
-   - status
-   - delivery carrier
-   - payment method
-   - tag
-   - date range
-   - search by customer phone or tracking number
-3. Add order details page.
-4. Show:
-   - products
-   - customer info
-   - delivery info
-   - payment info
-   - shipment info
-   - status history
-   - audit events
-5. Add tags:
-   - create tag
-   - assign tag
-   - remove tag
-6. Add manual status update with audit event.
-7. Add manual retry shipment creation.
-8. Ensure all labels, filters, table headings, empty states, errors, and status text are Ukrainian.
-9. Add tests:
-   - list orders use case
-   - filters
-   - tag assignment
-   - audit event creation
-   - manual status update rules
-   - owner orders UI
-   - Ukrainian UI labels
-10. Add Playwright e2e for owner order management.
-11. Update `spec.md`.
-12. Run all required checks.
-13. Commit after checks pass.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
+Commit with:
+`Replace Nova Poshta legacy API`
 ```
 
-Use a commit message like:
-`Add owner order management`
-````
 ---
 
 ================================================================================
-PROMPT 09 - UI polish, Ukrainian copy, accessibility, Playwright MCP verification
+PROMPT 03 - remove Ukrposhta from active MVP while preserving carrier architecture
 ================================================================================
 
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
-Important constraints:
-- No `admin` role or admin wording.
-- All user-facing UI content must be Ukrainian.
-- Do not add object storage.
-- Product images are image URLs only.
+Goal:
+Remove Ukrposhta from the active MVP because test/production API access is not currently practical, but keep the shipping architecture extensible so Ukrposhta can be reintroduced later.
 
-Polish and verify the UI.
+Current problem:
+Ukrposhta is still active in several places:
+- delivery form select option;
+- delivery form validation;
+- shipping carrier factory;
+- env validation and `.env.example`;
+- schema enums;
+- shipment carrier types;
+- docs/spec/deployment;
+- tests and fixtures.
 
-Scope:
-- Owner dashboard
-- Product catalog
-- Product form
-- Order builder
-- Public order review page
-- Customer delivery/payment form
-- Orders list
-- Order details
+Required product behavior:
+1. Customer delivery form must show only:
+   - `Нова пошта`
+2. Customer cannot submit `UKRPOSHTA`.
+3. `/api/carriers/cities` and `/api/carriers/warehouses` must reject disabled carriers with a Ukrainian 400 response.
+4. Worker must not try to create Ukrposhta shipments.
+5. Owner UI should not offer Ukrposhta filters unless there are historical records.
+6. If historical Ukrposhta records exist, show them as disabled/legacy:
+   - `Укрпошта (вимкнено)`
+   - no retry/live shipment action for them.
+7. Keep `ShippingCarrier` port and a carrier registry so another carrier can be added later without rewriting order/payment logic.
 
-Requirements:
-1. Use accessible shadcn/Radix patterns.
-2. Check keyboard navigation.
-3. Check focus states.
-4. Check loading states.
-5. Check empty states.
-6. Check error states.
-7. Check mobile layout for public customer pages.
-8. Replace any English user-facing copy with Ukrainian.
-9. Replace any visible `admin` wording with owner/dashboard wording.
-10. Use Playwright MCP to inspect critical flows:
-   - product creation
-   - order builder
-   - public order confirmation
-   - owner order details
-11. Add or update Playwright tests where UI issues are found.
-12. Add tests/assertions for Ukrainian labels on critical screens.
-13. Use screenshots/traces only as test artifacts, not as committed noise unless intentionally needed.
-14. Update `spec.md` with UI verification notes.
-15. Run all required checks.
-16. Commit after checks pass.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Use a commit message like:
-`Polish Ukrainian user interface`
-````
----
-
-================================================================================
-PROMPT 10 - Railway deployment
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
-
-Important constraints:
-- Use Railway MCP.
-- No S3/R2/Railway Storage Bucket by default.
-- Required Railway services: web, worker, postgres.
-- User-facing UI content must remain Ukrainian.
-- Commit messages must be English imperative sentence case.
-
-Configure Railway deployment using Railway MCP.
-
-Target deployment:
-- web service
-- worker service
-- PostgreSQL database
-
-Requirements:
-1. Link the GitHub repository to Railway if not already linked.
-2. Ensure Railway PostgreSQL service exists and `DATABASE_URL` is available to web and worker services.
-3. Configure GitHub autodeploy from protected `main`.
-4. Configure web service:
-   - build command if needed
-   - start command: pnpm start
-   - pre-deploy command: pnpm db:migrate
-5. Configure worker service:
-   - start command: pnpm worker:start
-6. Configure required env vars as placeholders or real values only through secure Railway variables.
-7. Do not commit secrets.
-8. Do not create object storage unless the user explicitly asks later.
-9. Add `/api/health` check if missing.
-10. Add `DEPLOYMENT.md` with:
-   - Railway services
-   - env vars
-   - deployment flow
-   - rollback notes
-   - migration notes
-   - manual external API verification checklist
-   - note that image handling currently uses external image URLs only
-11. Update `spec.md`.
-12. Run all local required checks.
-13. Commit deployment configuration docs and any safe config files.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Use a commit message like:
-`Configure Railway deployment`
-
-Do not claim live production integration is verified unless the Railway deployment and external credentials were actually tested.
-````
----
-
-================================================================================
-PROMPT 11 - final hardening and release candidate
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, `docs/adr/0001-architecture.md`, and `DEPLOYMENT.md` if it exists.
-
-Prepare a release candidate.
-
-Hard constraints:
-- No `admin` role anywhere in code, schema, seeds, tests, or UI.
-- Only `owner` and `user` roles are allowed.
-- All user-facing UI content must be Ukrainian.
-- Product images are external image URLs only.
-- No object storage service should exist unless explicitly requested later.
-- Railway PostgreSQL should be configured and documented.
-- Commit messages must be English imperative sentence case.
+Implementation guidance:
+- Prefer an `activeShippingCarriers` registry or config object instead of hardcoded arrays in many files.
+- It is acceptable to keep old PostgreSQL enum values if removing enum values is risky. Do not expose disabled carriers in UI.
+- If you change DB enum values, write a safe migration and verify it against a test DB first.
+- Remove live Ukrposhta adapter code from production wiring.
+- You may keep a future placeholder interface or README note, but do not leave an active factory path that calls Ukrposhta.
+- Remove `UKRPOSHTA_*` env vars from required/active production docs.
+- Do not delete the generic `ShippingCarrier` interface.
 
 Tasks:
-1. Review architecture boundaries.
-2. Search for business logic inside UI components or route handlers and move it into use cases.
-3. Search for `admin` and remove/migrate any remaining usage.
-4. Search for English user-facing UI text and translate it to Ukrainian.
-5. Search for secrets or unsafe logs.
-6. Verify all env vars are documented.
-7. Verify all external APIs have mocked tests.
-8. Verify all public routes are safe.
-9. Verify dashboard routes are protected for `owner` only.
-10. Verify `user` role cannot access owner dashboard.
-11. Verify public order token cannot expose other orders.
-12. Verify coverage is at least 80%.
-13. Verify Railway PostgreSQL migration flow is documented and tested.
-14. Run:
-    - pnpm lint
-    - pnpm typecheck
-    - pnpm test:coverage
-    - pnpm test:e2e
-    - pnpm build
-15. Fix all failures.
-16. Update `spec.md` with final status, known limitations, and manual production verification checklist.
-17. Create a final commit.
-18. Prepare a PR summary with:
-    - implemented features
-    - test evidence
-    - coverage result
-    - Railway deployment notes
-    - remaining risks
+1. Add a central shipping carrier registry:
+   - active carrier code;
+   - Ukrainian label;
+   - whether search is enabled;
+   - whether shipment creation is enabled;
+   - whether the carrier is legacy/disabled.
+2. Update delivery validation to accept only active carriers.
+3. Update delivery form to render active carriers from the registry.
+4. Update API carrier routes to reject disabled/unknown carriers.
+5. Update shipment worker and retry logic to avoid disabled carriers.
+6. Update owner order filters/details to handle legacy disabled carrier records safely.
+7. Remove Ukrposhta env vars from `.env.example`, `spec.md`, and `DEPLOYMENT.md`.
+8. Update tests that previously expected Ukrposhta as active.
+9. Keep architecture notes explaining how Ukrposhta can be added back later through the same port.
 
-Use a commit message like:
-`Prepare release candidate`
+Tests:
+1. Unit tests:
+   - active carrier registry contains Nova Post only;
+   - delivery validation rejects `UKRPOSHTA`;
+   - carrier API routes reject disabled carrier;
+   - worker refuses disabled carrier safely.
+2. UI tests:
+   - delivery form does not show `Укрпошта`;
+   - owner filter does not show Ukrposhta unless a legacy record exists.
+3. Playwright:
+   - customer delivery flow works with only Nova Post;
+   - no Ukrposhta option is visible.
+4. Docs tests or snapshot-like checks if they already exist.
 
-Do not stop after partial checks.
-Do not mark the release candidate complete unless all required checks pass.
-````
----
-
-================================================================================
-PROMPT 12 - recovery prompt for failed checks or broken implementation
-================================================================================
-
-````text
-Read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md` first.
-
-Use this prompt only when tests, lint, typecheck, e2e, build, migrations, Railway DB connection, or architecture checks fail.
-
-Important constraints:
-- Do not skip failing checks.
-- Do not weaken tests.
-- Do not reduce coverage thresholds.
-- Do not remove useful tests just to pass.
-- Do not create an `admin` role.
-- Only `owner` and `user` roles are allowed.
-- All user-facing UI content must be Ukrainian.
-- Do not create object storage.
-- Do not commit secrets.
-
-Recovery tasks:
-1. Identify the failing command and the exact failure.
-2. Find the smallest correct fix.
-3. Preserve architecture boundaries.
-4. If the failure is caused by missing Railway MCP or missing external credentials, document the blocker in `spec.md` and keep mocked/local tests green.
-5. If the failure is caused by DB migrations, verify the migration against the configured Railway PostgreSQL development/staging database or a safe test database.
-6. If the failure is caused by UI tests, use Playwright MCP to inspect the page when useful.
-7. If any English user-facing text appears in screenshots/tests, translate it to Ukrainian.
-8. If any `admin` role or admin wording appears, replace it with `owner` or dashboard wording.
-9. Re-run the failed command.
-10. Then run the full required suite:
-
+Required checks:
 ```bash
 pnpm lint
 pnpm typecheck
@@ -1584,48 +372,85 @@ pnpm test:e2e
 pnpm build
 ```
 
-11. Update `spec.md` with any important fix or blocker.
-12. Commit only after checks pass.
+Commit with:
+`Remove Ukrposhta active integration`
+```
 
-Use a commit message like:
-`Fix test failures`
-
-Final response must include:
-- what failed;
-- what was fixed;
-- which commands now pass;
-- whether any blocker remains.
-````
 ---
 
 ================================================================================
-Reusable instruction block - paste into any extra Codex task
+PROMPT 04 - harden shipping production settings and demo safety
 ================================================================================
 
-````text
-Before starting, read `AGENTS.md`, `spec.md`, and `docs/adr/0001-architecture.md`.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
-Non-negotiable project rules:
-- Allowed roles are only `owner` and `user`.
-- Do not create or use `admin`.
-- Owner dashboard access is for `owner` only.
-- All user-facing UI text must be Ukrainian.
-- Product images are image URLs only for the initial version.
-- Do not create S3/R2/Railway Storage Bucket unless explicitly requested later.
-- Use Railway PostgreSQL for DB/migration verification through secure env vars.
-- Do not commit secrets.
-- Keep feature-oriented onion architecture.
-- Domain must not import UI, Next.js, Drizzle, external clients, or env vars.
-- Application layer contains use cases and ports.
-- Infrastructure layer implements repositories and external adapters.
-- Every feature must include tests.
-- Maintain 80%+ coverage for lines, statements, branches, and functions.
-- Update `spec.md` when behavior changes.
-- Commit after green milestones.
-- Commit messages must be English imperative sentence case, for example `Add class selection logic`.
-- Do not use Conventional Commits prefixes.
+Goal:
+Make shipping safe for demo and production by preventing accidental incomplete or live shipment creation.
 
-Before final response, run:
+Context:
+The app should support real Nova Post shipment creation eventually, but demo/staging should not accidentally create real labels with incomplete sender/counterparty data.
+
+Tasks:
+1. Define explicit shipping modes:
+   - `mock` for local/e2e only;
+   - `disabled` for production without full credentials/sender config;
+   - `live` for real label creation.
+2. Add env var:
+   - `SHIPPING_LABEL_CREATION_MODE=disabled|mock|live`
+3. In production, default to `disabled` unless explicitly set to `live`.
+4. In `mock` mode, do not call live Nova Post APIs for shipment creation.
+5. In `disabled` mode:
+   - do not call live create-shipment endpoint;
+   - append a safe Ukrainian audit event;
+   - show owner-facing message that shipment creation is disabled until production shipping settings are completed;
+   - do not pretend a real tracking number exists.
+6. In `live` mode:
+   - validate every required Nova Post setting before creating shipment;
+   - fail safely if any setting is missing;
+   - never log API key/JWT/sensitive sender data.
+7. Add sender/counterparty configuration model for Nova Post.
+   You may start with env vars if no settings UI exists yet, but document it.
+8. Do not add Ukrposhta back.
+9. Keep all user-facing messages Ukrainian.
+
+Suggested env vars to evaluate and adjust after checking the official Nova Post API shape:
+- `NOVA_POST_API_KEY`
+- `NOVA_POST_API_URL`
+- `NOVA_POST_SENDER_ID`
+- `NOVA_POST_SENDER_CONTACT_ID`
+- `NOVA_POST_SENDER_WAREHOUSE_ID`
+- `NOVA_POST_PAYER_TYPE`
+- `NOVA_POST_PAYMENT_METHOD`
+- `NOVA_POST_DEFAULT_WEIGHT_KG`
+- `SHIPPING_LABEL_CREATION_MODE`
+
+Do not blindly add all env vars if the official Nova Post v.1.0 API requires different names. Use exact provider fields in infrastructure only, and keep app-level names stable.
+
+Tests:
+1. Unit/application tests:
+   - disabled mode does not call provider;
+   - live mode missing config fails before provider call;
+   - mock mode stays deterministic;
+   - audit event is written for disabled/missing-config cases.
+2. Worker tests:
+   - create-shipment job handles disabled mode safely;
+   - retry does not bypass disabled mode.
+3. Playwright:
+   - owner sees a clear Ukrainian message when shipment creation is disabled.
+4. Env tests:
+   - production env validation accepts disabled mode without full shipping credentials;
+   - live mode requires all required Nova Post settings.
+
+Docs:
+- Update `.env.example`.
+- Update `spec.md`.
+- Update `DEPLOYMENT.md`.
+- Add a short README section:
+  - how to demo with shipping disabled/mock;
+  - how to enable live Nova Post later.
+
+Required checks:
 ```bash
 pnpm lint
 pnpm typecheck
@@ -1634,30 +459,189 @@ pnpm test:e2e
 pnpm build
 ```
 
-Do not claim completion unless checks pass or a real external blocker is documented in `spec.md`.
-````
+Commit with:
+`Harden shipping production settings`
+```
+
 ---
 
 ================================================================================
-Recommended implementation order
+PROMPT 05 - split runtime env validation and clean deployment docs
 ================================================================================
 
-````text
-1. Repository audit, docs, architecture ADR, Railway PostgreSQL
-2. Tooling, tests, CI, DB connection verification
-3. DB schema and domain model
-4. Auth and owner dashboard shell
-5. Product catalog with image URLs
-6. Owner order builder
-7. Public order link
-8. Customer delivery form
-9. Nova Poshta adapter
-10. Ukrposhta adapter
-11. MonoPay module
-12. Shipment worker
-13. Tracking sync
-14. Owner orders and tags
-15. Ukrainian UI polish and Playwright MCP verification
-16. Railway deployment
-17. Release hardening
-````
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
+
+Goal:
+Clean up environment validation so each runtime validates only the secrets/settings it actually needs.
+
+Current issue:
+`getServerEnv()` validates one broad schema for all production runtimes. This can force the worker to require web-only values like owner setup/login settings, and can force web to carry worker-only settings.
+
+Tasks:
+1. Refactor env validation into runtime-aware functions:
+   - `getWebEnv()`
+   - `getWorkerEnv()`
+   - `getTestEnv()` if useful
+   - keep `getServerEnv()` only if it remains safe and documented.
+2. Web runtime should require:
+   - `DATABASE_URL`
+   - `BETTER_AUTH_SECRET`
+   - `BETTER_AUTH_URL`
+   - `OWNER_SETUP_TOKEN` only if first-owner setup is enabled in production
+   - payment/shipping settings only when the corresponding live mode is enabled.
+3. Worker runtime should require:
+   - `DATABASE_URL`
+   - `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`
+   - shipping mode/settings needed by worker.
+4. Worker should not require login/setup-only secrets unless truly needed.
+5. Test/dev should allow fixture/mocked behavior safely.
+6. Make missing env errors explicit and non-secret.
+7. Update all imports to use the correct env getter.
+8. Update `.env.example`, `spec.md`, `DEPLOYMENT.md`, and README.
+9. Keep Railway variables secure.
+10. Do not weaken production checks.
+
+Tests:
+1. Env validation tests for:
+   - web production;
+   - worker production;
+   - live shipping mode;
+   - disabled shipping mode;
+   - test/dev fallback.
+2. Worker start test or lightweight config test proving worker does not require owner setup token.
+3. Build must still pass.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+```
+
+Commit with:
+`Split runtime environment validation`
+```
+
+---
+
+================================================================================
+PROMPT 06 - final code audit and production readiness hardening
+================================================================================
+
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and README.md first.
+
+Goal:
+Perform a final production-readiness audit after the auth, Nova Post, Ukrposhta removal, and shipping settings changes.
+
+Audit areas:
+1. Auth:
+   - no redirect loops;
+   - owner setup works;
+   - login persists across navigation and reload;
+   - logout clears session;
+   - `user` role cannot access dashboard.
+2. Shipping:
+   - only Nova Post is active;
+   - no live Ukrposhta calls exist;
+   - no legacy Nova Poshta `v2.0/json` production code remains;
+   - shipping mode prevents accidental live labels;
+   - Nova Post JWT/API key is never logged.
+3. Payments:
+   - MonoPay retry works;
+   - stale webhook events are ignored;
+   - duplicate webhook events are idempotent;
+   - no card data is stored.
+4. DB:
+   - migrations are safe;
+   - no production destructive scripts;
+   - order confirmation writes remain transactional.
+5. UI:
+   - all user-facing copy is Ukrainian;
+   - home CTA works;
+   - public pages work on mobile;
+   - dashboard navigation works.
+6. Docs:
+   - README exists;
+   - `.env.example` matches code;
+   - `spec.md` current status is accurate;
+   - `DEPLOYMENT.md` matches Railway services and env vars.
+7. Tests:
+   - coverage remains 80%+;
+   - Playwright e2e covers repaired flows;
+   - CI does not call live external APIs.
+
+Fix any issues found.
+
+Required final checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+```
+
+Also run, if available:
+```bash
+pnpm db:generate
+pnpm db:migrate
+```
+
+If `pnpm db:generate` creates a migration, inspect it carefully and commit it only if expected.
+
+Update docs:
+- spec.md
+- DEPLOYMENT.md
+- README.md
+- AGENTS.md only if future agents need a new permanent rule.
+
+Commit with:
+`Prepare shipping and auth release`
+```
+
+---
+
+================================================================================
+PROMPT 07 - recovery prompt
+================================================================================
+
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and the latest failing command output.
+
+Goal:
+Recover from failing checks without weakening quality gates.
+
+Rules:
+1. Do not skip failing tests.
+2. Do not delete meaningful tests to make the suite pass.
+3. Do not reduce coverage thresholds.
+4. Do not bypass auth or shipping safety checks.
+5. Do not re-enable Ukrposhta as an active carrier.
+6. Do not restore legacy Nova Poshta `v2.0/json` production code.
+7. Do not commit secrets.
+8. Keep UI copy Ukrainian.
+9. Keep roles limited to `owner` and `user`.
+
+Tasks:
+1. Identify the root cause of the failure.
+2. Fix the smallest safe area of code.
+3. Add or update tests if the failure exposed missing coverage.
+4. Run the failing command again.
+5. Then run the full required suite:
+   ```bash
+   pnpm lint
+   pnpm typecheck
+   pnpm test:coverage
+   pnpm test:e2e
+   pnpm build
+   ```
+6. Update `spec.md` if behavior changed.
+7. Commit only after checks pass.
+
+Use a commit message that describes the actual recovery, for example:
+`Fix owner session persistence`
+```
