@@ -20,6 +20,14 @@ pnpm dev
 
 4. Open `http://localhost:3000`.
 
+## Runtime Environment
+
+Production `web` requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`. `OWNER_SETUP_TOKEN` is required only for the production first-owner setup path while no owner exists.
+
+Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`. It does not require login or setup secrets.
+
+MonoPay and Nova Post secrets should be set only for the live flows that use them. Keep Railway values in secure service variables or variable references.
+
 ## First Owner Setup
 
 Before any owner exists, open `/setup` and create the first owner.

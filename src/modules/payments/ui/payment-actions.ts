@@ -15,7 +15,7 @@ import {
 import { getMonobankPaymentProvider } from "@/modules/payments/infrastructure/payment-provider-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
-import { getServerEnv } from "@/shared/config/env";
+import { getWebEnv } from "@/shared/config/env";
 
 export type PaymentRetryActionResult =
   | {
@@ -114,7 +114,7 @@ async function getPublicBaseUrl(): Promise<string> {
   const requestHeaders = await headers();
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const env = getServerEnv();
+  const env = getWebEnv();
 
   if (!host) {
     return env.BETTER_AUTH_URL ?? "http://localhost:3000";

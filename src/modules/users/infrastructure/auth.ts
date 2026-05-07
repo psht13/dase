@@ -7,7 +7,7 @@ import {
   getE2eAuthMemoryDb,
   isE2eAuthMemoryEnabled,
 } from "@/modules/users/infrastructure/e2e-auth-memory-store";
-import { getServerEnv } from "@/shared/config/env";
+import { getWebEnv } from "@/shared/config/env";
 import { createDatabaseClient } from "@/shared/db/client";
 import * as schema from "@/shared/db/schema";
 
@@ -16,7 +16,7 @@ type Database = ReturnType<typeof createDatabaseClient>;
 let cachedAuth: ReturnType<typeof createAuth> | undefined;
 
 export function createAuth(database?: Database) {
-  const env = getServerEnv();
+  const env = getWebEnv();
   const authDatabase =
     database || !isE2eAuthMemoryEnabled()
       ? drizzleAdapter(database ?? createDatabaseClient(env.DATABASE_URL), {

@@ -1,10 +1,10 @@
-import { getServerEnv } from "@/shared/config/env";
+import { getWorkerEnv } from "@/shared/config/env";
 import { createPgBoss } from "@/modules/shipping/infrastructure/pg-boss-shipment-job-queue";
 import { registerShipmentWorkers } from "@/worker/jobs/shipment-jobs";
 import { formatSafeError } from "@/shared/logger/safe-error";
 
 async function main() {
-  const env = getServerEnv();
+  const env = getWorkerEnv();
 
   if (!env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required to start the worker");

@@ -13,7 +13,7 @@ import { getCredentialAuthService } from "@/modules/users/infrastructure/credent
 import { getOwnerSetupLock } from "@/modules/users/infrastructure/owner-setup-lock-factory";
 import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
 import type { OwnerSetupActionState } from "@/modules/users/ui/owner-setup-action-state";
-import { getServerEnv } from "@/shared/config/env";
+import { getWebEnv } from "@/shared/config/env";
 
 export async function createFirstOwnerAction(
   _previousState: OwnerSetupActionState,
@@ -30,7 +30,7 @@ export async function createFirstOwnerAction(
     return validationErrorResult(parsed.error);
   }
 
-  const env = getServerEnv();
+  const env = getWebEnv({ requireOwnerSetupToken: true });
 
   if (
     !isOwnerSetupTokenValid({

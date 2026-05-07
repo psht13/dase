@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getOwnerSetupStateUseCase } from "@/modules/users/application/owner-setup";
 import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
 import { OwnerSetupForm } from "@/modules/users/ui/owner-setup-form";
-import { getServerEnv } from "@/shared/config/env";
+import { getWebEnv } from "@/shared/config/env";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SetupPage() {
   const [env, state] = await Promise.all([
-    Promise.resolve(getServerEnv()),
+    Promise.resolve(getWebEnv()),
     getOwnerSetupStateUseCase({
       userRepository: getUserRepository(),
     }),
@@ -21,6 +21,8 @@ export default async function SetupPage() {
       <SetupUnavailable message="Перший власник уже створений. Увійдіть до кабінету власника." />
     );
   }
+
+  getWebEnv({ requireOwnerSetupToken: true });
 
   return (
     <main

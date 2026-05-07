@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import SetupPage from "./page";
 import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
-import { getServerEnv } from "@/shared/config/env";
+import { getWebEnv } from "@/shared/config/env";
 
 vi.mock("@/shared/config/env", () => ({
-  getServerEnv: vi.fn(),
+  getWebEnv: vi.fn(),
 }));
 
 vi.mock("@/modules/users/infrastructure/user-repository-factory", () => ({
@@ -26,7 +26,7 @@ vi.mock("@/modules/users/ui/owner-setup-form", () => ({
 
 describe("SetupPage", () => {
   beforeEach(() => {
-    vi.mocked(getServerEnv).mockReturnValue({
+    vi.mocked(getWebEnv).mockReturnValue({
       AUTO_COMPLETE_AFTER_DELIVERED_HOURS: 24,
       BETTER_AUTH_SECRET: "a".repeat(32),
       BETTER_AUTH_URL: "https://dase.example.com",
@@ -53,6 +53,7 @@ describe("SetupPage", () => {
     expect(
       screen.getByRole("form", { name: "Форма створення власника" }),
     ).toHaveAttribute("data-requires-token", "true");
+    expect(getWebEnv).toHaveBeenCalledWith({ requireOwnerSetupToken: true });
   });
 
   it("shows a Ukrainian unavailable message after an owner exists", async () => {
@@ -84,7 +85,7 @@ describe("SetupPage", () => {
   });
 
   it("does not require the setup token field outside production", async () => {
-    vi.mocked(getServerEnv).mockReturnValue({
+    vi.mocked(getWebEnv).mockReturnValue({
       AUTO_COMPLETE_AFTER_DELIVERED_HOURS: 24,
       NODE_ENV: "development",
     } as never);

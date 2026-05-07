@@ -18,7 +18,7 @@ import {
   getShippingLabelCreationMode,
   validateLiveShipmentCreationConfig,
 } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
-import { getServerEnv } from "@/shared/config/env";
+import { getWorkerEnv } from "@/shared/config/env";
 
 type ShipmentWorkerDependencies = {
   auditEventRepository: ReturnType<typeof getAuditEventRepository>;
@@ -58,7 +58,7 @@ export async function registerShipmentWorkers(boss: PgBoss): Promise<void> {
           await syncShipmentStatusJobUseCase(job.data, {
             auditEventRepository: dependencies.auditEventRepository,
             autoCompleteAfterDeliveredHours:
-              getServerEnv().AUTO_COMPLETE_AFTER_DELIVERED_HOURS,
+              getWorkerEnv().AUTO_COMPLETE_AFTER_DELIVERED_HOURS,
             getShippingCarrier,
             orderRepository: dependencies.orderRepository,
             shipmentJobQueue: dependencies.shipmentJobQueue,
@@ -75,7 +75,7 @@ export async function registerShipmentWorkers(boss: PgBoss): Promise<void> {
           await autoCompleteDeliveredOrderJobUseCase(job.data, {
             auditEventRepository: dependencies.auditEventRepository,
             autoCompleteAfterDeliveredHours:
-              getServerEnv().AUTO_COMPLETE_AFTER_DELIVERED_HOURS,
+              getWorkerEnv().AUTO_COMPLETE_AFTER_DELIVERED_HOURS,
             orderRepository: dependencies.orderRepository,
             shipmentRepository: dependencies.shipmentRepository,
           });

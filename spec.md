@@ -50,13 +50,13 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, and release-candidate hardening implemented
+Status: owner authentication, first-owner setup hardening, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, and release-candidate hardening implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
 - ESLint, Vitest coverage, Testing Library, MSW dependency, Playwright, Drizzle, Better Auth skeleton, and worker start script are configured.
 - `/api/health` returns a no-store JSON health response.
-- Environment validation is implemented in `src/shared/config/env.ts`.
+- Runtime-aware environment validation is implemented in `src/shared/config/env.ts`.
 - Starter UI copy is Ukrainian and covered by unit and E2E tests.
 - Initial Drizzle migrations create users, products, product images, orders, order items, customers, payments, shipments, order tags, audit events, webhook events, and carrier directory cache tables.
 - Roles are restricted to `owner` and `user`; the default user role is `user`.
@@ -172,7 +172,7 @@ Production owner access and payment/shipment safety update on 2026-04-30, repair
 - `/setup` creates the first `owner` only while no owner exists; after an owner exists it shows the Ukrainian unavailable state.
 - `/setup` no longer accepts or requires `OWNER_SETUP_TOKEN` in the URL. Production `/setup` renders a Ukrainian setup-token field inside the first-owner form and validates the submitted token only in the server action.
 - Non-production setup allows first-owner creation without a setup token.
-- `OWNER_SETUP_TOKEN` is validated as a production env var, documented in `.env.example` and `DEPLOYMENT.md`, and configured securely in Railway production variables for `web` and `worker` without committing the value.
+- `OWNER_SETUP_TOKEN` is validated only by the production `web` first-owner setup path while setup is available, documented in `.env.example` and `DEPLOYMENT.md`, and configured securely without committing the value.
 - Login now signs in through a Better Auth-backed server action so the session cookie is set before redirecting to `/dashboard`.
 - Dashboard access redirects unauthenticated visitors to `/login`; authenticated `user` role sessions remain denied dashboard access.
 - Owner sessions persist across `/dashboard`, `/dashboard/products`, `/dashboard/orders`, `/dashboard/orders/new`, hard reloads, client-side navigation, and browser back/forward.
@@ -216,6 +216,14 @@ Shipping label safety update on 2026-05-07:
 - Ukrposhta remains disabled legacy data and was not reintroduced.
 - Tests cover disabled mode provider avoidance, missing live config provider avoidance, deterministic mock mode, disabled retry safety, disabled owner copy, and production env validation.
 
+Runtime-aware environment validation update on 2026-05-07:
+- `src/shared/config/env.ts` now exposes `getWebEnv()`, `getWorkerEnv()`, and `getTestEnv()` alongside a documented safe `getServerEnv()` base parser for shared infrastructure.
+- Production `web` validation requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`. It requires `OWNER_SETUP_TOKEN` only when the first-owner setup path is enabled and does not force worker-only settings.
+- Production `worker` validation requires `DATABASE_URL` and an explicit `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`; it does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, or `OWNER_SETUP_TOKEN`.
+- `SHIPPING_LABEL_CREATION_MODE=live` continues to require complete Nova Post live shipment settings, `mock` remains rejected in production, and disabled production shipping mode does not require Nova Post credentials.
+- Missing environment errors report variable names and runtime context only; they do not include secret values.
+- Tests cover web production validation, worker production validation, live and disabled shipping modes, dev/test fallback behavior, and the worker config path proving owner setup tokens are not required by the worker.
+
 Ukrposhta active-MVP removal update on 2026-05-07:
 - Added a central shipping carrier registry at `src/modules/shipping/application/shipping-carrier-registry.ts`.
 - The active customer-facing carrier list contains only Nova Post with the Ukrainian label `Нова пошта`.
@@ -235,7 +243,7 @@ Repair order checklist:
 1. Auth, setup, and dashboard navigation:
    - Change the home CTA `Перейти до налаштування` from a non-navigating button into a real Ukrainian-labeled link or button-link to `/setup`.
    - Replace the production setup-token URL-query flow with a safer form-based setup-token flow: `/setup` renders the setup-token field while setup is available, submits setup data through the server action, and never requires or documents the secret in the URL.
-   - Keep first-owner creation available only while no `owner` exists, preserve the `owner`/`user` role boundary, and keep `OWNER_SETUP_TOKEN` required in production env validation.
+   - Keep first-owner creation available only while no `owner` exists, preserve the `owner`/`user` role boundary, and require `OWNER_SETUP_TOKEN` only for the production web setup path while setup is available.
    - Stabilize login-to-dashboard and dashboard route navigation by verifying Better Auth cookie persistence, callback handling, `router.replace("/dashboard")`, `router.refresh()`, and `requireOwnerSession()` behavior so normal owner navigation cannot intermittently redirect to `/login`.
    - Add or update unit and Playwright coverage for Ukrainian home CTA navigation, form-based setup token validation, first-owner creation, invalid token handling, owner dashboard access, and `user` dashboard denial.
 
@@ -494,7 +502,7 @@ Latest local quality status on 2026-04-30 after production owner access and paym
 - `pnpm test:coverage` passed with 87.24% statements, 80.35% branches, 91.5% functions, and 87.24% lines across the configured coverage scope.
 - `pnpm test:e2e` passed with Chromium: 10 tests covering health, Ukrainian home UI, Ukrainian login UI, owner dashboard access, `user` dashboard denial, owner product/order flows, mocked customer delivery, mocked MonoPay, and owner order management.
 - `pnpm build` passed.
-- Railway CLI verification passed for adding `OWNER_SETUP_TOKEN` securely to production `web` and `worker` variables with deploy triggering skipped.
+- Railway CLI verification passed for adding `OWNER_SETUP_TOKEN` securely with deploy triggering skipped; current validation requires it only for the production `web` first-owner setup path.
 
 Latest local quality status on 2026-05-07 after owner setup and login persistence repair:
 - `pnpm lint` passed.
@@ -514,6 +522,13 @@ Latest local quality status on 2026-05-07 after Ukrposhta active-MVP removal:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 88.48% statements, 80.29% branches, 90.64% functions, and 88.48% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login persistence.
+- `pnpm build` passed.
+
+Latest local quality status on 2026-05-07 after runtime-aware environment validation:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.51% statements, 80.01% branches, 90.68% functions, and 88.51% lines across the configured coverage scope.
 - `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login persistence.
 - `pnpm build` passed.
 
@@ -539,7 +554,7 @@ Current command status:
 - `pnpm start` runs `next start` for Railway web deployments.
 - `pnpm db:generate` was verified and generated Drizzle migrations through `drizzle/0003_kind_deathstrike.sql`.
 - `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway web deployments run it as the pre-deploy command against Railway PostgreSQL.
-- `pnpm worker:start` requires a secure `DATABASE_URL`; the Railway worker service starts successfully with the Railway PostgreSQL reference configured.
+- `pnpm worker:start` requires a secure `DATABASE_URL` and explicit `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` in production; the Railway worker service starts successfully with the Railway PostgreSQL reference configured.
 - Required local checks are available through pnpm scripts.
 
 ## Environment variables
@@ -548,9 +563,9 @@ Current command status:
 DATABASE_URL=
 DATABASE_URL_TEST=
 
-BETTER_AUTH_SECRET=
-BETTER_AUTH_URL=
-OWNER_SETUP_TOKEN=
+BETTER_AUTH_SECRET= # production web
+BETTER_AUTH_URL= # production web
+OWNER_SETUP_TOKEN= # production web setup path only while first-owner setup is available
 
 MONOBANK_TOKEN=
 MONOBANK_API_URL=
@@ -580,7 +595,7 @@ NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS=500
 NOVA_POSHTA_API_KEY= # deprecated compatibility name
 NOVA_POSHTA_API_URL= # deprecated compatibility name
 
-AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24
+AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24 # production worker
 
 NODE_ENV=development
 CI=
@@ -623,7 +638,7 @@ Current Railway status on 2026-04-30:
 - Services `web`, `worker`, and `Postgres` exist in the `production` environment.
 - PostgreSQL was provisioned through Railway MCP template deployment.
 - `DATABASE_URL` is configured securely for `web` and `worker` through Railway service variables as a reference to the `Postgres` service.
-- `OWNER_SETUP_TOKEN` is configured securely for `web` and `worker` production variables; the value is intentionally not documented or committed.
+- `OWNER_SETUP_TOKEN` is configured securely for the production first-owner setup path; current validation requires it only from the `web` setup flow, not from the `worker`. The value is intentionally not documented or committed.
 - `web` is connected to `psht13/dase` on `main`, autodeploy is enabled, and the latest deployment succeeded from `/railway.json`.
 - `worker` is connected to `psht13/dase` on `main`, autodeploy is enabled, and the latest deployment succeeded from `/railway.worker.json`.
 - Web health check verification passed at https://web-production-26609.up.railway.app/api/health.

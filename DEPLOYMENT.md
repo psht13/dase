@@ -32,16 +32,26 @@ Railway config-as-code applies per service deployment. If both `web` and `worker
 
 Set all values through Railway service variables or shared environment variables. Never commit real values.
 
-Required for production `web` and `worker`:
-- `DATABASE_URL` - Railway PostgreSQL private connection string.
+Required for production `web`:
+- `DATABASE_URL` - Railway PostgreSQL private connection string or Railway variable reference.
 - `BETTER_AUTH_SECRET` - at least 32 characters.
 - `BETTER_AUTH_URL` - canonical deployed web URL.
-- `OWNER_SETUP_TOKEN` - at least 32 characters; required by shared production env validation. The `web` service validates it only when the `/setup` form is submitted before the first owner exists. Never place this token in URLs, redirects, logs, query strings, or client-side state.
-- `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Production defaults to `disabled` when omitted. Use `disabled` for production/demo deployments until Nova Post sender settings are complete. `mock` is rejected in production and is only for local/e2e.
-- `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` - default `24` if omitted.
 - `NODE_ENV` - normally set to `production` by the runtime.
 
-Required for MonoPay / Monobank production payment flow:
+Required only when first-owner setup is available in production `web`:
+- `OWNER_SETUP_TOKEN` - at least 32 characters. The `web` service validates it only for the first-owner setup path before an owner exists. Never place this token in URLs, redirects, logs, query strings, or client-side state.
+
+Required for production `worker`:
+- `DATABASE_URL` - Railway PostgreSQL private connection string or Railway variable reference.
+- `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` - positive integer such as `24`.
+- `NODE_ENV` - normally set to `production` by the runtime.
+
+The production `worker` does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, or `OWNER_SETUP_TOKEN`.
+
+Shared shipping mode:
+- `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Production defaults to `disabled` when omitted. Use `disabled` for production/demo deployments until Nova Post sender settings are complete. `mock` is rejected in production and is only for local/e2e.
+
+Required for MonoPay / Monobank production payment flow. These are not required for `web` startup when the live MonoPay flow is not being used:
 - `MONOBANK_TOKEN`
 - `MONOBANK_API_URL`
 - `MONOBANK_PUBLIC_KEY`
@@ -142,7 +152,7 @@ Completed live setup:
 - `web` uses `/railway.json`, `pnpm build`, `pnpm db:migrate`, `pnpm start`, and `/api/health`.
 - `worker` uses `/railway.worker.json`, `pnpm build`, and `pnpm worker:start`.
 - Required runtime variables were set securely in Railway variables, including `DATABASE_URL` as a Railway reference to `Postgres`.
-- `OWNER_SETUP_TOKEN` was configured securely for `web` and `worker` production variables on 2026-04-30 with deploy triggering skipped; do not expose the value in logs or commits.
+- `OWNER_SETUP_TOKEN` was configured securely on 2026-04-30 with deploy triggering skipped; current runtime validation requires it only for the production `web` first-owner setup path. The `worker` no longer requires login/setup-only secrets. Do not expose the value in logs or commits.
 - Railway web domain: https://web-production-26609.up.railway.app
 - Web health check verified: `/api/health` returns `status: ok`.
 - Worker runtime verified: deployment logs include `Shipment worker is ready.`

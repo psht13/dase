@@ -2,7 +2,7 @@ import type { PaymentProvider } from "@/modules/payments/application/payment-pro
 import { PaymentProviderConfigurationError } from "@/modules/payments/application/payment-provider";
 import { FixtureMonobankPaymentProvider } from "@/modules/payments/infrastructure/fixture-payment-provider";
 import { MonobankPaymentProvider } from "@/modules/payments/infrastructure/monobank-payment-provider";
-import { getServerEnv } from "@/shared/config/env";
+import { getWebEnv } from "@/shared/config/env";
 
 let cachedMonobankProvider: PaymentProvider | undefined;
 
@@ -17,7 +17,7 @@ export function resetPaymentProviderForTests(): void {
 }
 
 function createMonobankPaymentProvider(): PaymentProvider {
-  const env = getServerEnv();
+  const env = getWebEnv();
 
   if (isPlaywrightFallbackEnabled()) {
     return new FixtureMonobankPaymentProvider();
