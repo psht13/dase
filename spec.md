@@ -191,6 +191,39 @@ Railway live setup retry on 2026-04-30:
 - Verified Railway PostgreSQL connectivity through the Railway public database proxy with a read-only query; `publicTableCount` was 16 after migration.
 - External production credentials for Monobank, Nova Poshta, and Ukrposhta still require manual configuration in Railway before live payment/shipping verification.
 
+## Repair audit on 2026-05-07
+
+Audit scope: `AGENTS.md`, this specification, `DEPLOYMENT.md`, ADR 0001, package/env configuration, home/login/setup pages, user auth/setup modules, shipping modules, delivery form validation/UI, environment validation, and database schema were inspected before any functional change.
+
+Repair order checklist:
+
+1. Auth, setup, and dashboard navigation:
+   - Change the home CTA `Перейти до налаштування` from a non-navigating button into a real Ukrainian-labeled link or button-link to `/setup`.
+   - Replace the production `/setup?token=<OWNER_SETUP_TOKEN>` URL-query flow with a safer form-based setup-token flow: `/setup` should render the setup-token field while setup is available, keep the owner creation fields gated until token validation succeeds or submit all setup data through the server action, and never require or document the secret in the URL.
+   - Keep first-owner creation available only while no `owner` exists, preserve the `owner`/`user` role boundary, and keep `OWNER_SETUP_TOKEN` required in production env validation.
+   - Stabilize login-to-dashboard and dashboard route navigation by verifying Better Auth cookie persistence, callback handling, `router.replace("/dashboard")`, `router.refresh()`, and `requireOwnerSession()` behavior so normal owner navigation cannot intermittently redirect to `/login`.
+   - Add or update unit and Playwright coverage for Ukrainian home CTA navigation, form-based setup token validation, first-owner creation, invalid token handling, owner dashboard access, and `user` dashboard denial.
+
+2. Nova Post API replacement:
+   - Replace the legacy Nova Poshta default endpoint `https://api.novaposhta.ua/v2.0/json/` and adapter request shape with the current Nova Post API required for MVP city search, warehouse search, shipment creation, tracking, and label/reference retrieval.
+   - Update `NOVA_POSHTA_API_URL` documentation and examples without committing credentials.
+   - Keep all external API tests on MSW/fixtures and do not call live Nova Post APIs in CI.
+
+3. Remove Ukrposhta from the active MVP:
+   - Remove Ukrposhta from active customer delivery choices, active owner filters, active carrier route validation, active shipment factory selection, active production env requirements, deployment checklists, and MVP manual smoke tests.
+   - Preserve a clean `ShippingCarrier` port/interface shape so a future Ukrposhta adapter can be reintroduced without changing order or shipment application use cases.
+   - Plan the schema/enums carefully before changing database values: existing `UKRPOSHTA` enum values may need a non-destructive migration or compatibility handling for historical rows and tests.
+
+4. Shipping production configuration and failure handling:
+   - Document and implement the exact Nova Post production variables needed for shipment creation, including sender/counterparty data, sender address/warehouse, contact phone, payer/payment method, cargo dimensions/weight defaults, and label retrieval behavior.
+   - Make shipment creation failures produce clear Ukrainian owner-facing status/audit messages while preserving safe internal logs and pg-boss retry behavior.
+   - Ensure missing or incomplete production shipping configuration fails before a live carrier request is attempted and gives owners an actionable retry path.
+
+5. Regression tests and documentation:
+   - After each behavior or environment-variable change, update `spec.md`, `.env.example`, `DEPLOYMENT.md`, and tests in the same milestone.
+   - Run at minimum `pnpm lint`, `pnpm typecheck`, focused unit/MSW tests, and Playwright navigation checks during each repair; run the full required gate before release.
+   - Keep all user-facing UI text Ukrainian, keep product images external URL-only, do not add object storage, do not commit secrets, and use English imperative sentence-case commit messages without prefixes.
+
 ## Core flows
 
 ### Product management
