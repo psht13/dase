@@ -14,6 +14,14 @@ test("home page exposes Ukrainian starter UI", async ({ page }) => {
 
   await expect(setupLink).toBeVisible();
   await expect(setupLink).toHaveAttribute("href", /\/(setup|login)$/);
+
+  await setupLink.click();
+  await expect(page).toHaveURL(/\/(setup|login)(?:\?|$)/);
+  await expect(
+    page.getByRole("heading", {
+      name: /Створення першого власника|Налаштування недоступне|Вхід до кабінету/,
+    }),
+  ).toBeVisible();
 });
 
 test("health route returns ok", async ({ request }) => {

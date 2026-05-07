@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, and release-candidate hardening implemented
+Status: owner authentication, first-owner setup hardening, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -266,6 +266,25 @@ Repair order checklist:
    - After each behavior or environment-variable change, update `spec.md`, `.env.example`, `DEPLOYMENT.md`, and tests in the same milestone.
    - Run at minimum `pnpm lint`, `pnpm typecheck`, focused unit/MSW tests, and Playwright navigation checks during each repair; run the full required gate before release.
    - Keep all user-facing UI text Ukrainian, keep product images external URL-only, do not add object storage, do not commit secrets, and use English imperative sentence-case commit messages without prefixes.
+
+## Final production-readiness audit on 2026-05-07
+
+Audit scope: `AGENTS.md`, this specification, `DEPLOYMENT.md`, ADR 0001, `README.md`, package/env configuration, Railway MCP service status, auth/setup/login/logout flow, owner dashboard access, Nova Post shipping integration, disabled Ukrposhta handling, MonoPay retry/webhook handling, migrations, transactional customer confirmation, CI/e2e setup, and user-facing UI copy.
+
+Audit result:
+- Auth remains protected against redirect loops: unauthenticated dashboard access redirects to `/login`, authenticated `owner` sessions persist across dashboard navigation, reload, browser history, and logout, and authenticated `user` sessions are denied dashboard access.
+- `/setup` remains available only before the first `owner` exists. Production setup tokens are submitted through the Ukrainian setup form and are not accepted from URLs.
+- The home CTA is a real link and the Playwright home test now clicks it, verifying navigation into `/setup` or `/login`.
+- Nova Post is the only active customer-facing carrier. Ukrposhta remains disabled historical data only; carrier lookup APIs, delivery validation, shipment enqueueing, retry, create-shipment jobs, tracking sync, and production carrier factory wiring avoid disabled carriers.
+- No live Ukrposhta production adapter is wired, and no legacy Nova Poshta `v2.0/json` production adapter remains.
+- `SHIPPING_LABEL_CREATION_MODE` prevents accidental live labels: production defaults to `disabled`, production rejects `mock`, and `live` requires complete Nova Post API, sender, payer, and parcel settings before a provider call can be made.
+- Nova Post API keys and JWTs are not logged. Provider errors expose safe messages and tests assert credential logging is avoided.
+- MonoPay retry remains available for confirmed orders missing a provider invoice id and for failed MonoPay payments. Webhook processing verifies signatures, stores events idempotently, ignores stale provider modified dates, and stores sanitized payloads without card data.
+- Database migrations are forward-only schema/data migrations with no production destructive scripts. Customer confirmation writes use `CustomerConfirmationUnitOfWork` and Drizzle transactions when PostgreSQL is configured.
+- User-facing application copy remains Ukrainian, with product/brand names such as Dase, MonoPay, Monobank, and Nova Post kept as proper names.
+- Public pages are covered by mobile Playwright checks with no horizontal overflow, and dashboard navigation remains covered by owner e2e flows.
+- `README.md`, `.env.example`, this specification, `DEPLOYMENT.md`, Railway config files, and CI workflow are aligned with the current web, worker, postgres, env var, no-object-storage, and mocked-external-API requirements.
+- CI and local tests use MSW, fixtures, or in-memory adapters for Monobank and Nova Post; live external APIs are not called in automated tests.
 
 ## Core flows
 
@@ -530,6 +549,13 @@ Latest local quality status on 2026-05-07 after runtime-aware environment valida
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 88.51% statements, 80.01% branches, 90.68% functions, and 88.51% lines across the configured coverage scope.
 - `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login persistence.
+- `pnpm build` passed.
+
+Latest local quality status on 2026-05-07 after final production-readiness audit:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.51% statements, 80.01% branches, 90.68% functions, and 88.51% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, clickable Ukrainian home CTA navigation, Ukrainian login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login/logout persistence.
 - `pnpm build` passed.
 
 ## Commands
