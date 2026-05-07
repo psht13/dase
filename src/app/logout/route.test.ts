@@ -1,11 +1,17 @@
 import { GET } from "./route";
 import { getAuth } from "@/modules/users/infrastructure/auth";
+import { resetServerEnvForTests } from "@/shared/config/env";
 
 vi.mock("@/modules/users/infrastructure/auth", () => ({
   getAuth: vi.fn(),
 }));
 
 describe("logout route", () => {
+  afterEach(() => {
+    resetServerEnvForTests();
+    vi.unstubAllEnvs();
+  });
+
   it("signs out through Better Auth and redirects to login", async () => {
     const signOut = vi.fn(async () => {
       const headers = new Headers();
@@ -32,5 +38,23 @@ describe("logout route", () => {
       asResponse: true,
       headers: expect.anything(),
     });
+  });
+
+  it("uses the configured public web URL when Railway exposes an internal request URL", async () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "a".repeat(32));
+    vi.stubEnv("BETTER_AUTH_URL", "https://web-production-26609.up.railway.app");
+    vi.stubEnv("DATABASE_URL", "postgres://user:pass@example.com:5432/dase");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(getAuth).mockReturnValue({
+      api: {
+        signOut: vi.fn(async () => new Response(null)),
+      },
+    } as never);
+
+    const response = await GET(new Request("https://localhost:8080/logout"));
+
+    expect(response.headers.get("location")).toBe(
+      "https://web-production-26609.up.railway.app/login?logout=1",
+    );
   });
 });

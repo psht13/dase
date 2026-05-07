@@ -286,6 +286,12 @@ Audit result:
 - `README.md`, `.env.example`, this specification, `DEPLOYMENT.md`, Railway config files, and CI workflow are aligned with the current web, worker, postgres, env var, no-object-storage, and mocked-external-API requirements.
 - CI and local tests use MSW, fixtures, or in-memory adapters for Monobank and Nova Post; live external APIs are not called in automated tests.
 
+## Production logout origin repair on 2026-05-07
+
+- Railway production returned `/logout` redirects with an internal `https://localhost:8080/login?logout=1` origin because the route handler built its redirect from `request.url`.
+- `/logout` now builds the redirect from configured `BETTER_AUTH_URL` first, then falls back to forwarded request headers for non-production/local cases.
+- Regression coverage simulates Railway's internal request URL and verifies the public deployed web URL is used for the Ukrainian logout success page.
+
 ## Core flows
 
 ### Product management
