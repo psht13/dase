@@ -152,6 +152,17 @@ export function validateWebEnv(
       }
     }
 
+    if (env.BETTER_AUTH_URL) {
+      const authUrlIssue = getPublicProductionUrlIssue(
+        env.BETTER_AUTH_URL,
+        "BETTER_AUTH_URL",
+      );
+
+      if (authUrlIssue) {
+        issues.push(authUrlIssue);
+      }
+    }
+
     if (options.requireOwnerSetupToken && !env.OWNER_SETUP_TOKEN) {
       issues.push({
         message:
@@ -252,10 +263,66 @@ export function resetServerEnvForTests(): void {
   cachedTestEnv = undefined;
 }
 
+export function isLocalhostUrl(value: string): boolean {
+  try {
+    const { hostname } = new URL(value);
+    const normalizedHost = hostname.toLowerCase();
+
+    return (
+      normalizedHost === "localhost" ||
+      normalizedHost.endsWith(".localhost") ||
+      normalizedHost === "0.0.0.0" ||
+      normalizedHost === "::1" ||
+      normalizedHost === "[::1]" ||
+      normalizedHost.startsWith("127.")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isInternalRailwayUrl(value: string): boolean {
+  try {
+    const { hostname } = new URL(value);
+    const normalizedHost = hostname.toLowerCase();
+
+    return (
+      normalizedHost === "railway.internal" ||
+      normalizedHost.endsWith(".railway.internal")
+    );
+  } catch {
+    return false;
+  }
+}
+
 type EnvironmentIssue = {
   message: string;
   path: string;
 };
+
+function getPublicProductionUrlIssue(
+  value: string,
+  key: string,
+): EnvironmentIssue | null {
+  const url = new URL(value);
+
+  if (
+    url.protocol !== "https:" ||
+    isLocalhostUrl(value) ||
+    isInternalRailwayUrl(value) ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    return {
+      message:
+        `${key} must be a public HTTPS origin in production and cannot point to localhost, loopback, or an internal Railway domain`,
+      path: key,
+    };
+  }
+
+  return null;
+}
 
 function getRequiredLiveShippingKeys(env: {
   NOVA_POST_API_KEY?: string;

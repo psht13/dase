@@ -94,7 +94,7 @@ test("owner setup and real login persist across dashboard navigation", async ({
     page.getByRole("heading", { name: "Панель власника" }),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Вийти" }).click();
+  await page.getByRole("button", { name: "Вийти" }).click();
   await expect(page).toHaveURL(/\/login\?logout=1$/);
   await expect(page.getByText("Ви вийшли з кабінету.")).toBeVisible();
 

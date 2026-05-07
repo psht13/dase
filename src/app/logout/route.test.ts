@@ -51,10 +51,51 @@ describe("logout route", () => {
       },
     } as never);
 
-    const response = await GET(new Request("https://localhost:8080/logout"));
+    const response = await GET(
+      new Request("https://localhost:8080/logout", {
+        headers: {
+          "x-forwarded-host": "web-production-26609.up.railway.app",
+          "x-forwarded-proto": "https",
+        },
+      }),
+    );
 
     expect(response.headers.get("location")).toBe(
       "https://web-production-26609.up.railway.app/login?logout=1",
     );
+  });
+
+  it("refuses a localhost production auth URL before redirecting", async () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "a".repeat(32));
+    vi.stubEnv("BETTER_AUTH_URL", "https://localhost:8080");
+    vi.stubEnv("DATABASE_URL", "postgres://user:pass@example.com:5432/dase");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(getAuth).mockReturnValue({
+      api: {
+        signOut: vi.fn(async () => new Response(null)),
+      },
+    } as never);
+
+    await expect(
+      GET(
+        new Request("https://localhost:8080/logout", {
+          headers: {
+            "x-forwarded-host": "web-production-26609.up.railway.app",
+            "x-forwarded-proto": "https",
+          },
+        }),
+      ),
+    ).rejects.toThrow(/BETTER_AUTH_URL must be a public HTTPS origin/);
+
+    await expect(
+      GET(
+        new Request("https://localhost:8080/logout", {
+          headers: {
+            "x-forwarded-host": "web-production-26609.up.railway.app",
+            "x-forwarded-proto": "https",
+          },
+        }),
+      ),
+    ).rejects.not.toThrow(/localhost:8080/);
   });
 });

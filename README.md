@@ -22,7 +22,7 @@ pnpm dev
 
 ## Runtime Environment
 
-Production `web` requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`. `OWNER_SETUP_TOKEN` is required only for the production first-owner setup path while no owner exists.
+Production `web` requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`. On Railway, `BETTER_AUTH_URL` must be the public HTTPS origin `https://web-production-26609.up.railway.app`; it must never be localhost, loopback, or `*.railway.internal` in production. `OWNER_SETUP_TOKEN` is required only for the production first-owner setup path while no owner exists.
 
 Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`. It does not require login or setup secrets.
 
@@ -53,3 +53,13 @@ pnpm test:coverage
 pnpm test:e2e
 pnpm build
 ```
+
+Authenticated production smoke testing is opt-in and uses only temporary local shell variables:
+
+```bash
+E2E_PROD_EMAIL='owner@example.com' \
+E2E_PROD_PASSWORD='temporary-password' \
+pnpm test:e2e:prod
+```
+
+Do not commit or store the production smoke credentials in repo files or Railway runtime variables.

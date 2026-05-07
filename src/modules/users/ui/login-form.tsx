@@ -1,16 +1,31 @@
 "use client";
 
 import { LogIn } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { initialLoginActionState } from "@/modules/users/ui/login-action-state";
 import { loginOwnerAction } from "@/modules/users/ui/login-actions";
 import { Button } from "@/shared/ui/button";
 
-export function LoginForm() {
+type LoginFormProps = {
+  navigateOnSuccess?: (url: string) => void;
+};
+
+export function LoginForm({ navigateOnSuccess }: LoginFormProps = {}) {
   const [state, formAction, isPending] = useActionState(
     loginOwnerAction,
     initialLoginActionState,
   );
+
+  useEffect(() => {
+    if (state.ok) {
+      if (navigateOnSuccess) {
+        navigateOnSuccess("/dashboard");
+        return;
+      }
+
+      window.location.assign("/dashboard");
+    }
+  }, [navigateOnSuccess, state.ok]);
 
   return (
     <form action={formAction} className="grid gap-4">
@@ -53,6 +68,9 @@ export function LoginForm() {
         <LogIn aria-hidden="true" className="size-4" />
         {isPending ? "Вхід…" : "Увійти"}
       </Button>
+      <p className="sr-only" role="status">
+        {isPending ? "Виконуємо вхід…" : ""}
+      </p>
     </form>
   );
 }

@@ -31,6 +31,7 @@ export function createAuth(database?: Database) {
       database: {
         generateId: "uuid",
       },
+      trustedProxyHeaders: env.NODE_ENV === "production",
     },
     appName: "Dase",
     baseURL: env.BETTER_AUTH_URL,
@@ -40,6 +41,7 @@ export function createAuth(database?: Database) {
     },
     plugins: [nextCookies()],
     secret: env.BETTER_AUTH_SECRET,
+    trustedOrigins: getTrustedOrigins(env),
     account: {
       modelName: "accounts",
     },
@@ -71,4 +73,19 @@ export function getAuth() {
 
 export function resetAuthForTests(): void {
   cachedAuth = undefined;
+}
+
+function getTrustedOrigins(env: ReturnType<typeof getWebEnv>): string[] {
+  const origins = new Set<string>();
+
+  if (env.BETTER_AUTH_URL) {
+    origins.add(new URL(env.BETTER_AUTH_URL).origin);
+  }
+
+  if (env.NODE_ENV !== "production") {
+    origins.add("http://localhost:3000");
+    origins.add("http://127.0.0.1:3000");
+  }
+
+  return Array.from(origins);
 }

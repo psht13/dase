@@ -35,8 +35,10 @@ Set all values through Railway service variables or shared environment variables
 Required for production `web`:
 - `DATABASE_URL` - Railway PostgreSQL private connection string or Railway variable reference.
 - `BETTER_AUTH_SECRET` - at least 32 characters.
-- `BETTER_AUTH_URL` - canonical deployed web URL.
+- `BETTER_AUTH_URL` - canonical deployed web URL. For the current Railway production web service this must be exactly `https://web-production-26609.up.railway.app`.
 - `NODE_ENV` - normally set to `production` by the runtime.
+
+`BETTER_AUTH_URL` must never be `localhost`, `127.0.0.1`, `0.0.0.0`, or an internal Railway URL such as `https://web.railway.internal` in production. Production validation rejects non-public or path-based values before auth routes can redirect.
 
 Required only when first-owner setup is available in production `web`:
 - `OWNER_SETUP_TOKEN` - at least 32 characters. The `web` service validates it only for the first-owner setup path before an owner exists. Never place this token in URLs, redirects, logs, query strings, or client-side state.
@@ -86,6 +88,11 @@ Test-only variables that must not be enabled in production:
 - `PLAYWRIGHT_BASE_URL`
 - `USE_MOCK_SHIPPING_CARRIERS`
 - `DATABASE_URL_TEST`
+
+Manual production smoke-test variables that must be set only in the local shell running the smoke test, not in Railway production runtime config:
+- `RUN_PROD_SMOKE`
+- `E2E_PROD_EMAIL`
+- `E2E_PROD_PASSWORD`
 
 Tooling-managed CI variable:
 - `CI` - set by GitHub Actions and used by Playwright for retry/reporting behavior.
@@ -138,6 +145,18 @@ Do not call live external APIs in CI. After production variables are configured,
 - The stored label reference points to Nova Post `/shipments/print`; downloading/serving labels requires a server-side authorized request because the provider endpoint requires JWT authorization.
 - Ukrposhta is not shown in the public customer form during the Nova Post MVP; historical records are labeled `Укрпошта (вимкнено)`.
 - Shipment tracking updates move orders through Ukrainian dashboard statuses.
+
+## Production Auth Smoke Test
+
+Run the authenticated production smoke test only from a local shell with temporary credentials:
+
+```bash
+E2E_PROD_EMAIL='owner@example.com' \
+E2E_PROD_PASSWORD='temporary-password' \
+pnpm test:e2e:prod
+```
+
+The smoke test opens the Railway production URL, signs in, verifies `/dashboard`, `/dashboard/products`, and `/dashboard/orders`, logs out through the POST logout button, asserts the browser ends at `https://web-production-26609.up.railway.app/login?logout=1`, and fails if any browser request targets `https://localhost:8080`.
 
 ## Current Railway Status
 

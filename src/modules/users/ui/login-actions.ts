@@ -1,7 +1,6 @@
 "use server";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ownerLoginFormSchema } from "@/modules/users/application/login-validation";
 import { getAuth } from "@/modules/users/infrastructure/auth";
@@ -36,7 +35,10 @@ export async function loginOwnerAction(
     };
   }
 
-  redirect("/dashboard");
+  return {
+    message: null,
+    ok: true,
+  };
 }
 
 function validationErrorResult(error: z.ZodError): LoginActionState {

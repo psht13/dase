@@ -289,7 +289,13 @@ Audit result:
 ## Production logout origin repair on 2026-05-07
 
 - Railway production returned `/logout` redirects with an internal `https://localhost:8080/login?logout=1` origin because the route handler built its redirect from `request.url`.
-- `/logout` now builds the redirect from configured `BETTER_AUTH_URL` first, then falls back to forwarded request headers for non-production/local cases.
+- Railway `web` was verified on 2026-05-07 as deployed from GitHub `main` commit `fb1cb285fa0ba61a7865032b6bd8061597c50d9c`, and Railway `web` variables were verified without exposing secret values: `BETTER_AUTH_URL` is the public origin `https://web-production-26609.up.railway.app`, `NODE_ENV=production`, `DATABASE_URL` is present, `BETTER_AUTH_SECRET` is present and at least 32 characters, and `OWNER_SETUP_TOKEN` is present for the first-owner setup path.
+- `/logout` now builds the redirect from configured valid production `BETTER_AUTH_URL` first, then forwarded request headers, then request-host fallback only outside production.
+- Dashboard logout no longer uses a Next `<Link>` to `/logout`; the owner shell submits a POST logout button with Ukrainian copy, while `GET /logout` remains supported for direct smoke checks.
+- Production environment validation rejects `BETTER_AUTH_URL` values that point to localhost, loopback, an internal Railway domain, non-HTTPS origins, or path/query/fragment URLs. Error messages include variable names only and do not print secret values.
+- Better Auth is configured with explicit trusted origins derived from the validated public auth origin and production trusted proxy-header support for Railway.
+- Login now completes the Better Auth server action, waits for the action response, then hard-navigates with `window.location.assign("/dashboard")` so the next server-rendered dashboard request sees the session cookie.
+- Added an opt-in Playwright production auth smoke test guarded by `RUN_PROD_SMOKE=1` and temporary local `E2E_PROD_EMAIL` / `E2E_PROD_PASSWORD` variables. The smoke test is not part of default CI or local E2E runs.
 - Regression coverage simulates Railway's internal request URL and verifies the public deployed web URL is used for the Ukrainian logout success page.
 
 ## Core flows
@@ -564,6 +570,13 @@ Latest local quality status on 2026-05-07 after final production-readiness audit
 - `pnpm test:e2e` passed with Chromium: 11 tests covering health, clickable Ukrainian home CTA navigation, Ukrainian login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login/logout persistence.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-05-07 after production auth redirect hardening:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.42% statements, 80% branches, 90.66% functions, and 88.42% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 11 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -575,6 +588,7 @@ pnpm typecheck
 pnpm test
 pnpm test:coverage
 pnpm test:e2e
+pnpm test:e2e:prod
 pnpm build
 pnpm db:generate
 pnpm db:migrate
@@ -587,6 +601,7 @@ Current command status:
 - `pnpm db:generate` was verified and generated Drizzle migrations through `drizzle/0003_kind_deathstrike.sql`.
 - `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway web deployments run it as the pre-deploy command against Railway PostgreSQL.
 - `pnpm worker:start` requires a secure `DATABASE_URL` and explicit `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` in production; the Railway worker service starts successfully with the Railway PostgreSQL reference configured.
+- `pnpm test:e2e:prod` is an opt-in production auth smoke wrapper for `RUN_PROD_SMOKE=1`, `PLAYWRIGHT_BASE_URL=https://web-production-26609.up.railway.app`, and temporary local `E2E_PROD_EMAIL` / `E2E_PROD_PASSWORD` credentials.
 - Required local checks are available through pnpm scripts.
 
 ## Environment variables
@@ -635,6 +650,12 @@ CI=
 PLAYWRIGHT_E2E=
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000
 USE_MOCK_SHIPPING_CARRIERS=
+
+# Local shell only for authenticated production smoke tests. Do not configure
+# these in Railway runtime variables and do not commit credential values.
+RUN_PROD_SMOKE=
+E2E_PROD_EMAIL=
+E2E_PROD_PASSWORD=
 ```
 
 No S3/storage bucket env vars are required for the initial version.

@@ -26,10 +26,13 @@ describe("DashboardLayout", () => {
       screen.getByRole("link", { name: /Створити замовлення/i }),
     ).toBeVisible();
     expect(screen.getByText("Роль: власник")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Вийти" })).toHaveAttribute(
-      "href",
-      "/logout",
-    );
+    expect(screen.getByRole("button", { name: "Вийти" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Вийти" }).closest("form"),
+    ).toHaveAttribute("action", "/logout");
+    expect(
+      screen.getByRole("button", { name: "Вийти" }).closest("form"),
+    ).toHaveAttribute("method", "post");
     expect(screen.getByText("Вміст сторінки")).toBeVisible();
 
     const shell = container.querySelector("#main-content > div");

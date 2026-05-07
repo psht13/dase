@@ -85,13 +85,15 @@ export default async function DashboardLayout({
               </div>
               <div className="flex items-center gap-3">
                 <p className="text-sm text-muted-foreground">Роль: власник</p>
-                <Link
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  href="/logout"
-                >
-                  <LogOut aria-hidden="true" className="size-4" />
-                  Вийти
-                </Link>
+                <form action="/logout" method="post">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    type="submit"
+                  >
+                    <LogOut aria-hidden="true" className="size-4" />
+                    Вийти
+                  </button>
+                </form>
               </div>
             </div>
           </header>

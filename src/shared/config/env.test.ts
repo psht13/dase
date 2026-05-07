@@ -62,6 +62,47 @@ describe("runtime environment validation", () => {
     expect(env.SHIPPING_LABEL_CREATION_MODE).toBe("disabled");
   });
 
+  it("allows localhost Better Auth URLs outside production", () => {
+    const env = validateWebEnv({
+      BETTER_AUTH_URL: "http://localhost:3000",
+      NODE_ENV: "development",
+    });
+
+    expect(env.BETTER_AUTH_URL).toBe("http://localhost:3000");
+  });
+
+  it("rejects private Better Auth URLs in production without exposing values", () => {
+    const baseProductionWebEnv = {
+      BETTER_AUTH_SECRET: "a".repeat(32),
+      DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
+      NODE_ENV: "production",
+    };
+
+    for (const BETTER_AUTH_URL of [
+      "http://localhost:3000",
+      "https://127.0.0.1:8080",
+      "https://0.0.0.0:3000",
+      "https://[::1]:3000",
+      "https://web.railway.internal",
+      "http://dase.example.com",
+      "https://dase.example.com/auth",
+    ]) {
+      expect(() =>
+        validateWebEnv({
+          ...baseProductionWebEnv,
+          BETTER_AUTH_URL,
+        }),
+      ).toThrow(/BETTER_AUTH_URL must be a public HTTPS origin/);
+
+      expect(() =>
+        validateWebEnv({
+          ...baseProductionWebEnv,
+          BETTER_AUTH_URL,
+        }),
+      ).not.toThrow(BETTER_AUTH_URL);
+    }
+  });
+
   it("requires the setup token only for enabled production first-owner setup", () => {
     const baseProductionWebEnv = {
       BETTER_AUTH_SECRET: "a".repeat(32),
