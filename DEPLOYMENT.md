@@ -77,6 +77,8 @@ Required only when `SHIPPING_LABEL_CREATION_MODE=live` for Nova Post production 
 
 `NOVA_POST_PAYMENT_METHOD`, legacy sender contact ids, and Ukrposhta variables are not required for the current Nova Post v.1.0 integration. The live request model is built from the official sender/recipient, payer, and parcel fields in the infrastructure adapter. Recipient counterparty data comes from the confirmed customer delivery form for each order.
 
+Nova Post authenticated API calls use the generated JWT as the raw `Authorization` header value. Do not prefix the JWT with `Bearer`.
+
 Deprecated compatibility names:
 - `NOVA_POSHTA_API_KEY`
 - `NOVA_POSHTA_API_URL`
@@ -178,6 +180,7 @@ Completed live setup:
 - Railway PostgreSQL connectivity and migrations were verified with a read-only table count check through the Railway public database proxy.
 
 Remaining manual production verification:
-- Configure real Monobank and Nova Post credentials in Railway variables.
+- Configure real Monobank credentials in Railway variables.
+- Nova Post stage directory lookup variables are configured on `web`, but live shipment creation still requires `SHIPPING_LABEL_CREATION_MODE=live` and complete Nova Post API, sender, payer, and parcel variables on `worker`.
 - Do not configure Ukrposhta for the active MVP; re-enable a future carrier only through the central carrier registry and updated deployment docs.
 - Run the external API checklist above with low-risk production test data.

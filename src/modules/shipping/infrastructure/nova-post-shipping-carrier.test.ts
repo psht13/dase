@@ -167,7 +167,7 @@ describe("NovaPostShippingCarrier", () => {
 
     expect(authRequestCount).toBe(1);
     expect(authApiKeys).toEqual(["test-nova-key"]);
-    expect(authHeaders).toEqual([`Bearer ${currentJwt}`, `Bearer ${currentJwt}`]);
+    expect(authHeaders).toEqual([currentJwt, currentJwt]);
   });
 
   it("refreshes the JWT after the cached token expires", async () => {

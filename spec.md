@@ -200,6 +200,7 @@ Nova Post API replacement update on 2026-05-07:
 - Removed the legacy Nova Poshta JSON adapter and replaced it with `NovaPostShippingCarrier` plus `NovaPostJwtProvider`.
 - The adapter uses official Nova Post API v.1.0 endpoints: production `https://api.novapost.com/v.1.0/`, stage/test `https://api-stage.novapost.pl/v.1.0/`, authorization `GET /clients/authorization?apiKey=...`, directory lookup through `GET /divisions`, shipment creation through `POST /shipments`, tracking through `GET /shipments/tracking/history`, and label references through `GET /shipments/print`.
 - `NOVA_POST_API_KEY` is exchanged server-side for a JWT token; the JWT is cached for less than one hour and refreshed before expiration. API keys and JWTs are not logged or included in safe application errors.
+- Nova Post v.1.0 requests send the generated JWT as the raw `Authorization` header value. Nova Post rejects a `Bearer `-prefixed JWT for directory requests.
 - Public carrier directory route handlers still return internal DTOs only and map provider failures to safe Ukrainian messages.
 - Shipment creation validates required sender config before calling Nova Post. Missing sender country, sender division, sender name, or sender phone fails safely, stores a Ukrainian audit reason, and leaves the owner retry path available.
 - New preferred env names are `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, and optional `NOVA_POST_AUTH_URL`; `NOVA_POSHTA_API_KEY` and `NOVA_POSHTA_API_URL` are temporarily accepted as deprecated compatibility names.
@@ -297,6 +298,15 @@ Audit result:
 - Login now completes the Better Auth server action, waits for the action response, then hard-navigates with `window.location.assign("/dashboard")` so the next server-rendered dashboard request sees the session cookie.
 - Added an opt-in Playwright production auth smoke test guarded by `RUN_PROD_SMOKE=1` and temporary local `E2E_PROD_EMAIL` / `E2E_PROD_PASSWORD` variables. The smoke test is not part of default CI or local E2E runs.
 - Regression coverage simulates Railway's internal request URL and verifies the public deployed web URL is used for the Ukrainian logout success page.
+
+## Nova Post live directory regression on 2026-05-08
+
+- Official Nova Post docs were checked for the active v.1.0 endpoints, JWT generation, raw token usage, branch directory lookup, branch identifiers, and local shipment fields.
+- Railway production variables were verified without exposing secret values. The `web` service has `NOVA_POST_API_KEY` and `NOVA_POST_API_URL` configured for the Nova Post stage endpoint. `SHIPPING_LABEL_CREATION_MODE`, Nova Post sender, payer, and parcel defaults are not configured on `web`.
+- The `worker` service has `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`, but Nova Post API, sender, payer, parcel defaults, and `SHIPPING_LABEL_CREATION_MODE` are not configured there.
+- Before the adapter repair, production `/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ` returned the safe Ukrainian `502` message because Nova Post rejected `Authorization: Bearer <jwt>` with `401 Unauthorized`.
+- After the adapter repair, a Railway-env local probe using the production `web` variables returned one Київ city record and five warehouse records from Nova Post stage data.
+- Live shipment creation remains intentionally blocked until `worker` is configured with `SHIPPING_LABEL_CREATION_MODE=live` and the complete Nova Post API, sender, payer, and parcel variables. Production still defaults to disabled label creation when the mode is omitted.
 
 ## Core flows
 
@@ -577,6 +587,13 @@ Latest local quality status on 2026-05-07 after production auth redirect hardeni
 - `pnpm test:e2e` passed with Chromium: 11 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-05-08 after Nova Post authorization header repair:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.42% statements, 80.01% branches, 90.66% functions, and 88.42% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 11 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -820,7 +837,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Open questions
 
 - Production MonoPay credentials, public key, and final callback domain.
-- Nova Post production values must still be supplied in Railway before live shipment smoke tests: sender division id, sender name/phone, optional company fields, payer settings, and parcel dimension/weight defaults. Missing required sender config now blocks shipment creation before a live provider call.
+- Nova Post stage directory lookup variables are present on the production `web` service, but live shipment values must still be supplied to the production `worker` before live shipment smoke tests: API key and URL, sender division id, sender name/phone, optional company fields, payer settings, and parcel dimension/weight defaults. Missing required sender config now blocks shipment creation before a live provider call.
 - Production shipping label creation remains disabled by default through `SHIPPING_LABEL_CREATION_MODE=disabled`; switch to `live` only after Nova Post sender, payer, and parcel settings are configured securely.
 - Future Ukrposhta reintroduction requires practical test/production API access, sender/client/address workflow confirmation, shipment/package details, payer settings, label decisions, and enabling the carrier through the central registry.
 - Whether to reserve stock when order link is created or only after customer confirms.
@@ -829,7 +846,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
-- Real Monobank and Nova Post production credentials are not yet configured in Railway, so live payment and carrier smoke tests remain manual. Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured with complete settings.
+- Real Monobank production credentials are not yet configured in Railway, so live payment smoke tests remain manual. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.

@@ -328,7 +328,7 @@ export class NovaPostShippingCarrier implements ShippingCarrier {
     const headers = new Headers(init.headers);
 
     headers.set("accept", headers.get("accept") ?? "application/json");
-    headers.set("authorization", `Bearer ${token}`);
+    headers.set("authorization", token);
 
     const response = await this.fetchImpl(url, {
       ...init,
