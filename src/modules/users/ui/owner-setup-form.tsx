@@ -2,17 +2,15 @@
 
 import { UserPlus } from "lucide-react";
 import { useActionState } from "react";
-import {
-  createFirstOwnerAction,
-  initialOwnerSetupActionState,
-} from "@/modules/users/ui/owner-setup-actions";
+import { initialOwnerSetupActionState } from "@/modules/users/ui/owner-setup-action-state";
+import { createFirstOwnerAction } from "@/modules/users/ui/owner-setup-actions";
 import { Button } from "@/shared/ui/button";
 
 type OwnerSetupFormProps = {
-  setupToken: string;
+  requiresSetupToken: boolean;
 };
 
-export function OwnerSetupForm({ setupToken }: OwnerSetupFormProps) {
+export function OwnerSetupForm({ requiresSetupToken }: OwnerSetupFormProps) {
   const [state, formAction, isPending] = useActionState(
     createFirstOwnerAction,
     initialOwnerSetupActionState,
@@ -20,8 +18,6 @@ export function OwnerSetupForm({ setupToken }: OwnerSetupFormProps) {
 
   return (
     <form action={formAction} className="grid gap-4">
-      <input name="setupToken" type="hidden" value={setupToken} />
-
       {state.message ? (
         <p
           className={
@@ -33,6 +29,23 @@ export function OwnerSetupForm({ setupToken }: OwnerSetupFormProps) {
         >
           {state.message}
         </p>
+      ) : null}
+
+      {requiresSetupToken ? (
+        <>
+          <FieldError messages={state.fieldErrors?.setupToken} />
+          <label className="grid gap-2 text-sm font-medium">
+            Токен налаштування
+            <input
+              autoComplete="off"
+              className="rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              name="setupToken"
+              placeholder="Введіть захищений токен"
+              required
+              type="password"
+            />
+          </label>
+        </>
       ) : null}
 
       <FieldError messages={state.fieldErrors?.name} />

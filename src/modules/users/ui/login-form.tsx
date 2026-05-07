@@ -1,57 +1,29 @@
 "use client";
 
 import { LogIn } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useActionState } from "react";
+import { initialLoginActionState } from "@/modules/users/ui/login-action-state";
+import { loginOwnerAction } from "@/modules/users/ui/login-actions";
 import { Button } from "@/shared/ui/button";
 
 export function LoginForm() {
-  const router = useRouter();
-  const [message, setMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage(null);
-    setIsSubmitting(true);
-
-    const formData = new FormData(event.currentTarget);
-    const response = await fetch("/api/auth/sign-in/email", {
-      body: JSON.stringify({
-        callbackURL: "/dashboard",
-        email: formValue(formData, "email"),
-        password: formValue(formData, "password"),
-        rememberMe: true,
-      }),
-      credentials: "same-origin",
-      headers: {
-        "content-type": "application/json",
-      },
-      method: "POST",
-    });
-
-    setIsSubmitting(false);
-
-    if (!response.ok) {
-      setMessage("Електронна пошта або пароль неправильні");
-      return;
-    }
-
-    router.replace("/dashboard");
-    router.refresh();
-  }
+  const [state, formAction, isPending] = useActionState(
+    loginOwnerAction,
+    initialLoginActionState,
+  );
 
   return (
-    <form className="grid gap-4" onSubmit={onSubmit}>
-      {message ? (
+    <form action={formAction} className="grid gap-4">
+      {state.message ? (
         <p
           className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           role="alert"
         >
-          {message}
+          {state.message}
         </p>
       ) : null}
 
+      <FieldError messages={state.fieldErrors?.email} />
       <label className="grid gap-2 text-sm font-medium">
         Електронна пошта
         <input
@@ -64,6 +36,7 @@ export function LoginForm() {
         />
       </label>
 
+      <FieldError messages={state.fieldErrors?.password} />
       <label className="grid gap-2 text-sm font-medium">
         Пароль
         <input
@@ -76,16 +49,22 @@ export function LoginForm() {
         />
       </label>
 
-      <Button disabled={isSubmitting} type="submit">
+      <Button disabled={isPending} type="submit">
         <LogIn aria-hidden="true" className="size-4" />
-        {isSubmitting ? "Вхід…" : "Увійти"}
+        {isPending ? "Вхід…" : "Увійти"}
       </Button>
     </form>
   );
 }
 
-function formValue(formData: FormData, key: string): string {
-  const value = formData.get(key);
+function FieldError({ messages }: { messages?: string[] }) {
+  if (!messages?.length) {
+    return null;
+  }
 
-  return typeof value === "string" ? value : "";
+  return (
+    <p className="text-sm text-destructive" role="alert">
+      {messages[0]}
+    </p>
+  );
 }

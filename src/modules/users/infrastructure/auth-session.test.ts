@@ -52,6 +52,30 @@ describe("getSessionUserFromHeaders", () => {
     });
   });
 
+  it("falls back to Better Auth when e2e auth is enabled without a fallback cookie", async () => {
+    vi.stubEnv("PLAYWRIGHT_E2E", "1");
+    vi.stubEnv("NODE_ENV", "development");
+    vi.mocked(getAuth).mockReturnValue({
+      api: {
+        getSession: vi.fn(async () => ({
+          user: {
+            email: "owner@example.com",
+            id: "owner-1",
+            name: "Власниця",
+            role: "owner",
+          },
+        })),
+      },
+    } as never);
+
+    await expect(getSessionUserFromHeaders(new Headers())).resolves.toEqual({
+      email: "owner@example.com",
+      id: "owner-1",
+      name: "Власниця",
+      role: "owner",
+    });
+  });
+
   it("rejects unsupported roles from Better Auth session data", async () => {
     vi.mocked(getAuth).mockReturnValue({
       api: {

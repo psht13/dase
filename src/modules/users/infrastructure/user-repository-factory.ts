@@ -1,5 +1,9 @@
 import type { UserRepository } from "@/modules/users/application/user-repository";
 import { DrizzleUserRepository } from "@/modules/users/infrastructure/drizzle-user-repository";
+import {
+  E2eAuthMemoryUserRepository,
+  isE2eAuthMemoryEnabled,
+} from "@/modules/users/infrastructure/e2e-auth-memory-store";
 import { getServerEnv } from "@/shared/config/env";
 import { createDatabaseClient } from "@/shared/db/client";
 
@@ -18,9 +22,13 @@ export function resetUserRepositoryForTests(): void {
 function createUserRepository(): UserRepository {
   const env = getServerEnv();
 
-  if (!env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required for user storage");
+  if (env.DATABASE_URL) {
+    return new DrizzleUserRepository(createDatabaseClient(env.DATABASE_URL));
   }
 
-  return new DrizzleUserRepository(createDatabaseClient(env.DATABASE_URL));
+  if (isE2eAuthMemoryEnabled()) {
+    return new E2eAuthMemoryUserRepository();
+  }
+
+  throw new Error("DATABASE_URL is required for user storage");
 }

@@ -165,16 +165,20 @@ Release candidate hardening update on 2026-04-30:
 - Owner dashboard routes continue to require an authenticated `owner`; `user` role sessions are redirected away from `/dashboard`.
 - Railway MCP was attempted again during Prompt 11 with `check_railway_status`, but live Railway configuration was initially blocked by invalid or expired Railway authentication.
 
-Production owner access and payment/shipment safety update on 2026-04-30:
+Production owner access and payment/shipment safety update on 2026-04-30, repaired on 2026-05-07:
 - Added production Ukrainian auth UI at `/login`, `/logout`, and `/setup`.
+- The home page CTA is a real link. It points to `/setup` while no `owner` exists and to `/login` after the first owner exists.
 - `/setup` creates the first `owner` only while no owner exists; after an owner exists it shows the Ukrainian unavailable state.
-- Production `/setup` requires `OWNER_SETUP_TOKEN`; invalid or missing setup tokens show a Ukrainian unavailable state before any creation form is exposed.
+- `/setup` no longer accepts or requires `OWNER_SETUP_TOKEN` in the URL. Production `/setup` renders a Ukrainian setup-token field inside the first-owner form and validates the submitted token only in the server action.
+- Non-production setup allows first-owner creation without a setup token.
 - `OWNER_SETUP_TOKEN` is validated as a production env var, documented in `.env.example` and `DEPLOYMENT.md`, and configured securely in Railway production variables for `web` and `worker` without committing the value.
-- Dashboard access now redirects unauthenticated visitors to `/login`; authenticated `user` role sessions remain denied dashboard access.
+- Login now signs in through a Better Auth-backed server action so the session cookie is set before redirecting to `/dashboard`.
+- Dashboard access redirects unauthenticated visitors to `/login`; authenticated `user` role sessions remain denied dashboard access.
+- Owner sessions persist across `/dashboard`, `/dashboard/products`, `/dashboard/orders`, `/dashboard/orders/new`, hard reloads, client-side navigation, and browser back/forward.
 - Customer confirmation writes now support a customer-confirmation unit of work so customer, order, payment, shipment, and audit rows use transaction-scoped repositories in PostgreSQL.
 - MonoPay invoice creation now supports retry when a confirmed order has a MonoPay payment without `providerInvoiceId`, or when a previous MonoPay payment failed.
 - Public order review and owner order details expose the Ukrainian `Повторити оплату` action when MonoPay retry is available.
-- Tests cover first owner setup, setup blocked after an owner exists, invalid setup token handling, Ukrainian login labels, owner dashboard access, user dashboard denial, transaction wiring, MonoPay retry eligibility, and public/owner retry UI.
+- Tests cover first owner setup, setup blocked after an owner exists, form-based setup-token handling, Ukrainian login labels, owner dashboard access, user dashboard denial, real setup/login persistence, transaction wiring, MonoPay retry eligibility, and public/owner retry UI.
 
 Railway live setup retry on 2026-04-30:
 - Railway authentication was refreshed and Railway MCP `check_railway_status` passed.
@@ -199,7 +203,7 @@ Repair order checklist:
 
 1. Auth, setup, and dashboard navigation:
    - Change the home CTA `Перейти до налаштування` from a non-navigating button into a real Ukrainian-labeled link or button-link to `/setup`.
-   - Replace the production `/setup?token=<OWNER_SETUP_TOKEN>` URL-query flow with a safer form-based setup-token flow: `/setup` should render the setup-token field while setup is available, keep the owner creation fields gated until token validation succeeds or submit all setup data through the server action, and never require or document the secret in the URL.
+   - Replace the production setup-token URL-query flow with a safer form-based setup-token flow: `/setup` renders the setup-token field while setup is available, submits setup data through the server action, and never requires or documents the secret in the URL.
    - Keep first-owner creation available only while no `owner` exists, preserve the `owner`/`user` role boundary, and keep `OWNER_SETUP_TOKEN` required in production env validation.
    - Stabilize login-to-dashboard and dashboard route navigation by verifying Better Auth cookie persistence, callback handling, `router.replace("/dashboard")`, `router.refresh()`, and `requireOwnerSession()` behavior so normal owner navigation cannot intermittently redirect to `/login`.
    - Add or update unit and Playwright coverage for Ukrainian home CTA navigation, form-based setup token validation, first-owner creation, invalid token handling, owner dashboard access, and `user` dashboard denial.
@@ -462,6 +466,13 @@ Latest local quality status on 2026-04-30 after production owner access and paym
 - `pnpm build` passed.
 - Railway CLI verification passed for adding `OWNER_SETUP_TOKEN` securely to production `web` and `worker` variables with deploy triggering skipped.
 
+Latest local quality status on 2026-05-07 after owner setup and login persistence repair:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.38% statements, 80.39% branches, 90.57% functions, and 88.38% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and the real `/setup` plus `/login` persistence path across dashboard navigation, hard reload, browser back/forward, and logout.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -703,7 +714,7 @@ After external production variables are configured:
 2. Confirm `DATABASE_URL` is provided to `web` and `worker` through Railway secure variables or references.
 3. Run `pnpm db:migrate` against a safe Railway development/staging PostgreSQL database before production promotion.
 4. Verify `/api/health` returns a healthy no-store response on the deployed web URL.
-5. Before the first owner exists, open `/setup?token=<OWNER_SETUP_TOKEN>` and create the owner; after that confirm `/setup` shows the Ukrainian unavailable state.
+5. Before the first owner exists, open `/setup`, enter `OWNER_SETUP_TOKEN` in the Ukrainian setup-token field, and create the owner; after that confirm `/setup` shows the Ukrainian unavailable state. Do not put `OWNER_SETUP_TOKEN` in the URL.
 6. Sign in as an `owner` at `/login` and confirm `/dashboard` loads; confirm `/logout` ends the session and a `user` role cannot access dashboard routes.
 7. Create a product using external image URLs only, then create an order link and open the `/o/[token]` public page.
 8. Confirm an invalid, expired, or cancelled public token shows the Ukrainian unavailable state and does not reveal other order data.

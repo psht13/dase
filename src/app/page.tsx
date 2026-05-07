@@ -1,4 +1,7 @@
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { getOwnerSetupStateUseCase } from "@/modules/users/application/owner-setup";
+import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
 
@@ -8,7 +11,22 @@ const starterItems = [
   "Доставка та оплата",
 ];
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const setupState = await getOwnerSetupStateUseCase({
+    userRepository: getUserRepository(),
+  });
+  const cta = setupState.available
+    ? {
+        href: "/setup",
+        label: "Перейти до налаштування",
+      }
+    : {
+        href: "/login",
+        label: "Увійти до кабінету",
+      };
+
   return (
     <main
       className="min-h-screen bg-[hsl(var(--brand-shell))]"
@@ -26,7 +44,9 @@ export default function Home() {
               посилань замовлень, оплати та доставки.
             </p>
             <div>
-              <Button>Перейти до налаштування</Button>
+              <Button asChild>
+                <Link href={cta.href}>{cta.label}</Link>
+              </Button>
             </div>
           </div>
 

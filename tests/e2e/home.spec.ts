@@ -8,9 +8,12 @@ test("home page exposes Ukrainian starter UI", async ({ page }) => {
       name: "Підтвердження замовлень для ювелірних продавців",
     }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Перейти до налаштування" }),
-  ).toBeVisible();
+  const setupLink = page.getByRole("link", {
+    name: /Перейти до налаштування|Увійти до кабінету/,
+  });
+
+  await expect(setupLink).toBeVisible();
+  await expect(setupLink).toHaveAttribute("href", /\/(setup|login)$/);
 });
 
 test("health route returns ok", async ({ request }) => {

@@ -12,8 +12,15 @@ vi.mock("@/modules/users/infrastructure/user-repository-factory", () => ({
 }));
 
 vi.mock("@/modules/users/ui/owner-setup-form", () => ({
-  OwnerSetupForm: ({ setupToken }: { setupToken: string }) => (
-    <form aria-label="Форма створення власника" data-token={setupToken} />
+  OwnerSetupForm: ({
+    requiresSetupToken,
+  }: {
+    requiresSetupToken: boolean;
+  }) => (
+    <form
+      aria-label="Форма створення власника"
+      data-requires-token={String(requiresSetupToken)}
+    />
   ),
 }));
 
@@ -38,18 +45,14 @@ describe("SetupPage", () => {
       createUserRepository({ ownerCount: 0 }) as never,
     );
 
-    render(
-      await SetupPage({
-        searchParams: Promise.resolve({ token: "b".repeat(32) }),
-      }),
-    );
+    render(await SetupPage());
 
     expect(
       screen.getByRole("heading", { name: "Створення першого власника" }),
     ).toBeVisible();
     expect(
       screen.getByRole("form", { name: "Форма створення власника" }),
-    ).toHaveAttribute("data-token", "b".repeat(32));
+    ).toHaveAttribute("data-requires-token", "true");
   });
 
   it("shows a Ukrainian unavailable message after an owner exists", async () => {
@@ -57,11 +60,7 @@ describe("SetupPage", () => {
       createUserRepository({ ownerCount: 1 }) as never,
     );
 
-    render(
-      await SetupPage({
-        searchParams: Promise.resolve({ token: "b".repeat(32) }),
-      }),
-    );
+    render(await SetupPage());
 
     expect(
       screen.getByRole("heading", { name: "Налаштування недоступне" }),
@@ -69,21 +68,35 @@ describe("SetupPage", () => {
     expect(screen.getByText(/Перший власник уже створений/i)).toBeVisible();
   });
 
-  it("shows a Ukrainian unavailable message for an invalid setup token", async () => {
+  it("does not accept the setup token from the URL before rendering the form", async () => {
     vi.mocked(getUserRepository).mockReturnValue(
       createUserRepository({ ownerCount: 0 }) as never,
     );
 
-    render(
-      await SetupPage({
-        searchParams: Promise.resolve({ token: "wrong-token" }),
-      }),
-    );
+    render(await SetupPage());
 
     expect(
-      screen.getByRole("heading", { name: "Налаштування недоступне" }),
+      screen.getByRole("heading", { name: "Створення першого власника" }),
     ).toBeVisible();
-    expect(screen.getByText(/Токен налаштування недійсний/i)).toBeVisible();
+    expect(
+      screen.getByRole("form", { name: "Форма створення власника" }),
+    ).not.toHaveAttribute("data-token");
+  });
+
+  it("does not require the setup token field outside production", async () => {
+    vi.mocked(getServerEnv).mockReturnValue({
+      AUTO_COMPLETE_AFTER_DELIVERED_HOURS: 24,
+      NODE_ENV: "development",
+    } as never);
+    vi.mocked(getUserRepository).mockReturnValue(
+      createUserRepository({ ownerCount: 0 }) as never,
+    );
+
+    render(await SetupPage());
+
+    expect(
+      screen.getByRole("form", { name: "Форма створення власника" }),
+    ).toHaveAttribute("data-requires-token", "false");
   });
 });
 

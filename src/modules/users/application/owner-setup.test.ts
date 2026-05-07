@@ -76,6 +76,19 @@ describe("owner setup use cases", () => {
       isOwnerSetupTokenValid({
         expectedToken: "a".repeat(32),
         nodeEnv: "production",
+        submittedToken: null,
+      }),
+    ).toBe(false);
+    expect(
+      isOwnerSetupTokenValid({
+        nodeEnv: "production",
+        submittedToken: "a".repeat(32),
+      }),
+    ).toBe(false);
+    expect(
+      isOwnerSetupTokenValid({
+        expectedToken: "a".repeat(32),
+        nodeEnv: "production",
         submittedToken: "wrong-token",
       }),
     ).toBe(false);

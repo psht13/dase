@@ -10,7 +10,11 @@ export async function getSessionUserFromHeaders(
   requestHeaders: Headers,
 ): Promise<DashboardSessionUser | null> {
   if (isE2eSessionEnabled()) {
-    return getE2eSessionUser(requestHeaders);
+    const e2eSessionUser = getE2eSessionUser(requestHeaders);
+
+    if (e2eSessionUser) {
+      return e2eSessionUser;
+    }
   }
 
   const session = await getAuth().api.getSession({

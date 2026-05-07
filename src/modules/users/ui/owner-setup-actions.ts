@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -11,18 +12,8 @@ import { ownerSetupFormSchema } from "@/modules/users/application/owner-setup-va
 import { getCredentialAuthService } from "@/modules/users/infrastructure/credential-auth-service-factory";
 import { getOwnerSetupLock } from "@/modules/users/infrastructure/owner-setup-lock-factory";
 import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
+import type { OwnerSetupActionState } from "@/modules/users/ui/owner-setup-action-state";
 import { getServerEnv } from "@/shared/config/env";
-
-export type OwnerSetupActionState = {
-  fieldErrors?: Record<string, string[]>;
-  message: string | null;
-  ok: boolean;
-};
-
-export const initialOwnerSetupActionState: OwnerSetupActionState = {
-  message: null,
-  ok: false,
-};
 
 export async function createFirstOwnerAction(
   _previousState: OwnerSetupActionState,
@@ -49,6 +40,9 @@ export async function createFirstOwnerAction(
     })
   ) {
     return {
+      fieldErrors: {
+        setupToken: ["Вкажіть правильний токен налаштування"],
+      },
       message: "Токен налаштування недійсний або відсутній",
       ok: false,
     };
@@ -75,6 +69,7 @@ export async function createFirstOwnerAction(
     };
   }
 
+  await clearBetterAuthSessionCookies();
   redirect("/login?setup=created");
 }
 
@@ -100,4 +95,20 @@ function formValue(formData: FormData, key: string): string {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : "";
+}
+
+async function clearBetterAuthSessionCookies(): Promise<void> {
+  const cookieStore = await cookies();
+  const sessionCookieNames = [
+    "better-auth.session_token",
+    "__Secure-better-auth.session_token",
+    "better-auth.session_data",
+    "__Secure-better-auth.session_data",
+    "better-auth.dont_remember",
+    "__Secure-better-auth.dont_remember",
+  ];
+
+  for (const name of sessionCookieNames) {
+    cookieStore.delete(name);
+  }
 }

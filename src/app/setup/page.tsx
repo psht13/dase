@@ -1,8 +1,5 @@
 import Link from "next/link";
-import {
-  getOwnerSetupStateUseCase,
-  isOwnerSetupTokenValid,
-} from "@/modules/users/application/owner-setup";
+import { getOwnerSetupStateUseCase } from "@/modules/users/application/owner-setup";
 import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
 import { OwnerSetupForm } from "@/modules/users/ui/owner-setup-form";
 import { getServerEnv } from "@/shared/config/env";
@@ -11,37 +8,17 @@ import { Button } from "@/shared/ui/button";
 
 export const dynamic = "force-dynamic";
 
-type SetupPageProps = {
-  searchParams?: Promise<{
-    token?: string;
-  }>;
-};
-
-export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [params, env, state] = await Promise.all([
-    searchParams,
+export default async function SetupPage() {
+  const [env, state] = await Promise.all([
     Promise.resolve(getServerEnv()),
     getOwnerSetupStateUseCase({
       userRepository: getUserRepository(),
     }),
   ]);
-  const submittedToken = params?.token ?? "";
 
   if (!state.available) {
     return (
       <SetupUnavailable message="Перший власник уже створений. Увійдіть до кабінету власника." />
-    );
-  }
-
-  if (
-    !isOwnerSetupTokenValid({
-      expectedToken: env.OWNER_SETUP_TOKEN,
-      nodeEnv: env.NODE_ENV,
-      submittedToken,
-    })
-  ) {
-    return (
-      <SetupUnavailable message="Токен налаштування недійсний або відсутній." />
     );
   }
 
@@ -62,7 +39,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </div>
 
         <div className="rounded-md border border-border/80 bg-card/95 p-5 shadow-sm">
-          <OwnerSetupForm setupToken={submittedToken} />
+          <OwnerSetupForm requiresSetupToken={env.NODE_ENV === "production"} />
         </div>
       </section>
     </main>

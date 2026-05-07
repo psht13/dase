@@ -36,7 +36,7 @@ Required for production `web` and `worker`:
 - `DATABASE_URL` - Railway PostgreSQL private connection string.
 - `BETTER_AUTH_SECRET` - at least 32 characters.
 - `BETTER_AUTH_URL` - canonical deployed web URL.
-- `OWNER_SETUP_TOKEN` - at least 32 characters; required by shared production env validation. The `web` service uses it to protect `/setup` before the first owner exists.
+- `OWNER_SETUP_TOKEN` - at least 32 characters; required by shared production env validation. The `web` service validates it only when the `/setup` form is submitted before the first owner exists. Never place this token in URLs, redirects, logs, query strings, or client-side state.
 - `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` - default `24` if omitted.
 - `NODE_ENV` - normally set to `production` by the runtime.
 
@@ -98,7 +98,7 @@ If the worker causes shipment or tracking errors, stop or roll back the `worker`
 ## Manual External API Verification
 
 Do not call live external APIs in CI. After production variables are configured, verify manually in Railway using a low-risk test order:
-- Open `/setup?token=<OWNER_SETUP_TOKEN>` before any owner exists, create the first owner, then confirm `/setup` shows the Ukrainian unavailable state.
+- Open `/setup` before any owner exists, enter `OWNER_SETUP_TOKEN` into the Ukrainian setup-token field, create the first owner, then confirm `/setup` shows the Ukrainian unavailable state. Do not put `OWNER_SETUP_TOKEN` in the URL.
 - Confirm `/login` accepts the owner credentials, `/logout` ends the session, and a `user` role cannot access `/dashboard`.
 - MonoPay invoice creation redirects to the expected Monobank payment URL.
 - MonoPay retry shows `Повторити оплату` when a confirmed order is missing a provider invoice or when payment failed.
