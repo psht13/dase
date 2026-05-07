@@ -94,6 +94,29 @@ describe("OwnerOrderDetailsView", () => {
       screen.getByRole("button", { name: "Повторити оплату" }),
     ).toBeVisible();
   });
+
+  it("shows historical Ukrposhta shipments as disabled without retry access", () => {
+    const order = createOrderDetails();
+
+    render(
+      <OwnerOrderDetailsView
+        availableTags={[]}
+        order={{
+          ...order,
+          shipments: order.shipments.map((shipment) => ({
+            ...shipment,
+            carrier: "UKRPOSHTA",
+            status: "FAILED",
+          })),
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText("Укрпошта (вимкнено)")[0]).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Повторити створення відправлення" }),
+    ).toBeDisabled();
+  });
 });
 
 function createOrderDetails(

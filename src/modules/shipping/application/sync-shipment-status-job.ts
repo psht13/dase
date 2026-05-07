@@ -10,6 +10,7 @@ import type {
 import type {
   ShippingCarrier,
 } from "@/modules/shipping/application/shipping-carrier";
+import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import type {
   ShipmentCarrier,
   ShipmentRecord,
@@ -36,6 +37,25 @@ export async function syncShipmentStatusJobUseCase(
 
   if (!order || !shipment) {
     throw new Error("Order or shipment not found");
+  }
+
+  if (!isShipmentCreationEnabled(shipment.carrier)) {
+    await dependencies.auditEventRepository.append({
+      actorCustomerId: null,
+      actorType: "SYSTEM",
+      actorUserId: null,
+      eventType: "SHIPMENT_STATUS_SYNCED",
+      orderId: order.id,
+      payload: {
+        carrier: shipment.carrier,
+        message:
+          "Службу доставки вимкнено. Автоматичне оновлення не виконується.",
+        shipmentStatus: shipment.status,
+        trackingNumber: shipment.trackingNumber,
+      },
+    });
+
+    return shipment;
   }
 
   const carrier = dependencies.getShippingCarrier(shipment.carrier);

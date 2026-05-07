@@ -2,12 +2,17 @@ import { render, screen } from "@testing-library/react";
 import { OwnerOrdersFilterForm } from "@/modules/orders/ui/owner-orders-filter-form";
 import { OwnerOrdersTable } from "@/modules/orders/ui/owner-orders-table";
 import type { OwnerOrderSummary } from "@/modules/orders/application/owner-order-read-model";
+import {
+  activeShippingCarriers,
+  getShippingCarrierOptionsForRecords,
+} from "@/modules/shipping/application/shipping-carrier-registry";
 
 describe("owner orders UI", () => {
   it("renders Ukrainian filters and table headings", () => {
     render(
       <>
         <OwnerOrdersFilterForm
+          deliveryCarrierOptions={activeShippingCarriers}
           filters={{
             deliveryCarrier: "NOVA_POSHTA",
             paymentMethod: "CASH_ON_DELIVERY",
@@ -32,6 +37,9 @@ describe("owner orders UI", () => {
 
     expect(screen.getByLabelText("Статус")).toBeVisible();
     expect(screen.getByLabelText("Служба доставки")).toBeVisible();
+    expect(
+      screen.queryByRole("option", { name: "Укрпошта (вимкнено)" }),
+    ).toBeNull();
     expect(screen.getByLabelText("Спосіб оплати")).toBeVisible();
     expect(screen.getByLabelText("Тег")).toBeVisible();
     expect(screen.getByPlaceholderText("Телефон або ТТН")).toBeVisible();
@@ -47,6 +55,24 @@ describe("owner orders UI", () => {
 
     expect(screen.getByText("Замовлення не знайдено")).toBeVisible();
     expect(screen.getByText(/Змініть фільтри/i)).toBeVisible();
+  });
+
+  it("shows disabled legacy carrier filters only when historical records exist", () => {
+    const legacyOptions = getShippingCarrierOptionsForRecords(["UKRPOSHTA"]);
+
+    render(
+      <OwnerOrdersFilterForm
+        deliveryCarrierOptions={legacyOptions}
+        filters={{
+          deliveryCarrier: "UKRPOSHTA",
+        }}
+        tagOptions={[]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("option", { name: "Укрпошта (вимкнено)" }),
+    ).toBeVisible();
   });
 });
 

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import type { PaymentProviderCode } from "@/modules/payments/application/payment-repository";
+import { isActiveShippingCarrier } from "@/modules/shipping/application/shipping-carrier-registry";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
 
-const shipmentCarriers = ["NOVA_POSHTA"] as const;
 const paymentProviders = ["MONOBANK", "CASH_ON_DELIVERY"] as const;
 
 export const deliveryFormSchema = z.object({
@@ -90,7 +90,7 @@ function normalizePhone(value: string): string {
 }
 
 function isShipmentCarrierValue(value: string): boolean {
-  return (shipmentCarriers as readonly string[]).includes(value);
+  return isActiveShippingCarrier(value);
 }
 
 function isPaymentProviderValue(value: string): boolean {

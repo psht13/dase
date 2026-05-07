@@ -2,6 +2,10 @@ import type {
   ShippingCarrier,
 } from "@/modules/shipping/application/shipping-carrier";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
+import {
+  isShipmentCreationEnabled,
+  isShippingCarrierSearchEnabled,
+} from "@/modules/shipping/application/shipping-carrier-registry";
 import { FixtureShippingCarrier } from "@/modules/shipping/infrastructure/fixture-shipping-carrier";
 import {
   NovaPostShippingCarrier,
@@ -9,10 +13,16 @@ import {
   type NovaPostSenderConfig,
   type NovaPostShipmentDefaults,
 } from "@/modules/shipping/infrastructure/nova-post-shipping-carrier";
-import { UkrposhtaShippingCarrier } from "@/modules/shipping/infrastructure/ukrposhta-shipping-carrier";
 import { getServerEnv, type ServerEnv } from "@/shared/config/env";
 
 export function getShippingCarrier(carrier: ShipmentCarrier): ShippingCarrier {
+  if (
+    !isShippingCarrierSearchEnabled(carrier) &&
+    !isShipmentCreationEnabled(carrier)
+  ) {
+    throw new Error("Shipping carrier is disabled");
+  }
+
   if (isMockCarrierEnabled()) {
     return new FixtureShippingCarrier(carrier);
   }
@@ -35,15 +45,7 @@ export function getShippingCarrier(carrier: ShipmentCarrier): ShippingCarrier {
     });
   }
 
-  if (!env.UKRPOSHTA_BEARER_TOKEN) {
-    throw new Error("UKRPOSHTA_BEARER_TOKEN is required for Ukrposhta");
-  }
-
-  return new UkrposhtaShippingCarrier({
-    baseUrl: env.UKRPOSHTA_API_URL,
-    bearerToken: env.UKRPOSHTA_BEARER_TOKEN,
-    counterpartyToken: env.UKRPOSHTA_COUNTERPARTY_TOKEN,
-  });
+  throw new Error("Shipping carrier is not configured");
 }
 
 function isMockCarrierEnabled(): boolean {

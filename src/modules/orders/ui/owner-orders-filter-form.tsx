@@ -8,14 +8,17 @@ import {
 } from "@/modules/orders/application/order-labels";
 import type { OwnerOrderFilters } from "@/modules/orders/application/owner-order-read-model";
 import { orderStatuses } from "@/modules/orders/domain/status";
+import type { ShippingCarrierRegistryEntry } from "@/modules/shipping/application/shipping-carrier-registry";
 import { Button } from "@/shared/ui/button";
 
 type OwnerOrdersFilterFormProps = {
+  deliveryCarrierOptions: ShippingCarrierRegistryEntry[];
   filters: OwnerOrderFilters;
   tagOptions: OrderTagRecord[];
 };
 
 export function OwnerOrdersFilterForm({
+  deliveryCarrierOptions,
   filters,
   tagOptions,
 }: OwnerOrdersFilterFormProps) {
@@ -48,10 +51,11 @@ export function OwnerOrdersFilterForm({
             name="deliveryCarrier"
           >
             <option value="">Усі служби доставки</option>
-            <option value="NOVA_POSHTA">
-              {shipmentCarrierLabels.NOVA_POSHTA}
-            </option>
-            <option value="UKRPOSHTA">{shipmentCarrierLabels.UKRPOSHTA}</option>
+            {deliveryCarrierOptions.map((carrier) => (
+              <option key={carrier.code} value={carrier.code}>
+                {shipmentCarrierLabels[carrier.code]}
+              </option>
+            ))}
           </select>
         </label>
 

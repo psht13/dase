@@ -1,7 +1,6 @@
 import { resetServerEnvForTests } from "@/shared/config/env";
 import { FixtureShippingCarrier } from "@/modules/shipping/infrastructure/fixture-shipping-carrier";
 import { NovaPostShippingCarrier } from "@/modules/shipping/infrastructure/nova-post-shipping-carrier";
-import { UkrposhtaShippingCarrier } from "@/modules/shipping/infrastructure/ukrposhta-shipping-carrier";
 import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 
 describe("getShippingCarrier", () => {
@@ -22,13 +21,18 @@ describe("getShippingCarrier", () => {
   it("creates real adapters when credentials are configured", () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("NOVA_POST_API_KEY", "nova-key");
-    vi.stubEnv("UKRPOSHTA_BEARER_TOKEN", "ukr-token");
 
     expect(getShippingCarrier("NOVA_POSHTA")).toBeInstanceOf(
       NovaPostShippingCarrier,
     );
-    expect(getShippingCarrier("UKRPOSHTA")).toBeInstanceOf(
-      UkrposhtaShippingCarrier,
+  });
+
+  it("rejects disabled carriers even when mock mode is enabled", () => {
+    vi.stubEnv("PLAYWRIGHT_E2E", "1");
+    vi.stubEnv("NODE_ENV", "development");
+
+    expect(() => getShippingCarrier("UKRPOSHTA")).toThrow(
+      /Shipping carrier is disabled/,
     );
   });
 

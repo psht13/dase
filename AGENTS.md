@@ -10,7 +10,7 @@ The app has:
 - Product selection and quantity-based order building.
 - Owner-created public order links.
 - Public customer confirmation page.
-- Delivery form with Nova Poshta and Ukrposhta integrations.
+- Delivery form with Nova Post as the active MVP carrier.
 - MonoPay / Monobank acquiring integration.
 - Shipment creation and tracking.
 - Order tags, statuses, and audit history.
@@ -222,7 +222,7 @@ Allowed:
 - Better Auth adapter setup
 - Monobank provider implementation
 - Nova Poshta provider implementation
-- Ukrposhta provider implementation
+- Future carrier provider implementations behind the `ShippingCarrier` port
 - Job queue implementation
 - Environment-specific adapters
 
@@ -260,7 +260,7 @@ Future possible strategies, not for initial implementation:
 
 - Unit test domain logic.
 - Integration test application use cases.
-- Use MSW for Monobank, Nova Poshta, and Ukrposhta API mocks.
+- Use MSW for Monobank, Nova Post, and any re-enabled carrier API mocks.
 - Use Playwright for end-to-end flows.
 - Use Playwright MCP to inspect and verify UI behavior where useful.
 - Keep tests deterministic.
@@ -308,9 +308,9 @@ Bad examples:
 
 ### Ukrposhta
 
-- Implement through `ShippingCarrier` port.
-- Support address/client/shipment workflow.
-- Filter unavailable post offices where the API indicates they are inactive.
+- Ukrposhta is disabled for the active MVP because practical test/production API access is not available.
+- Keep historical `UKRPOSHTA` records readable as disabled legacy data.
+- Reintroduce it later only through the existing `ShippingCarrier` port and central carrier registry.
 
 ## Railway
 

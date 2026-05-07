@@ -18,11 +18,11 @@ describe("safe error formatting", () => {
     expect(
       formatSafeError(
         new Error(
-          "failed with UKRPOSHTA_BEARER_TOKEN=secret and https://u:p@example.com",
+          "failed with NOVA_POST_API_KEY=secret and https://u:p@example.com",
         ),
       ),
     ).toBe(
-      "Error: failed with UKRPOSHTA_BEARER_TOKEN=[redacted] and https://[redacted]:[redacted]@example.com",
+      "Error: failed with NOVA_POST_API_KEY=[redacted] and https://[redacted]:[redacted]@example.com",
     );
   });
 });

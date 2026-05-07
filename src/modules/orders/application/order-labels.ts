@@ -8,6 +8,7 @@ import type {
   ShipmentCarrier,
   ShipmentStatus,
 } from "@/modules/shipping/application/shipment-repository";
+import { getShippingCarrierLabel } from "@/modules/shipping/application/shipping-carrier-registry";
 
 export const orderStatusLabels: Record<OrderStatus, string> = {
   CANCELLED: "Скасовано",
@@ -27,8 +28,8 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
 };
 
 export const shipmentCarrierLabels: Record<ShipmentCarrier, string> = {
-  NOVA_POSHTA: "Нова пошта",
-  UKRPOSHTA: "Укрпошта",
+  NOVA_POSHTA: getShippingCarrierLabel("NOVA_POSHTA"),
+  UKRPOSHTA: getShippingCarrierLabel("UKRPOSHTA"),
 };
 
 export const shipmentStatusLabels: Record<ShipmentStatus, string> = {

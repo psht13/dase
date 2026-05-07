@@ -49,3 +49,5 @@ Tradeoffs:
 - Route handlers and server actions should be thin.
 - User-facing UI copy must be Ukrainian.
 - Only `owner` and `user` roles are allowed.
+- Shipping carriers are selected through the application-layer carrier registry and `ShippingCarrier` port.
+- Disabled legacy carriers can stay readable in historical records without being exposed in customer choices, carrier lookup APIs, worker live shipment creation, or retry actions.

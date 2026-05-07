@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { searchCarrierCitiesUseCase } from "@/modules/shipping/application/search-carrier-directory";
-import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
+import {
+  isKnownShippingCarrier,
+  isShippingCarrierSearchEnabled,
+} from "@/modules/shipping/application/shipping-carrier-registry";
 import { getCarrierDirectoryCacheRepository } from "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory";
 import { ShippingCarrierApiError } from "@/modules/shipping/infrastructure/shipping-carrier-api-error";
 import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
@@ -12,9 +15,16 @@ export async function GET(request: Request) {
   const carrier = url.searchParams.get("carrier");
   const query = url.searchParams.get("query") ?? "";
 
-  if (!isShipmentCarrier(carrier)) {
+  if (!isKnownShippingCarrier(carrier)) {
     return NextResponse.json(
       { message: "Службу доставки не підтримано" },
+      { status: 400 },
+    );
+  }
+
+  if (!isShippingCarrierSearchEnabled(carrier)) {
+    return NextResponse.json(
+      { message: "Службу доставки тимчасово вимкнено" },
       { status: 400 },
     );
   }
@@ -51,8 +61,4 @@ export async function GET(request: Request) {
       },
     },
   );
-}
-
-function isShipmentCarrier(value: string | null): value is ShipmentCarrier {
-  return value === "NOVA_POSHTA" || value === "UKRPOSHTA";
 }

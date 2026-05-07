@@ -30,6 +30,7 @@ import { OwnerOrderTagPanel } from "@/modules/orders/ui/owner-order-tag-panel";
 import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
 import { retryOwnerMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
+import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import { retryShipmentCreationAction } from "@/modules/shipping/ui/shipment-actions";
 import { Button } from "@/shared/ui/button";
 
@@ -234,7 +235,11 @@ export function OwnerOrderDetailsView({
       <section className="grid gap-6 rounded-md border p-4">
         <OwnerOrderRetryShipmentForm
           action={retryShipmentCreationAction.bind(null, order.id)}
-          canRetry={order.shipments.some((shipment) => shipment.status === "FAILED")}
+          canRetry={order.shipments.some(
+            (shipment) =>
+              shipment.status === "FAILED" &&
+              isShipmentCreationEnabled(shipment.carrier),
+          )}
         />
       </section>
 

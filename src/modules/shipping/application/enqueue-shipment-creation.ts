@@ -3,6 +3,7 @@ import type { OrderRepository } from "@/modules/orders/application/order-reposit
 import { assertOrderStatusTransition } from "@/modules/orders/domain/status";
 import type { PaymentRepository } from "@/modules/payments/application/payment-repository";
 import type { ShipmentJobQueue } from "@/modules/shipping/application/shipment-job-queue";
+import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import type {
   ShipmentRecord,
   ShipmentRepository,
@@ -20,6 +21,7 @@ export type EnqueueShipmentCreationResult = {
   jobId: string | null;
   reason:
     | "already-created"
+    | "disabled-carrier"
     | "enqueued"
     | "missing-order"
     | "missing-shipment"
@@ -85,6 +87,19 @@ export async function enqueueShipmentCreationForReadyOrderUseCase(
       enqueued: false,
       jobId: null,
       reason: "already-created",
+      shipmentId: shipment.id,
+    };
+  }
+
+  if (!isShipmentCreationEnabled(shipment.carrier)) {
+    if (input.requireFailedShipment) {
+      throw new ShipmentCreationRetryUnavailableError();
+    }
+
+    return {
+      enqueued: false,
+      jobId: null,
+      reason: "disabled-carrier",
       shipmentId: shipment.id,
     };
   }

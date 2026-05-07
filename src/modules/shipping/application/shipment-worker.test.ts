@@ -110,6 +110,50 @@ describe("shipment worker use cases", () => {
     });
   });
 
+  it("does not enqueue shipment creation for disabled carriers", async () => {
+    const context = await createContext({
+      orderStatus: "CONFIRMED_BY_CUSTOMER",
+      paymentProvider: "CASH_ON_DELIVERY",
+      paymentStatus: "PENDING",
+      shipmentCarrier: "UKRPOSHTA",
+    });
+
+    await expect(
+      enqueueShipmentCreationForReadyOrderUseCase(
+        {
+          orderId: context.order.id,
+          requestedBy: "system",
+        },
+        context,
+      ),
+    ).resolves.toMatchObject({
+      enqueued: false,
+      reason: "disabled-carrier",
+      shipmentId: context.shipment.id,
+    });
+    expect(context.shipmentJobQueue.createShipmentJobs).toHaveLength(0);
+  });
+
+  it("rejects manual retry enqueueing for disabled carriers", async () => {
+    const context = await createContext({
+      orderStatus: "SHIPMENT_PENDING",
+      shipmentCarrier: "UKRPOSHTA",
+      shipmentStatus: "FAILED",
+    });
+
+    await expect(
+      enqueueShipmentCreationForReadyOrderUseCase(
+        {
+          orderId: context.order.id,
+          requestedBy: "owner",
+          requireFailedShipment: true,
+        },
+        context,
+      ),
+    ).rejects.toBeInstanceOf(ShipmentCreationRetryUnavailableError);
+    expect(context.shipmentJobQueue.createShipmentJobs).toHaveLength(0);
+  });
+
   it("creates shipments through the selected carrier and schedules tracking sync", async () => {
     const context = await createContext({ orderStatus: "SHIPMENT_PENDING" });
     const carrier = createCarrier({
@@ -181,6 +225,44 @@ describe("shipment worker use cases", () => {
     ).resolves.toEqual([
       expect.objectContaining({
         status: "FAILED",
+      }),
+    ]);
+  });
+
+  it("refuses disabled carrier shipment creation without calling a live adapter", async () => {
+    const context = await createContext({
+      orderStatus: "SHIPMENT_PENDING",
+      shipmentCarrier: "UKRPOSHTA",
+    });
+    const getShippingCarrier = vi.fn(() => createCarrier());
+
+    await expect(
+      createShipmentJobUseCase(
+        {
+          orderId: context.order.id,
+          requestedAt: now.toISOString(),
+          requestedBy: "system",
+          shipmentId: context.shipment.id,
+        },
+        {
+          ...context,
+          getShippingCarrier,
+          now: () => now,
+        },
+      ),
+    ).resolves.toMatchObject({
+      status: "FAILED",
+    });
+    expect(getShippingCarrier).not.toHaveBeenCalled();
+    await expect(
+      context.auditEventRepository.listForOrder(context.order.id),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        eventType: "SHIPMENT_CREATION_FAILED",
+        payload: expect.objectContaining({
+          reason:
+            "Службу доставки вимкнено. Оберіть інший спосіб доставки для нового замовлення.",
+        }),
       }),
     ]);
   });
@@ -684,7 +766,8 @@ type ContextInput = {
     | "SHIPMENT_PENDING";
   paymentProvider?: "CASH_ON_DELIVERY" | "MONOBANK";
   paymentStatus?: "PAID" | "PENDING";
-  shipmentStatus?: "CREATED" | "DELIVERED" | "PENDING";
+  shipmentCarrier?: "NOVA_POSHTA" | "UKRPOSHTA";
+  shipmentStatus?: "CREATED" | "DELIVERED" | "FAILED" | "PENDING";
 };
 
 async function createContext(input: ContextInput = {}) {
@@ -724,7 +807,7 @@ async function createContext(input: ContextInput = {}) {
   });
   const shipment = await shipmentRepository.save({
     addressText: "Київ, Відділення №1, вул. Хрещатик, 1",
-    carrier: "NOVA_POSHTA",
+    carrier: input.shipmentCarrier ?? "NOVA_POSHTA",
     carrierOfficeId: "warehouse-1",
     carrierPayload: { warehouseName: "Відділення №1" },
     carrierShipmentId: null,

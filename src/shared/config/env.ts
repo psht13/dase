@@ -47,9 +47,6 @@ export const serverEnvSchema = z
     NOVA_POSHTA_API_KEY: z.string().optional(),
     NOVA_POSHTA_API_URL: optionalUrl,
     OWNER_SETUP_TOKEN: optionalSecret,
-    UKRPOSHTA_API_URL: optionalUrl,
-    UKRPOSHTA_BEARER_TOKEN: z.string().optional(),
-    UKRPOSHTA_COUNTERPARTY_TOKEN: z.string().optional(),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV !== "production") {
@@ -97,7 +94,6 @@ export const serverEnvSchema = z
     NOVA_POSHTA_API_KEY: env.NOVA_POSHTA_API_KEY || undefined,
     NOVA_POSHTA_API_URL: env.NOVA_POSHTA_API_URL || undefined,
     OWNER_SETUP_TOKEN: env.OWNER_SETUP_TOKEN || undefined,
-    UKRPOSHTA_API_URL: env.UKRPOSHTA_API_URL || undefined,
   }));
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

@@ -102,6 +102,32 @@ export async function listOwnerOrdersUseCase(
     .sort((first, second) => second.createdAt.getTime() - first.createdAt.getTime());
 }
 
+export async function listOwnerOrderDeliveryCarriersUseCase(
+  input: {
+    ownerId: string;
+  },
+  dependencies: Pick<
+    OwnerOrderReadDependencies,
+    "orderRepository" | "shipmentRepository"
+  >,
+): Promise<ShipmentCarrier[]> {
+  const orders = await dependencies.orderRepository.listByOwnerId(input.ownerId);
+  const shipmentGroups = await Promise.all(
+    orders.map((order) =>
+      dependencies.shipmentRepository.findByOrderId(order.id),
+    ),
+  );
+  const carriers = new Set<ShipmentCarrier>();
+
+  for (const shipments of shipmentGroups) {
+    for (const shipment of shipments) {
+      carriers.add(shipment.carrier);
+    }
+  }
+
+  return [...carriers];
+}
+
 export async function getOwnerOrderDetailsUseCase(
   input: {
     orderId: string;

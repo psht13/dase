@@ -1,7 +1,8 @@
 import type { DeliveryFormValues } from "@/modules/orders/application/delivery-form-validation";
+import { activeShippingCarriers } from "@/modules/shipping/application/shipping-carrier-registry";
 
 export const emptyDeliveryFormValues: DeliveryFormValues = {
-  carrier: "NOVA_POSHTA",
+  carrier: activeShippingCarriers[0]?.code ?? "",
   cityId: "",
   cityName: "",
   fullName: "",

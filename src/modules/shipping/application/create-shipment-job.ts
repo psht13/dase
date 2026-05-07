@@ -7,6 +7,7 @@ import type { ShipmentJobQueue } from "@/modules/shipping/application/shipment-j
 import type {
   ShippingCarrier,
 } from "@/modules/shipping/application/shipping-carrier";
+import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import type {
   ShipmentCarrier,
   ShipmentRecord,
@@ -68,6 +69,21 @@ export async function createShipmentJobUseCase(
     throw new ShipmentJobCannotBeProcessedError("Shipment address is incomplete");
   }
 
+  if (!isShipmentCreationEnabled(shipment.carrier)) {
+    return markShipmentCreationFailed(
+      {
+        auditEventRepository: dependencies.auditEventRepository,
+        shipmentRepository: dependencies.shipmentRepository,
+      },
+      {
+        orderId: order.id,
+        reason:
+          "Службу доставки вимкнено. Оберіть інший спосіб доставки для нового замовлення.",
+        shipmentId: shipment.id,
+      },
+    );
+  }
+
   const carrier = dependencies.getShippingCarrier(shipment.carrier);
 
   try {
@@ -123,25 +139,52 @@ export async function createShipmentJobUseCase(
 
     return updatedShipment;
   } catch (error) {
-    await dependencies.shipmentRepository.updateStatus({
-      shipmentId: shipment.id,
-      status: "FAILED",
-    });
-    await dependencies.auditEventRepository.append({
-      actorCustomerId: null,
-      actorType: "SYSTEM",
-      actorUserId: null,
-      eventType: "SHIPMENT_CREATION_FAILED",
-      orderId: order.id,
-      payload: {
-        message: "Створення відправлення не вдалося",
+    await markShipmentCreationFailed(
+      {
+        auditEventRepository: dependencies.auditEventRepository,
+        shipmentRepository: dependencies.shipmentRepository,
+      },
+      {
+        orderId: order.id,
         reason: getSafeShipmentFailureReason(error),
         shipmentId: shipment.id,
       },
-    });
+    );
 
     throw error;
   }
+}
+
+async function markShipmentCreationFailed(
+  dependencies: Pick<
+    CreateShipmentJobDependencies,
+    "auditEventRepository" | "shipmentRepository"
+  >,
+  input: {
+    orderId: string;
+    reason: string;
+    shipmentId: string;
+  },
+): Promise<ShipmentRecord> {
+  const updatedShipment = await dependencies.shipmentRepository.updateStatus({
+    shipmentId: input.shipmentId,
+    status: "FAILED",
+  });
+
+  await dependencies.auditEventRepository.append({
+    actorCustomerId: null,
+    actorType: "SYSTEM",
+    actorUserId: null,
+    eventType: "SHIPMENT_CREATION_FAILED",
+    orderId: input.orderId,
+    payload: {
+      message: "Створення відправлення не вдалося",
+      reason: input.reason,
+      shipmentId: input.shipmentId,
+    },
+  });
+
+  return updatedShipment;
 }
 
 async function findShipment(

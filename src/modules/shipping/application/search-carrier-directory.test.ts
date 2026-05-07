@@ -134,9 +134,9 @@ describe("carrier directory search use cases", () => {
     await expect(
       searchCarrierWarehousesUseCase(
         {
-          carrier: "UKRPOSHTA",
+          carrier: "NOVA_POSHTA",
           cityId: "city-1",
-          query: "01001",
+          query: "1",
         },
         {
           cacheRepository,
@@ -146,18 +146,18 @@ describe("carrier directory search use cases", () => {
       ),
     ).resolves.toEqual([
       {
-        address: "вул. Хрещатик, 22",
+        address: "вул. Хрещатик, 1",
         cityId: "city-1",
         id: "warehouse-1",
-        name: "Відділення 01001",
-        number: "01001",
-        type: "post-office",
+        name: "Відділення №1",
+        number: "1",
+        type: "warehouse",
       },
     ]);
     expect(shippingCarrier.searchWarehouses).toHaveBeenCalledWith({
       cityId: "city-1",
       limit: 20,
-      query: "01001",
+      query: "1",
     });
   });
 });
@@ -171,12 +171,12 @@ function createShippingCarrier(): ShippingCarrier {
     ]),
     searchWarehouses: vi.fn(async () => [
       {
-        address: "вул. Хрещатик, 22",
+        address: "вул. Хрещатик, 1",
         cityId: "city-1",
         id: "warehouse-1",
-        name: "Відділення 01001",
-        number: "01001",
-        type: "post-office",
+        name: "Відділення №1",
+        number: "1",
+        type: "warehouse",
       },
     ]),
   };

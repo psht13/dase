@@ -19,6 +19,7 @@ import type {
   ShippingCity,
   ShippingWarehouse,
 } from "@/modules/shipping/application/shipping-carrier";
+import { activeShippingCarriers } from "@/modules/shipping/application/shipping-carrier-registry";
 import { Button } from "@/shared/ui/button";
 
 type DeliveryFormProps = {
@@ -274,7 +275,11 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
               resetDeliverySelection();
             }}
           >
-            <option value="NOVA_POSHTA">Нова пошта</option>
+            {activeShippingCarriers.map((deliveryCarrier) => (
+              <option key={deliveryCarrier.code} value={deliveryCarrier.code}>
+                {deliveryCarrier.label}
+              </option>
+            ))}
           </select>
           <FieldError
             id="delivery-carrier-error"

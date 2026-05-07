@@ -11,18 +11,14 @@ import type {
 } from "@/modules/shipping/application/shipping-carrier";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
 
-const fixtureCities: Record<ShipmentCarrier, ShippingCity[]> = {
+const fixtureCities: Partial<Record<ShipmentCarrier, ShippingCity[]>> = {
   NOVA_POSHTA: [
     { id: "np-city-kyiv", name: "Київ", region: "Київська область" },
     { id: "np-city-lviv", name: "Львів", region: "Львівська область" },
   ],
-  UKRPOSHTA: [
-    { id: "up-city-kyiv", name: "Київ", region: "Київська область" },
-    { id: "up-city-odesa", name: "Одеса", region: "Одеська область" },
-  ],
 };
 
-const fixtureWarehouses: Record<ShipmentCarrier, ShippingWarehouse[]> = {
+const fixtureWarehouses: Partial<Record<ShipmentCarrier, ShippingWarehouse[]>> = {
   NOVA_POSHTA: [
     {
       address: "вул. Хрещатик, 1",
@@ -41,16 +37,6 @@ const fixtureWarehouses: Record<ShipmentCarrier, ShippingWarehouse[]> = {
       type: "postomat",
     },
   ],
-  UKRPOSHTA: [
-    {
-      address: "вул. Хрещатик, 22",
-      cityId: "up-city-kyiv",
-      id: "up-wh-01001",
-      name: "Відділення 01001",
-      number: "01001",
-      type: "post-office",
-    },
-  ],
 };
 
 export class FixtureShippingCarrier implements ShippingCarrier {
@@ -59,7 +45,7 @@ export class FixtureShippingCarrier implements ShippingCarrier {
   async searchCities(input: SearchCitiesInput): Promise<ShippingCity[]> {
     const query = input.query.toLocaleLowerCase("uk");
 
-    return fixtureCities[this.carrier]
+    return (fixtureCities[this.carrier] ?? [])
       .filter((city) => city.name.toLocaleLowerCase("uk").includes(query))
       .slice(0, input.limit ?? 20);
   }
@@ -69,7 +55,7 @@ export class FixtureShippingCarrier implements ShippingCarrier {
   ): Promise<ShippingWarehouse[]> {
     const query = (input.query ?? "").toLocaleLowerCase("uk");
 
-    return fixtureWarehouses[this.carrier]
+    return (fixtureWarehouses[this.carrier] ?? [])
       .filter((warehouse) => warehouse.cityId === input.cityId)
       .filter((warehouse) =>
         query
@@ -82,11 +68,14 @@ export class FixtureShippingCarrier implements ShippingCarrier {
   }
 
   async createShipment(input: CreateShipmentInput): Promise<CreatedShipment> {
+    if (this.carrier !== "NOVA_POSHTA") {
+      throw new Error("Fixture shipping carrier is disabled");
+    }
+
     return {
       carrierShipmentId: `${this.carrier}-${input.orderId}`,
       labelUrl: null,
-      trackingNumber:
-        this.carrier === "NOVA_POSHTA" ? "20450000000000" : "0500000000000",
+      trackingNumber: "20450000000000",
     };
   }
 

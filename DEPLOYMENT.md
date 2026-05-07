@@ -68,11 +68,6 @@ Deprecated compatibility names:
 
 Prefer the `NOVA_POST_*` names for all new Railway variables. The compatibility names are accepted temporarily only to avoid breaking existing environments during rollout.
 
-Optional for a future Ukrposhta production shipment flow:
-- `UKRPOSHTA_BEARER_TOKEN`
-- `UKRPOSHTA_COUNTERPARTY_TOKEN`
-- `UKRPOSHTA_API_URL`
-
 Test-only variables that must not be enabled in production:
 - `PLAYWRIGHT_E2E`
 - `PLAYWRIGHT_BASE_URL`
@@ -127,7 +122,7 @@ Do not call live external APIs in CI. After production variables are configured,
 - Nova Post shipment creation returns a tracking number for a test shipment after sender config is present.
 - Nova Post tracking sync maps provider status codes into Ukrainian dashboard shipment statuses.
 - The stored label reference points to Nova Post `/shipments/print`; downloading/serving labels requires a server-side authorized request because the provider endpoint requires JWT authorization.
-- Ukrposhta is not shown in the public customer form during the Nova Post MVP; verify it only if the carrier is re-enabled later.
+- Ukrposhta is not shown in the public customer form during the Nova Post MVP; historical records are labeled `Укрпошта (вимкнено)`.
 - Shipment tracking updates move orders through Ukrainian dashboard statuses.
 
 ## Current Railway Status
@@ -151,5 +146,5 @@ Completed live setup:
 
 Remaining manual production verification:
 - Configure real Monobank and Nova Post credentials in Railway variables.
-- Configure Ukrposhta credentials only if it is re-enabled as an active carrier later.
+- Do not configure Ukrposhta for the active MVP; re-enable a future carrier only through the central carrier registry and updated deployment docs.
 - Run the external API checklist above with low-risk production test data.

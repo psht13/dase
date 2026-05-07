@@ -83,4 +83,15 @@ describe("validateServerEnv", () => {
     expect(env.NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS).toBe(750);
     expect(env.NOVA_POST_SENDER_EMAIL).toBeUndefined();
   });
+
+  it("does not expose unknown carrier production variables", () => {
+    const env = validateServerEnv({
+      LEGACY_CARRIER_API_URL: "https://carrier.test",
+      LEGACY_CARRIER_TOKEN: "secret",
+      NODE_ENV: "development",
+    });
+
+    expect("LEGACY_CARRIER_API_URL" in env).toBe(false);
+    expect("LEGACY_CARRIER_TOKEN" in env).toBe(false);
+  });
 });

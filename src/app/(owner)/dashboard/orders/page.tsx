@@ -1,6 +1,10 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import { listOwnerOrderTagsUseCase, listOwnerOrdersUseCase } from "@/modules/orders/application/owner-order-read-model";
+import {
+  listOwnerOrderDeliveryCarriersUseCase,
+  listOwnerOrderTagsUseCase,
+  listOwnerOrdersUseCase,
+} from "@/modules/orders/application/owner-order-read-model";
 import type { OwnerOrderFilters } from "@/modules/orders/application/owner-order-read-model";
 import { isOrderStatus } from "@/modules/orders/domain/status";
 import { getCustomerRepository } from "@/modules/orders/infrastructure/customer-repository-factory";
@@ -10,7 +14,10 @@ import { OwnerOrdersFilterForm } from "@/modules/orders/ui/owner-orders-filter-f
 import { OwnerOrdersTable } from "@/modules/orders/ui/owner-orders-table";
 import type { PaymentProviderCode } from "@/modules/payments/application/payment-repository";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
-import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
+import {
+  getShippingCarrierOptionsForRecords,
+  isKnownShippingCarrier,
+} from "@/modules/shipping/application/shipping-carrier-registry";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 import { Button } from "@/shared/ui/button";
@@ -23,26 +30,40 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const owner = await requireOwnerSession();
   const params = (await searchParams) ?? {};
   const filters = filtersFromSearchParams(params);
+  const customerRepository = getCustomerRepository();
+  const orderRepository = getOrderRepository();
   const orderTagRepository = getOrderTagRepository();
-  const [orders, tags] = await Promise.all([
+  const paymentRepository = getPaymentRepository();
+  const shipmentRepository = getShipmentRepository();
+  const [orders, tags, historicalDeliveryCarriers] = await Promise.all([
     listOwnerOrdersUseCase(
       {
         filters,
         ownerId: owner.id,
       },
       {
-        customerRepository: getCustomerRepository(),
-        orderRepository: getOrderRepository(),
+        customerRepository,
+        orderRepository,
         orderTagRepository,
-        paymentRepository: getPaymentRepository(),
-        shipmentRepository: getShipmentRepository(),
+        paymentRepository,
+        shipmentRepository,
       },
     ),
     listOwnerOrderTagsUseCase(
       { ownerId: owner.id },
       { orderTagRepository },
     ),
+    listOwnerOrderDeliveryCarriersUseCase(
+      { ownerId: owner.id },
+      {
+        orderRepository,
+        shipmentRepository,
+      },
+    ),
   ]);
+  const deliveryCarrierOptions = getShippingCarrierOptionsForRecords(
+    historicalDeliveryCarriers,
+  );
 
   return (
     <div className="grid gap-6">
@@ -63,7 +84,11 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         </Button>
       </div>
 
-      <OwnerOrdersFilterForm filters={filters} tagOptions={tags} />
+      <OwnerOrdersFilterForm
+        deliveryCarrierOptions={deliveryCarrierOptions}
+        filters={filters}
+        tagOptions={tags}
+      />
       <OwnerOrdersTable orders={orders} />
     </div>
   );
@@ -79,7 +104,9 @@ function filtersFromSearchParams(
   return {
     dateFrom: startOfDay(firstParam(params.dateFrom)),
     dateTo: endOfDay(firstParam(params.dateTo)),
-    deliveryCarrier: isShipmentCarrier(deliveryCarrier) ? deliveryCarrier : null,
+    deliveryCarrier: isKnownShippingCarrier(deliveryCarrier)
+      ? deliveryCarrier
+      : null,
     paymentMethod: isPaymentProvider(paymentMethod) ? paymentMethod : null,
     search: firstParam(params.search),
     status: status && isOrderStatus(status) ? status : null,
@@ -101,10 +128,6 @@ function startOfDay(value: string | null): Date | null {
 
 function endOfDay(value: string | null): Date | null {
   return value ? new Date(`${value}T23:59:59.999Z`) : null;
-}
-
-function isShipmentCarrier(value: string | null): value is ShipmentCarrier {
-  return value === "NOVA_POSHTA" || value === "UKRPOSHTA";
 }
 
 function isPaymentProvider(value: string | null): value is PaymentProviderCode {

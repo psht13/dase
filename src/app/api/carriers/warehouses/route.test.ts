@@ -78,6 +78,20 @@ describe("GET /api/carriers/warehouses", () => {
     });
   });
 
+  it("rejects disabled carriers with Ukrainian feedback", async () => {
+    const response = await GET(
+      new Request(
+        "https://dase.test/api/carriers/warehouses?carrier=UKRPOSHTA&cityId=city-1",
+      ),
+    );
+
+    expect(response.status).toBe(400);
+    expect(getShippingCarrier).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toEqual({
+      message: "Службу доставки тимчасово вимкнено",
+    });
+  });
+
   it("maps provider errors to safe Ukrainian feedback", async () => {
     vi.mocked(getShippingCarrier).mockReturnValue({
       createShipment: vi.fn(),
