@@ -135,7 +135,7 @@ export async function createShipmentJobUseCase(
       orderId: order.id,
       payload: {
         message: "Створення відправлення не вдалося",
-        reason: error instanceof Error ? error.message : "Unknown error",
+        reason: getSafeShipmentFailureReason(error),
         shipmentId: shipment.id,
       },
     });
@@ -166,4 +166,15 @@ function getWarehouseName(shipment: ShipmentRecord): string {
       : null;
 
   return warehouseName ?? shipment.addressText ?? shipment.carrierOfficeId ?? "";
+}
+
+function getSafeShipmentFailureReason(error: unknown): string {
+  if (
+    error instanceof Error &&
+    error.message.startsWith("Налаштування відправника")
+  ) {
+    return error.message;
+  }
+
+  return "Помилка служби доставки. Повторіть створення відправлення пізніше.";
 }

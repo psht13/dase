@@ -39,6 +39,10 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
     page.getByRole("heading", { name: "Доставка та оплата" }),
   ).toBeVisible();
   await expect(page.getByLabel("Повне ім’я")).toBeVisible();
+  await expect(page.getByLabel("Служба доставки")).toHaveValue("NOVA_POSHTA");
+  await expect(page.locator("#delivery-carrier option")).toHaveText([
+    "Нова пошта",
+  ]);
   await expect(page.getByLabel("Місто або населений пункт")).toBeVisible();
   await expect(page.getByLabel("Спосіб оплати")).toBeVisible();
   await expectNoHorizontalOverflow(page);

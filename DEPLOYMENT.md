@@ -46,11 +46,29 @@ Required for MonoPay / Monobank production payment flow:
 - `MONOBANK_PUBLIC_KEY`
 - `MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY`
 
-Required for Nova Poshta production shipment flow:
+Required for Nova Post production shipment flow:
+- `NOVA_POST_API_KEY` - secret API key used only server-side to generate temporary JWT tokens.
+- `NOVA_POST_API_URL` - default `https://api.novapost.com/v.1.0/`; use `https://api-stage.novapost.pl/v.1.0/` for stage/test verification.
+- `NOVA_POST_AUTH_URL` - optional override for the authorization endpoint when it cannot be derived from `NOVA_POST_API_URL`; by default the app calls `/clients/authorization`.
+- `NOVA_POST_SENDER_COUNTRY_CODE` - normally `UA`.
+- `NOVA_POST_SENDER_DIVISION_ID` - sender branch/division id from Nova Post.
+- `NOVA_POST_SENDER_NAME`
+- `NOVA_POST_SENDER_PHONE`
+- `NOVA_POST_SENDER_EMAIL` - optional.
+- `NOVA_POST_SENDER_COMPANY_TIN` - optional.
+- `NOVA_POST_SENDER_COMPANY_NAME` - optional.
+- `NOVA_POST_PAYER_TYPE` - `Recipient`, `Sender`, or `ThirdPerson`; default `Recipient`.
+- `NOVA_POST_PAYER_CONTRACT_NUMBER` - required by Nova Post for some non-cash or third-person payer scenarios.
+- `NOVA_POST_DEFAULT_WIDTH_MM`, `NOVA_POST_DEFAULT_LENGTH_MM`, `NOVA_POST_DEFAULT_HEIGHT_MM`
+- `NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS`, `NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS`
+
+Deprecated compatibility names:
 - `NOVA_POSHTA_API_KEY`
 - `NOVA_POSHTA_API_URL`
 
-Required for Ukrposhta production shipment flow:
+Prefer the `NOVA_POST_*` names for all new Railway variables. The compatibility names are accepted temporarily only to avoid breaking existing environments during rollout.
+
+Optional for a future Ukrposhta production shipment flow:
 - `UKRPOSHTA_BEARER_TOKEN`
 - `UKRPOSHTA_COUNTERPARTY_TOKEN`
 - `UKRPOSHTA_API_URL`
@@ -105,10 +123,11 @@ Do not call live external APIs in CI. After production variables are configured,
 - Monobank webhook signature verification accepts a signed provider callback.
 - Duplicate Monobank webhooks are idempotent.
 - Stale Monobank webhook events do not overwrite newer payment state.
-- Nova Poshta city and warehouse search works for a known city.
-- Nova Poshta shipment creation returns a tracking number for a test shipment.
-- Ukrposhta city or post-office lookup returns only active offices where the provider marks availability.
-- Ukrposhta shipment creation returns a provider shipment reference for a test shipment.
+- Nova Post city and warehouse search works for a known city through mocked CI tests and a low-risk manual production check.
+- Nova Post shipment creation returns a tracking number for a test shipment after sender config is present.
+- Nova Post tracking sync maps provider status codes into Ukrainian dashboard shipment statuses.
+- The stored label reference points to Nova Post `/shipments/print`; downloading/serving labels requires a server-side authorized request because the provider endpoint requires JWT authorization.
+- Ukrposhta is not shown in the public customer form during the Nova Post MVP; verify it only if the carrier is re-enabled later.
 - Shipment tracking updates move orders through Ukrainian dashboard statuses.
 
 ## Current Railway Status
@@ -131,5 +150,6 @@ Completed live setup:
 - Railway PostgreSQL connectivity and migrations were verified with a read-only table count check through the Railway public database proxy.
 
 Remaining manual production verification:
-- Configure real Monobank, Nova Poshta, and Ukrposhta credentials in Railway variables.
+- Configure real Monobank and Nova Post credentials in Railway variables.
+- Configure Ukrposhta credentials only if it is re-enabled as an active carrier later.
 - Run the external API checklist above with low-risk production test data.

@@ -23,6 +23,8 @@ describe("DeliveryForm", () => {
     expect(screen.getByLabelText("Повне ім’я")).toBeVisible();
     expect(screen.getByLabelText("Телефон")).toBeVisible();
     expect(screen.getByLabelText("Служба доставки")).toBeVisible();
+    expect(screen.getByRole("option", { name: "Нова пошта" })).toBeVisible();
+    expect(screen.queryByRole("option", { name: "Укрпошта" })).toBeNull();
     expect(screen.getByLabelText("Місто або населений пункт")).toBeVisible();
     expect(
       screen.getByLabelText("Відділення або поштове відділення"),

@@ -1,5 +1,6 @@
 import { GET } from "@/app/api/carriers/warehouses/route";
 import { getCarrierDirectoryCacheRepository } from "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory";
+import { ShippingCarrierApiError } from "@/modules/shipping/infrastructure/shipping-carrier-api-error";
 import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 
 vi.mock(
@@ -74,6 +75,28 @@ describe("GET /api/carriers/warehouses", () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
       message: "Службу доставки не підтримано",
+    });
+  });
+
+  it("maps provider errors to safe Ukrainian feedback", async () => {
+    vi.mocked(getShippingCarrier).mockReturnValue({
+      createShipment: vi.fn(),
+      getShipmentStatus: vi.fn(),
+      searchCities: vi.fn(),
+      searchWarehouses: vi.fn(async () => {
+        throw new ShippingCarrierApiError("provider raw failure");
+      }),
+    } as never);
+
+    const response = await GET(
+      new Request(
+        "https://dase.test/api/carriers/warehouses?carrier=NOVA_POSHTA&cityId=city-1&query=1",
+      ),
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({
+      message: "Не вдалося завантажити відділення. Спробуйте ще раз.",
     });
   });
 });

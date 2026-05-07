@@ -60,4 +60,27 @@ describe("validateServerEnv", () => {
     expect(env.AUTO_COMPLETE_AFTER_DELIVERED_HOURS).toBe(48);
     expect(getServerEnv().AUTO_COMPLETE_AFTER_DELIVERED_HOURS).toBe(48);
   });
+
+  it("parses Nova Post v1 configuration", () => {
+    const env = validateServerEnv({
+      NODE_ENV: "development",
+      NOVA_POST_API_KEY: "nova-key",
+      NOVA_POST_API_URL: "https://api.novapost.com/v.1.0/",
+      NOVA_POST_AUTH_URL:
+        "https://api.novapost.com/v.1.0/clients/authorization",
+      NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS: "750",
+      NOVA_POST_SENDER_COUNTRY_CODE: "UA",
+      NOVA_POST_SENDER_DIVISION_ID: "11759",
+      NOVA_POST_SENDER_EMAIL: "",
+      NOVA_POST_SENDER_NAME: "Тестова Тетяна",
+      NOVA_POST_SENDER_PHONE: "380007654321",
+    });
+
+    expect(env.NOVA_POST_API_URL).toBe("https://api.novapost.com/v.1.0/");
+    expect(env.NOVA_POST_AUTH_URL).toBe(
+      "https://api.novapost.com/v.1.0/clients/authorization",
+    );
+    expect(env.NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS).toBe(750);
+    expect(env.NOVA_POST_SENDER_EMAIL).toBeUndefined();
+  });
 });

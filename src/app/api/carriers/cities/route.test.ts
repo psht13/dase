@@ -1,5 +1,6 @@
 import { GET } from "@/app/api/carriers/cities/route";
 import { getCarrierDirectoryCacheRepository } from "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory";
+import { ShippingCarrierApiError } from "@/modules/shipping/infrastructure/shipping-carrier-api-error";
 import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 
 vi.mock(
@@ -58,6 +59,28 @@ describe("GET /api/carriers/cities", () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
       message: "Службу доставки не підтримано",
+    });
+  });
+
+  it("maps provider errors to safe Ukrainian feedback", async () => {
+    vi.mocked(getShippingCarrier).mockReturnValue({
+      createShipment: vi.fn(),
+      getShipmentStatus: vi.fn(),
+      searchCities: vi.fn(async () => {
+        throw new ShippingCarrierApiError("provider raw failure");
+      }),
+      searchWarehouses: vi.fn(),
+    } as never);
+
+    const response = await GET(
+      new Request(
+        "https://dase.test/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ",
+      ),
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({
+      message: "Не вдалося завантажити міста. Спробуйте ще раз.",
     });
   });
 });

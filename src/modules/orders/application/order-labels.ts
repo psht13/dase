@@ -27,7 +27,7 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
 };
 
 export const shipmentCarrierLabels: Record<ShipmentCarrier, string> = {
-  NOVA_POSHTA: "Нова Пошта",
+  NOVA_POSHTA: "Нова пошта",
   UKRPOSHTA: "Укрпошта",
 };
 

@@ -274,8 +274,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
               resetDeliverySelection();
             }}
           >
-            <option value="NOVA_POSHTA">Нова Пошта</option>
-            <option value="UKRPOSHTA">Укрпошта</option>
+            <option value="NOVA_POSHTA">Нова пошта</option>
           </select>
           <FieldError
             id="delivery-carrier-error"

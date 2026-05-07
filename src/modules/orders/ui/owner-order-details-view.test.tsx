@@ -48,7 +48,7 @@ describe("OwnerOrderDetailsView", () => {
     expect(screen.getByRole("heading", { name: "Клієнт" })).toBeVisible();
     expect(screen.getByText("Олена Петренко")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
-    expect(screen.getAllByText("Нова Пошта")[0]).toBeVisible();
+    expect(screen.getAllByText("Нова пошта")[0]).toBeVisible();
     expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
     expect(screen.getByText("Післяплата")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Повтор оплати MonoPay" })).toBeVisible();

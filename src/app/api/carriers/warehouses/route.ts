@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { searchCarrierWarehousesUseCase } from "@/modules/shipping/application/search-carrier-directory";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
 import { getCarrierDirectoryCacheRepository } from "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory";
+import { ShippingCarrierApiError } from "@/modules/shipping/infrastructure/shipping-carrier-api-error";
 import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 
 export const dynamic = "force-dynamic";
@@ -19,17 +20,30 @@ export async function GET(request: Request) {
     );
   }
 
-  const warehouses = await searchCarrierWarehousesUseCase(
-    {
-      carrier,
-      cityId,
-      query,
-    },
-    {
-      cacheRepository: getCarrierDirectoryCacheRepository(),
-      shippingCarrier: getShippingCarrier(carrier),
-    },
-  );
+  let warehouses;
+
+  try {
+    warehouses = await searchCarrierWarehousesUseCase(
+      {
+        carrier,
+        cityId,
+        query,
+      },
+      {
+        cacheRepository: getCarrierDirectoryCacheRepository(),
+        shippingCarrier: getShippingCarrier(carrier),
+      },
+    );
+  } catch (error) {
+    if (error instanceof ShippingCarrierApiError) {
+      return NextResponse.json(
+        { message: "Не вдалося завантажити відділення. Спробуйте ще раз." },
+        { status: 502 },
+      );
+    }
+
+    throw error;
+  }
 
   return NextResponse.json(
     { warehouses },

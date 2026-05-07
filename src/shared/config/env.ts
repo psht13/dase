@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const optionalUrl = z.string().url().optional().or(z.literal(""));
 const optionalSecret = z.string().min(32).optional().or(z.literal(""));
+const optionalPositiveInt = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.coerce.number().int().positive().optional(),
+);
 
 export const serverEnvSchema = z
   .object({
@@ -21,6 +25,25 @@ export const serverEnvSchema = z
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    NOVA_POST_API_KEY: z.string().optional(),
+    NOVA_POST_API_URL: optionalUrl,
+    NOVA_POST_AUTH_URL: optionalUrl,
+    NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS: optionalPositiveInt,
+    NOVA_POST_DEFAULT_HEIGHT_MM: optionalPositiveInt,
+    NOVA_POST_DEFAULT_LENGTH_MM: optionalPositiveInt,
+    NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS: optionalPositiveInt,
+    NOVA_POST_DEFAULT_WIDTH_MM: optionalPositiveInt,
+    NOVA_POST_PAYER_CONTRACT_NUMBER: z.string().optional(),
+    NOVA_POST_PAYER_TYPE: z
+      .enum(["Recipient", "Sender", "ThirdPerson"])
+      .optional(),
+    NOVA_POST_SENDER_COMPANY_NAME: z.string().optional(),
+    NOVA_POST_SENDER_COMPANY_TIN: z.string().optional(),
+    NOVA_POST_SENDER_COUNTRY_CODE: z.string().optional(),
+    NOVA_POST_SENDER_DIVISION_ID: z.string().optional(),
+    NOVA_POST_SENDER_EMAIL: z.string().email().optional().or(z.literal("")),
+    NOVA_POST_SENDER_NAME: z.string().optional(),
+    NOVA_POST_SENDER_PHONE: z.string().optional(),
     NOVA_POSHTA_API_KEY: z.string().optional(),
     NOVA_POSHTA_API_URL: optionalUrl,
     OWNER_SETUP_TOKEN: optionalSecret,
@@ -57,6 +80,21 @@ export const serverEnvSchema = z
     DATABASE_URL: env.DATABASE_URL || undefined,
     DATABASE_URL_TEST: env.DATABASE_URL_TEST || undefined,
     MONOBANK_API_URL: env.MONOBANK_API_URL || undefined,
+    NOVA_POST_API_KEY: env.NOVA_POST_API_KEY || undefined,
+    NOVA_POST_API_URL: env.NOVA_POST_API_URL || undefined,
+    NOVA_POST_AUTH_URL: env.NOVA_POST_AUTH_URL || undefined,
+    NOVA_POST_PAYER_CONTRACT_NUMBER:
+      env.NOVA_POST_PAYER_CONTRACT_NUMBER || undefined,
+    NOVA_POST_SENDER_COMPANY_NAME:
+      env.NOVA_POST_SENDER_COMPANY_NAME || undefined,
+    NOVA_POST_SENDER_COMPANY_TIN: env.NOVA_POST_SENDER_COMPANY_TIN || undefined,
+    NOVA_POST_SENDER_COUNTRY_CODE:
+      env.NOVA_POST_SENDER_COUNTRY_CODE || undefined,
+    NOVA_POST_SENDER_DIVISION_ID: env.NOVA_POST_SENDER_DIVISION_ID || undefined,
+    NOVA_POST_SENDER_EMAIL: env.NOVA_POST_SENDER_EMAIL || undefined,
+    NOVA_POST_SENDER_NAME: env.NOVA_POST_SENDER_NAME || undefined,
+    NOVA_POST_SENDER_PHONE: env.NOVA_POST_SENDER_PHONE || undefined,
+    NOVA_POSHTA_API_KEY: env.NOVA_POSHTA_API_KEY || undefined,
     NOVA_POSHTA_API_URL: env.NOVA_POSHTA_API_URL || undefined,
     OWNER_SETUP_TOKEN: env.OWNER_SETUP_TOKEN || undefined,
     UKRPOSHTA_API_URL: env.UKRPOSHTA_API_URL || undefined,

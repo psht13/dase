@@ -55,4 +55,20 @@ describe("delivery form validation", () => {
       expect(errors.paymentMethod).toContain("Оберіть спосіб оплати");
     }
   });
+
+  it("keeps Nova Post as the only active delivery carrier", () => {
+    const result = safeParseDeliveryFormValues({
+      carrier: "UKRPOSHTA",
+      cityId: "city-1",
+      cityName: "Київ",
+      fullName: "Олена Петренко",
+      paymentMethod: "CASH_ON_DELIVERY",
+      phone: "+380671234567",
+      warehouseAddress: "вул. Хрещатик, 1",
+      warehouseId: "warehouse-1",
+      warehouseName: "Відділення №1",
+    });
+
+    expect(result.success).toBe(false);
+  });
 });

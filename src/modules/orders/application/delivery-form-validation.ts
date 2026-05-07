@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { PaymentProviderCode } from "@/modules/payments/application/payment-repository";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
 
-const shipmentCarriers = ["NOVA_POSHTA", "UKRPOSHTA"] as const;
+const shipmentCarriers = ["NOVA_POSHTA"] as const;
 const paymentProviders = ["MONOBANK", "CASH_ON_DELIVERY"] as const;
 
 export const deliveryFormSchema = z.object({

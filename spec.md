@@ -90,10 +90,10 @@ Customer delivery confirmation update on 2026-04-30:
 - Customer confirmation is implemented through `confirmPublicOrderUseCase`, repository ports, and infrastructure adapters rather than business logic in React components.
 - Valid confirmation creates a `customers` row, stores a pending `payments` row, stores a pending `shipments` row with internal carrier DTO data, links the order to the customer, sets `confirmed_at`, and changes order status to `CONFIRMED_BY_CUSTOMER`.
 - `ShippingCarrier` application port defines `searchCities`, `searchWarehouses`, `createShipment`, and `getShipmentStatus`.
-- Nova Poshta and Ukrposhta infrastructure adapters map external API shapes into internal city, warehouse, shipment, and status DTOs.
+- Nova Post and Ukrposhta infrastructure adapters map external API shapes into internal city, warehouse, shipment, and status DTOs.
 - `/api/carriers/cities` and `/api/carriers/warehouses` are thin route handlers that call cached carrier search use cases and return internal DTOs only.
 - City and warehouse lookups use `carrier_directory_cache`; Playwright and test runs use deterministic in-memory mocked carrier data and never call live carrier APIs.
-- MSW contract tests cover Nova Poshta and Ukrposhta adapter response mapping, status mapping, and carrier error handling.
+- MSW contract tests cover Nova Post and Ukrposhta adapter response mapping, status mapping, and carrier error handling.
 - Playwright e2e covers a customer confirming delivery with mocked carrier lookup.
 
 MonoPay / Monobank payment update on 2026-04-30:
@@ -160,7 +160,7 @@ Release candidate hardening update on 2026-04-30:
 - Product image handling remains external URL only through `product_images`; no object storage service or upload path was added.
 - Worker error logging now formats errors through a safe logger that redacts credentialed URLs and sensitive environment assignments before printing.
 - Environment documentation now includes every app/tooling variable read by the repository, including `PLAYWRIGHT_BASE_URL`, `NODE_ENV`, and `CI`.
-- External API adapters remain covered by MSW contract tests and fixture adapters; CI does not call live Monobank, Nova Poshta, or Ukrposhta APIs.
+- External API adapters remain covered by MSW contract tests and fixture adapters; CI does not call live Monobank, Nova Post, or Ukrposhta APIs.
 - Public order routes still expose only token-scoped public order review/payment status data and do not expose internal order IDs.
 - Owner dashboard routes continue to require an authenticated `owner`; `user` role sessions are redirected away from `/dashboard`.
 - Railway MCP was attempted again during Prompt 11 with `check_railway_status`, but live Railway configuration was initially blocked by invalid or expired Railway authentication.
@@ -193,7 +193,17 @@ Railway live setup retry on 2026-04-30:
 - Verified the Railway web deployment succeeded and `/api/health` returns `status: ok`.
 - Verified the Railway worker deployment succeeded and logs `Shipment worker is ready.`
 - Verified Railway PostgreSQL connectivity through the Railway public database proxy with a read-only query; `publicTableCount` was 16 after migration.
-- External production credentials for Monobank, Nova Poshta, and Ukrposhta still require manual configuration in Railway before live payment/shipping verification.
+- External production credentials for Monobank and Nova Post still require manual configuration in Railway before live payment/shipping verification. Ukrposhta credentials are needed only if that carrier is re-enabled later.
+
+Nova Post API replacement update on 2026-05-07:
+- Removed the legacy Nova Poshta JSON adapter and replaced it with `NovaPostShippingCarrier` plus `NovaPostJwtProvider`.
+- The adapter uses official Nova Post API v.1.0 endpoints: production `https://api.novapost.com/v.1.0/`, stage/test `https://api-stage.novapost.pl/v.1.0/`, authorization `GET /clients/authorization?apiKey=...`, directory lookup through `GET /divisions`, shipment creation through `POST /shipments`, tracking through `GET /shipments/tracking/history`, and label references through `GET /shipments/print`.
+- `NOVA_POST_API_KEY` is exchanged server-side for a JWT token; the JWT is cached for less than one hour and refreshed before expiration. API keys and JWTs are not logged or included in safe application errors.
+- Public carrier directory route handlers still return internal DTOs only and map provider failures to safe Ukrainian messages.
+- Shipment creation validates required sender config before calling Nova Post. Missing sender country, sender division, sender name, or sender phone fails safely, stores a Ukrainian audit reason, and leaves the owner retry path available.
+- New preferred env names are `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, and optional `NOVA_POST_AUTH_URL`; `NOVA_POSHTA_API_KEY` and `NOVA_POSHTA_API_URL` are temporarily accepted as deprecated compatibility names.
+- Public customer delivery now exposes `Нова пошта` as the only active carrier. The database/internal enum value remains `NOVA_POSHTA` for compatibility with existing rows and worker code.
+- MSW tests cover JWT generation, JWT caching, JWT refresh, city/warehouse mapping, shipment creation mapping, tracking status mapping, safe provider errors, no credential logging, and missing sender config blocking live shipment calls.
 
 ## Repair audit on 2026-05-07
 
@@ -209,8 +219,8 @@ Repair order checklist:
    - Add or update unit and Playwright coverage for Ukrainian home CTA navigation, form-based setup token validation, first-owner creation, invalid token handling, owner dashboard access, and `user` dashboard denial.
 
 2. Nova Post API replacement:
-   - Replace the legacy Nova Poshta default endpoint `https://api.novaposhta.ua/v2.0/json/` and adapter request shape with the current Nova Post API required for MVP city search, warehouse search, shipment creation, tracking, and label/reference retrieval.
-   - Update `NOVA_POSHTA_API_URL` documentation and examples without committing credentials.
+   - Replace the legacy Nova Poshta JSON endpoint and adapter request shape with the current Nova Post API required for MVP city search, warehouse search, shipment creation, tracking, and label/reference retrieval.
+   - Update Nova Post API URL documentation and examples without committing credentials.
    - Keep all external API tests on MSW/fixtures and do not call live Nova Post APIs in CI.
 
 3. Remove Ukrposhta from the active MVP:
@@ -260,8 +270,7 @@ Repair order checklist:
 2. Customer reviews product list and totals.
 3. Customer fills full name and phone.
 4. Customer chooses delivery carrier:
-   - Nova Poshta
-   - Ukrposhta
+   - Нова пошта
 5. Customer selects city and branch/office from official carrier data.
 6. Customer chooses payment:
    - MonoPay
@@ -473,6 +482,13 @@ Latest local quality status on 2026-05-07 after owner setup and login persistenc
 - `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and the real `/setup` plus `/login` persistence path across dashboard navigation, hard reload, browser back/forward, and logout.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-05-07 after Nova Post API replacement:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.53% statements, 80.04% branches, 90.84% functions, and 88.53% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier, mocked MonoPay, owner order management, and real setup/login persistence.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -513,8 +529,26 @@ MONOBANK_API_URL=
 MONOBANK_PUBLIC_KEY=
 MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
 
-NOVA_POSHTA_API_KEY=
-NOVA_POSHTA_API_URL=
+NOVA_POST_API_KEY=
+NOVA_POST_API_URL=https://api.novapost.com/v.1.0/
+NOVA_POST_AUTH_URL=
+NOVA_POST_SENDER_COUNTRY_CODE=UA
+NOVA_POST_SENDER_DIVISION_ID=
+NOVA_POST_SENDER_NAME=
+NOVA_POST_SENDER_PHONE=
+NOVA_POST_SENDER_EMAIL=
+NOVA_POST_SENDER_COMPANY_TIN=
+NOVA_POST_SENDER_COMPANY_NAME=
+NOVA_POST_PAYER_TYPE=Recipient
+NOVA_POST_PAYER_CONTRACT_NUMBER=
+NOVA_POST_DEFAULT_WIDTH_MM=200
+NOVA_POST_DEFAULT_LENGTH_MM=300
+NOVA_POST_DEFAULT_HEIGHT_MM=100
+NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS=500
+NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS=500
+
+NOVA_POSHTA_API_KEY= # deprecated compatibility name
+NOVA_POSHTA_API_URL= # deprecated compatibility name
 
 UKRPOSHTA_BEARER_TOKEN=
 UKRPOSHTA_COUNTERPARTY_TOKEN=
@@ -642,7 +676,7 @@ Status: completed on 2026-04-30; Railway deployment and migration verification p
 Status: payment module and shipment worker automation completed on 2026-04-30. Railway migration/database verification and worker startup verification passed after Railway authentication was refreshed.
 
 - Implement MonoPay invoice creation and webhook handling. Completed locally with mocked/contract-tested Monobank adapters.
-- Implement Nova Poshta and Ukrposhta shipment creation/tracking adapters. Completed locally with mocked/contract-tested carrier adapters.
+- Implement Nova Post and Ukrposhta shipment creation/tracking adapters. Nova Post now uses API v.1.0 with JWT authorization; Ukrposhta remains available internally but is not exposed in the public customer delivery form.
 - Add worker jobs for shipment creation, tracking sync, and auto-completion. Completed locally with pg-boss queue adapter and in-memory test queue.
 - Add shipment audit events. Completed locally for worker enqueue/create/failure/sync/auto-complete events.
 - Owner status/tag views moved to the owner order management milestone.
@@ -692,7 +726,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Open questions
 
 - Production MonoPay credentials, public key, and final callback domain.
-- Exact Nova Poshta sender/counterparty settings: current adapter can search cities/warehouses and create a draft InternetDocument-shaped request, but production shipment creation still needs configured sender city, sender warehouse/address, sender contact, sender phone, payer/payment method, cargo weight/dimensions policy, and any required counterparty refs.
+- Nova Post production values must still be supplied in Railway before live shipment smoke tests: sender division id, sender name/phone, optional company fields, payer settings, and parcel dimension/weight defaults. Missing required sender config now blocks shipment creation before a live provider call.
 - Exact Ukrposhta sender/client/address setup: current adapter can search/filter offices and map shipment responses, but production shipment creation still needs sender client UUID/token, sender address UUID, recipient client/address workflow confirmation, shipment type/package details, payer settings, and any required label/printing endpoint decisions.
 - Whether to reserve stock when order link is created or only after customer confirms.
 - Cash on delivery now enqueues shipment creation after customer confirmation.
@@ -700,9 +734,9 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
-- Real Monobank, Nova Poshta, and Ukrposhta production credentials are not yet configured in Railway, so live payment and carrier smoke tests remain manual.
-- Production external API credentials and sender/counterparty settings are not present in the repository and must be configured only as Railway variables.
-- Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank, Nova Poshta, and Ukrposhta behavior still needs a low-risk production smoke test after variables are configured.
+- Real Monobank and Nova Post production credentials are not yet configured in Railway, so live payment and carrier smoke tests remain manual.
+- Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
+- Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.
 - Stock reservation timing is still an open product decision.
 
@@ -718,8 +752,8 @@ After external production variables are configured:
 6. Sign in as an `owner` at `/login` and confirm `/dashboard` loads; confirm `/logout` ends the session and a `user` role cannot access dashboard routes.
 7. Create a product using external image URLs only, then create an order link and open the `/o/[token]` public page.
 8. Confirm an invalid, expired, or cancelled public token shows the Ukrainian unavailable state and does not reveal other order data.
-9. Complete a customer delivery confirmation with Nova Poshta lookup and shipment creation on a low-risk test order.
-10. Complete a customer delivery confirmation with Ukrposhta lookup and shipment creation on a low-risk test order.
+9. Complete a customer delivery confirmation with Nova Post lookup and shipment creation on a low-risk test order.
+10. Confirm Ukrposhta is not shown in the public customer delivery form unless it is deliberately re-enabled later.
 11. Create a MonoPay invoice, complete payment, verify signed Monobank webhook processing, duplicate webhook idempotency, and stale event handling.
 12. Confirm `Повторити оплату` creates a new MonoPay invoice when a confirmed order is missing a provider invoice id or the previous payment failed.
 13. Confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
