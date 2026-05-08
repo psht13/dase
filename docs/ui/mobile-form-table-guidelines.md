@@ -76,6 +76,7 @@ Recommended step groups:
   - `Контакти`: name and phone.
   - `Доставка`: carrier, city, warehouse.
   - `Оплата`: payment method and confirmation.
+  - `Перевірка`: contact, delivery, payment summary, and final submit.
 
 ## Reusable Multi-Step Foundation
 
@@ -309,16 +310,20 @@ Plan:
 
 ### `/o/[token]/delivery`
 
-Current state:
-- No horizontal overflow.
-- The form is about 990-1,030 px tall on phone widths.
-- Controls are 40 px high.
+Current state after 2026-05-08 public delivery stepper refactor:
+- The page uses the shared four-step flow: `Контакти`, `Доставка`, `Оплата`, and `Перевірка`.
+- Contact fields validate before the delivery lookup step is shown.
+- Nova Post remains the only active MVP carrier exposed to customers.
+- City and warehouse lookup still goes through route handlers and carrier use cases, not direct provider calls from UI.
+- Search results render as full-width mobile cards with Ukrainian loading, empty, and error states instead of cramped dropdowns.
+- Selected city and warehouse values are shown as clear selected-state summaries with `Змінити місто` and `Змінити відділення` actions.
+- The payment step uses explicit MonoPay and `Післяплата` radio-card choices with short Ukrainian explanations.
+- The review step summarizes contact, delivery, and payment data before the unchanged confirmation/payment action runs.
+- Focused tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, MonoPay redirect wiring, cash-on-delivery confirmation, and duplicate-submit prevention.
+- Playwright customer delivery E2E follows the step flow at 390 px and asserts no page-level horizontal overflow; the public-pages mobile smoke still covers the delivery page at 360 px.
 
-Plan:
-- Consider the delivery stepper after owner dashboard tables/forms are fixed.
-- Raise touch target heights.
-- Keep Nova Post as the only active MVP carrier.
-- Keep city/warehouse lookup through route handlers and carrier use cases, not direct provider calls from UI.
+Remaining plan:
+- Use Playwright screenshots at 360 px and 390 px after related public-page spacing changes to keep result cards and review summaries easy to scan with longer customer-entered values.
 
 ## Testing Checklist
 

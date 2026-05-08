@@ -42,11 +42,15 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
     .click();
   await page.getByLabel("Повне ім’я").fill(customerName);
   await page.getByLabel("Телефон").fill(customerPhone);
+  await page.getByRole("button", { name: "Далі" }).click();
   await page.getByLabel("Місто або населений пункт").fill("Київ");
   await page.getByRole("button", { name: /Київ.*Київська область/ }).click();
   await page.getByLabel("Відділення або поштове відділення").fill("1");
   await page.getByRole("button", { name: /Відділення №1/ }).click();
-  await page.getByLabel("Спосіб оплати").selectOption("CASH_ON_DELIVERY");
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page.getByRole("radio", { name: /Післяплата/ }).check();
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();
   await expect(
     page.getByText("Замовлення підтверджено. Оплата при отриманні."),

@@ -85,6 +85,7 @@ Owner order builder and public order link update on 2026-04-30:
 
 Customer delivery confirmation update on 2026-04-30:
 - `/o/[token]/delivery` now renders the full customer delivery and payment form with Ukrainian labels, placeholders, validation errors, loading states, empty states, and success/error states.
+- The public customer form is mobile-first and split into four UI-only steps: `Контакти`, `Доставка`, `Оплата`, and `Перевірка`.
 - The form collects full name, phone, delivery carrier, city/locality, branch/warehouse/post office, and payment method.
 - React Hook Form and Zod validate the delivery form; server actions re-validate submitted data before calling application use cases.
 - Customer confirmation is implemented through `confirmPublicOrderUseCase`, repository ports, and infrastructure adapters rather than business logic in React components.
@@ -333,7 +334,7 @@ Audit result:
 - Added shared multi-step form UI primitives in `src/shared/ui/multi-step-form.tsx`: `Stepper`, `StepIndicator`, `StepActions`, `StepCard`, and `FormSummaryCard`.
 - Added `useMultiStepForm` for React Hook Form flows. It keeps step index as local UI state, validates only the current step through RHF `trigger`, preserves values between steps, prevents early form submits from sending partial data, moves final-submit failures to the first invalid step, and focuses either the revealed step heading or invalid field.
 - The foundation is generic UI code only. It does not change domain/application rules, server actions, database schema, roles, product image handling, payment, or shipping behavior.
-- Existing product and delivery forms remain on their current submit paths. Later form refactors should adopt the foundation while keeping the existing Zod schema and complete server-action validation as the source of truth.
+- Product, owner order-builder, and public delivery refactors keep their existing submit paths while using the foundation for UI-only step state. Later form refactors should keep the existing Zod schema and complete server-action validation as the source of truth.
 - `docs/ui/mobile-form-table-guidelines.md` now documents how feature forms should adopt the shared stepper and keep all user-facing text Ukrainian.
 - Focused component tests cover Ukrainian progress/actions, `aria-current`, current-step validation, live-region step errors, focus movement, state preservation, early-submit handling, full-submit gating, and the optional `Перевірити` review action.
 
@@ -357,6 +358,17 @@ Audit result:
 - The link step shows the generated token-based public URL, copy action, and quick open action. Internal order ids are still not exposed in public URLs.
 - The order creation server action, `createOrderDraftUseCase`, form-data contract, product snapshots, public token generation, and public order review behavior remain unchanged.
 - Unit tests cover product selection/search, quantity validation, summary review, generated-link display, and Ukrainian labels. Playwright owner order-link creation now creates a multi-product link at 390 px and asserts no page-level horizontal overflow through the owner builder steps.
+
+## Public delivery stepper adoption on 2026-05-08
+
+- `/o/[token]/delivery` now uses the shared multi-step form foundation with four Ukrainian steps: `Контакти`, `Доставка`, `Оплата`, and `Перевірка`.
+- The contact step validates full name and phone before exposing delivery fields.
+- The delivery step keeps carrier, city, and warehouse lookup through `/api/carriers/cities` and `/api/carriers/warehouses`; it does not call Nova Post directly from UI and still renders Nova Post as the only active MVP carrier.
+- City and warehouse results render as full-width mobile-friendly result cards with loading, empty, and error states in Ukrainian. Selected city and warehouse states are shown clearly with `Змінити місто` and `Змінити відділення` reset actions.
+- The payment step uses two explicit Ukrainian radio-card options: MonoPay with an online redirect explanation and `Післяплата` with a payment-on-receipt explanation.
+- The review step shows separate contact, delivery, and payment summaries before the unchanged `confirmDeliveryAction` submit runs.
+- Final submit is guarded against accidental double submit. MonoPay still redirects when the existing action returns `paymentRedirectUrl`; cash on delivery still shows the existing confirmation message.
+- Focused UI tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, MonoPay redirect wiring, cash-on-delivery confirmation, and Ukrainian labels. Playwright customer delivery E2E now follows the step flow and checks mobile overflow during the public delivery path.
 
 ## Core flows
 
@@ -389,14 +401,14 @@ Audit result:
 
 1. Customer opens public order link.
 2. Customer reviews product list and totals.
-3. Customer fills full name and phone.
-4. Customer chooses delivery carrier:
+3. Customer opens the `Контакти` step and fills full name and phone.
+4. Customer opens the `Доставка` step and chooses delivery carrier:
    - Нова пошта
 5. Customer selects city and branch/office from official carrier data.
-6. Customer chooses payment:
+6. Customer opens the `Оплата` step and chooses payment:
    - MonoPay
    - cash on delivery
-7. Customer submits form.
+7. Customer opens `Перевірка`, reviews contact, delivery, and payment summaries, and submits the form.
 8. App saves confirmation data, sets the order to `CONFIRMED_BY_CUSTOMER`, and prepares pending payment/shipment records.
 
 ### Payment
@@ -674,6 +686,14 @@ Latest local quality status on 2026-05-08 after the owner order builder stepper 
 - `pnpm build` passed.
 - Playwright MCP inspected `/dashboard/orders/new` at 390x844 and 1440x900 with E2E-safe owner/product data. The only console error was the existing missing `/favicon.ico` dev request.
 
+Latest local quality status on 2026-05-08 after the public delivery stepper adoption:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 89% statements, 80.58% branches, 90.14% functions, and 89% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 14 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+- Playwright MCP inspected `/o/[token]/delivery` at 360x740 and 390x844 with E2E-safe public order data. The only console error was the existing missing `/favicon.ico` dev request.
+
 ## Commands
 
 Configured commands:
@@ -904,16 +924,16 @@ Status: completed on 2026-04-30.
 
 ### Milestone 9 - Mobile owner UI refactor
 
-Status: in progress; audit and refactor plan documented, dashboard shell baseline implemented, reusable multi-step form foundation added, and product create/edit forms converted to the stepper on 2026-05-08.
+Status: in progress; audit and refactor plan documented, dashboard shell baseline implemented, reusable multi-step form foundation added, and product create/edit, owner order builder, and public delivery forms converted to stepper flows on 2026-05-08.
 
 - Refactor the owner dashboard shell so phone and tablet portrait layouts use compact mobile navigation instead of the full stacked/persistent sidebar.
 - Replace mobile product/order/order-builder tables with card-first layouts while keeping desktop tables for wide screens.
-- Convert long product and order-builder flows to stepper/card patterns without moving business logic into UI components. Product create/edit is completed; order builder remains planned.
-- Use `src/shared/ui/multi-step-form.tsx` for future long-form conversions so RHF/Zod validation, focus behavior, progress, and Back/Next controls stay consistent. Product create/edit now uses this foundation.
+- Convert long product, order-builder, and public delivery flows to stepper/card patterns without moving business logic into UI components. Product create/edit, owner order builder, and public delivery are completed.
+- Use `src/shared/ui/multi-step-form.tsx` for future long-form conversions so RHF/Zod validation, focus behavior, progress, and Back/Next controls stay consistent. Product create/edit and public delivery now use this foundation; owner order builder uses the shared stepper UI primitives.
 - Improve owner order details by converting mobile product/audit tables into cards or timelines and reducing the single-page visual weight.
 - Raise touch targets to at least 44 px for mobile controls and action buttons.
 - Keep all new user-facing copy Ukrainian, keep roles limited to `owner` and `user`, keep product images as external URLs only, and avoid database schema changes unless a later UI requirement proves one is necessary.
-- Add focused UI and Playwright coverage for the changed pages using the documented viewport matrix. Product create/edit now has unit coverage and a 360 px Playwright regression.
+- Add focused UI and Playwright coverage for the changed pages using the documented viewport matrix. Product create/edit, owner order builder, and public delivery now have focused unit and Playwright mobile regressions.
 
 ## Commit message format
 
@@ -939,7 +959,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
-- Owner dashboard mobile responsiveness is partially implemented. The shared multi-step foundation now exists and product create/edit forms use it, but product/order tables still depend on horizontal scroll on small screens, the order builder can create page-level horizontal overflow at phone and tablet portrait widths, and long owner order-builder/details surfaces still need to be converted to stepper/card patterns.
+- Owner dashboard mobile responsiveness is partially implemented. The shared multi-step foundation now exists and product create/edit, owner order builder, and public delivery forms use stepper/card patterns, but product/order tables still depend on horizontal scroll on small screens and long owner order details surfaces still need to be converted to cards or timelines.
 - Real Monobank production credentials are not yet configured in Railway, so live payment smoke tests remain manual. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.

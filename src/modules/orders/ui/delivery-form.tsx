@@ -1,11 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Search } from "lucide-react";
+import {
+  Banknote,
+  Check,
+  CheckCircle2,
+  CreditCard,
+  RotateCcw,
+  Search,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useForm, type FieldPath } from "react-hook-form";
 import {
   deliveryFormSchema,
   type DeliveryFormValues,
@@ -21,17 +28,84 @@ import type {
 } from "@/modules/shipping/application/shipping-carrier";
 import { activeShippingCarriers } from "@/modules/shipping/application/shipping-carrier-registry";
 import { Button } from "@/shared/ui/button";
+import {
+  FormSummaryCard,
+  StepActions,
+  StepCard,
+  Stepper,
+  type MultiStepFormStep,
+  useMultiStepForm,
+} from "@/shared/ui/multi-step-form";
+import { cn } from "@/shared/utils/cn";
 
 type DeliveryFormProps = {
   action: (formData: FormData) => Promise<DeliveryActionResult>;
+  navigateToPayment?: (url: string) => void;
 };
 
 type LookupStatus = "idle" | "loading" | "loaded" | "error";
 
-export function DeliveryForm({ action }: DeliveryFormProps) {
+const deliveryFormSteps = [
+  {
+    description: "Вкажіть ім’я та телефон отримувача.",
+    fields: ["fullName", "phone"],
+    id: "contacts",
+    title: "Контакти",
+  },
+  {
+    description: "Оберіть службу доставки, місто та відділення.",
+    fields: [
+      "carrier",
+      "cityId",
+      "cityName",
+      "warehouseAddress",
+      "warehouseId",
+      "warehouseName",
+    ],
+    id: "delivery",
+    title: "Доставка",
+  },
+  {
+    description: "Виберіть зручний спосіб оплати.",
+    fields: ["paymentMethod"],
+    id: "payment",
+    title: "Оплата",
+  },
+  {
+    description: "Перевірте дані перед підтвердженням.",
+    fields: [],
+    id: "review",
+    title: "Перевірка",
+  },
+] satisfies readonly MultiStepFormStep<DeliveryFormValues>[];
+
+const paymentMethodOptions = [
+  {
+    description:
+      "Онлайн-оплата карткою після підтвердження. Далі відкриється сторінка MonoPay.",
+    label: "MonoPay",
+    value: "MONOBANK",
+  },
+  {
+    description:
+      "Оплата готівкою або карткою при отриманні у відділенні.",
+    label: "Післяплата",
+    value: "CASH_ON_DELIVERY",
+  },
+] as const;
+
+const inputClassName =
+  "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:text-sm";
+
+export function DeliveryForm({
+  action,
+  navigateToPayment,
+}: DeliveryFormProps) {
   const router = useRouter();
+  const submitLockRef = useRef(false);
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [cityQuery, setCityQuery] = useState("");
   const [warehouseQuery, setWarehouseQuery] = useState("");
@@ -43,10 +117,22 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
     defaultValues: emptyDeliveryFormValues,
     resolver: zodResolver(deliveryFormSchema),
   });
-  const carrier = form.watch("carrier");
-  const selectedCityId = form.watch("cityId");
-  const selectedWarehouseId = form.watch("warehouseId");
+  const formValues = form.watch();
+  const carrier = formValues.carrier;
+  const selectedCityId = formValues.cityId;
+  const selectedWarehouseId = formValues.warehouseId;
+  const selectedPaymentOption =
+    paymentMethodOptions.find(
+      (option) => option.value === formValues.paymentMethod,
+    ) ?? paymentMethodOptions[0];
   const carrierField = form.register("carrier");
+  const stepper = useMultiStepForm({
+    finalValidationMessage: "Перевірте дані доставки перед підтвердженням",
+    form,
+    steps: deliveryFormSteps,
+    validationMessage: "Перевірте поля цього кроку",
+  });
+  const isBusy = isPending || isSubmitting;
 
   useEffect(() => {
     const query = cityQuery.trim();
@@ -125,6 +211,12 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
   }, [carrier, selectedCityId, warehouseQuery]);
 
   function onSubmit(values: DeliveryFormValues) {
+    if (submitLockRef.current || isConfirmed) {
+      return;
+    }
+
+    submitLockRef.current = true;
+    setIsSubmitting(true);
     setServerMessage(null);
 
     startTransition(() => {
@@ -136,19 +228,47 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
           router.refresh();
 
           if (result.paymentRedirectUrl) {
-            window.location.assign(result.paymentRedirectUrl);
+            if (navigateToPayment) {
+              navigateToPayment(result.paymentRedirectUrl);
+            } else {
+              window.location.assign(result.paymentRedirectUrl);
+            }
           }
 
           return;
         }
 
+        submitLockRef.current = false;
+        setIsSubmitting(false);
+
         for (const [field, messages] of Object.entries(
           result.fieldErrors ?? {},
         )) {
-          form.setError(field as keyof DeliveryFormValues, {
-            message: messages[0],
+          const message = messages[0];
+          const fieldPath = fieldPathFromServerField(field);
+
+          if (!message || !fieldPath) {
+            continue;
+          }
+
+          form.setError(fieldPath, {
+            message,
             type: "server",
           });
+        }
+
+        const firstServerField = firstServerErrorField(result.fieldErrors);
+
+        if (firstServerField) {
+          const fieldPath = fieldPathFromServerField(firstServerField);
+
+          stepper.setCurrentStepIndex(stepIndexForField(firstServerField));
+
+          if (fieldPath) {
+            window.setTimeout(() => {
+              form.setFocus(fieldPath);
+            }, 0);
+          }
         }
       });
     });
@@ -174,6 +294,24 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
     setWarehouses([]);
   }
 
+  function updateCityQuery(value: string) {
+    form.setValue("cityId", "", { shouldValidate: true });
+    form.setValue("cityName", "");
+    form.setValue("warehouseAddress", "");
+    form.setValue("warehouseId", "");
+    form.setValue("warehouseName", "");
+    setCityQuery(value);
+    setWarehouseQuery("");
+    setWarehouses([]);
+  }
+
+  function updateWarehouseQuery(value: string) {
+    form.setValue("warehouseAddress", "");
+    form.setValue("warehouseId", "", { shouldValidate: true });
+    form.setValue("warehouseName", "");
+    setWarehouseQuery(value);
+  }
+
   function resetDeliverySelection() {
     form.setValue("cityId", "");
     form.setValue("cityName", "");
@@ -184,21 +322,39 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
     setWarehouseQuery("");
     setCities([]);
     setWarehouses([]);
+    setCityStatus("idle");
+    setWarehouseStatus("idle");
+  }
+
+  function resetWarehouseSelection() {
+    form.setValue("warehouseAddress", "");
+    form.setValue("warehouseId", "");
+    form.setValue("warehouseName", "");
+    setWarehouseQuery("");
+    setWarehouses([]);
+    setWarehouseStatus("idle");
+    focusElement("delivery-warehouse");
+  }
+
+  function resetCitySelection() {
+    resetDeliverySelection();
+    focusElement("delivery-city");
   }
 
   return (
     <form
-      className="grid min-w-0 gap-6"
+      className="grid min-w-0 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-6"
       noValidate
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={stepper.handleSubmit(onSubmit)}
     >
       {serverMessage ? (
         <p
-          className={
+          className={cn(
+            "rounded-md border px-3 py-2 text-sm lg:col-span-2",
             isConfirmed
-              ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
-              : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          }
+              ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+              : "border-destructive/30 bg-destructive/10 text-destructive",
+          )}
           aria-live="polite"
           role={isConfirmed ? "status" : "alert"}
         >
@@ -206,231 +362,389 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         </p>
       ) : null}
 
-      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
-        <div className="grid gap-2">
-          <label className="text-sm font-medium" htmlFor="delivery-full-name">
-            Повне ім’я
-          </label>
-          <input
-            aria-describedby={
-              form.formState.errors.fullName
-                ? "delivery-full-name-error"
-                : undefined
-            }
-            aria-invalid={Boolean(form.formState.errors.fullName)}
-            autoComplete="name"
-            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            id="delivery-full-name"
-            placeholder="Ім’я та прізвище"
-            {...form.register("fullName")}
-          />
-          <FieldError
-            id="delivery-full-name-error"
-            message={form.formState.errors.fullName?.message}
-          />
-        </div>
+      <input type="hidden" {...form.register("cityId")} />
+      <input type="hidden" {...form.register("cityName")} />
+      <input type="hidden" {...form.register("warehouseAddress")} />
+      <input type="hidden" {...form.register("warehouseId")} />
+      <input type="hidden" {...form.register("warehouseName")} />
 
-        <div className="grid gap-2">
-          <label className="text-sm font-medium" htmlFor="delivery-phone">
-            Телефон
-          </label>
-          <input
-            aria-describedby={
-              form.formState.errors.phone ? "delivery-phone-error" : undefined
-            }
-            aria-invalid={Boolean(form.formState.errors.phone)}
-            autoComplete="tel"
-            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            id="delivery-phone"
-            inputMode="tel"
-            placeholder="+380XXXXXXXXX"
-            type="tel"
-            {...form.register("phone")}
-          />
-          <FieldError
-            id="delivery-phone-error"
-            message={form.formState.errors.phone?.message}
-          />
-        </div>
-      </section>
+      <Stepper
+        className="lg:sticky lg:top-24"
+        currentStepIndex={stepper.currentStepIndex}
+        steps={deliveryFormSteps}
+      />
 
-      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
-        <div className="grid gap-2">
-          <label className="text-sm font-medium" htmlFor="delivery-carrier">
-            Служба доставки
-          </label>
-          <select
-            aria-describedby={
-              form.formState.errors.carrier
-                ? "delivery-carrier-error"
-                : undefined
-            }
-            aria-invalid={Boolean(form.formState.errors.carrier)}
-            autoComplete="off"
-            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            id="delivery-carrier"
-            {...carrierField}
-            onChange={(event) => {
-              void carrierField.onChange(event);
-              resetDeliverySelection();
-            }}
-          >
-            {activeShippingCarriers.map((deliveryCarrier) => (
-              <option key={deliveryCarrier.code} value={deliveryCarrier.code}>
-                {deliveryCarrier.label}
-              </option>
-            ))}
-          </select>
-          <FieldError
-            id="delivery-carrier-error"
-            message={form.formState.errors.carrier?.message}
-          />
-        </div>
+      <div className="grid min-w-0 gap-4">
+        <StepCard
+          description={stepper.currentStep.description}
+          errorMessage={stepper.stepErrorMessage}
+          headingRef={stepper.headingRef}
+          title={stepper.currentStep.title}
+        >
+          {stepper.currentStep.id === "contacts" ? (
+            <section className="grid min-w-0 gap-4">
+              <div className="grid min-w-0 gap-2">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="delivery-full-name"
+                >
+                  Повне ім’я
+                </label>
+                <input
+                  aria-describedby={
+                    form.formState.errors.fullName
+                      ? "delivery-full-name-error"
+                      : undefined
+                  }
+                  aria-invalid={Boolean(form.formState.errors.fullName)}
+                  autoComplete="name"
+                  className={inputClassName}
+                  id="delivery-full-name"
+                  placeholder="Ім’я та прізвище"
+                  {...form.register("fullName")}
+                />
+                <FieldError
+                  id="delivery-full-name-error"
+                  message={form.formState.errors.fullName?.message}
+                />
+              </div>
 
-        <input type="hidden" {...form.register("cityId")} />
-        <input type="hidden" {...form.register("cityName")} />
-        <input type="hidden" {...form.register("warehouseAddress")} />
-        <input type="hidden" {...form.register("warehouseId")} />
-        <input type="hidden" {...form.register("warehouseName")} />
-
-        <div className="grid gap-2">
-          <label className="text-sm font-medium" htmlFor="delivery-city">
-            Місто або населений пункт
-          </label>
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
-            />
-            <input
-              aria-describedby={
-                form.formState.errors.cityId ? "delivery-city-error" : undefined
-              }
-              aria-invalid={Boolean(form.formState.errors.cityId)}
-              autoComplete="address-level2"
-              className="h-11 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              id="delivery-city"
-              onChange={(event) => {
-                form.setValue("cityId", "", { shouldValidate: true });
-                form.setValue("cityName", "");
-                setCityQuery(event.target.value);
-              }}
-              placeholder="Введіть назву міста"
-              value={cityQuery}
-            />
-          </div>
-          <FieldError
-            id="delivery-city-error"
-            message={form.formState.errors.cityId?.message}
-          />
-          {!selectedCityId ? (
-            <LookupResults
-              emptyMessage="Місто не знайдено"
-              errorMessage="Не вдалося завантажити міста"
-              loadingMessage="Пошук міст…"
-              onSelect={selectCity}
-              renderItem={(city) => (
-                <>
-                  <span>{city.name}</span>
-                  {city.region ? (
-                    <span className="text-muted-foreground">{city.region}</span>
-                  ) : null}
-                </>
-              )}
-              results={cities}
-              status={cityStatus}
-            />
+              <div className="grid min-w-0 gap-2">
+                <label className="text-sm font-medium" htmlFor="delivery-phone">
+                  Телефон
+                </label>
+                <input
+                  aria-describedby={
+                    form.formState.errors.phone
+                      ? "delivery-phone-error"
+                      : undefined
+                  }
+                  aria-invalid={Boolean(form.formState.errors.phone)}
+                  autoComplete="tel"
+                  className={inputClassName}
+                  id="delivery-phone"
+                  inputMode="tel"
+                  placeholder="+380XXXXXXXXX"
+                  type="tel"
+                  {...form.register("phone")}
+                />
+                <FieldError
+                  id="delivery-phone-error"
+                  message={form.formState.errors.phone?.message}
+                />
+              </div>
+            </section>
           ) : null}
-        </div>
 
-        <div className="grid gap-2">
-          <label className="text-sm font-medium" htmlFor="delivery-warehouse">
-            Відділення або поштове відділення
-          </label>
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
-            />
-            <input
-              aria-describedby={
-                form.formState.errors.warehouseId
-                  ? "delivery-warehouse-error"
-                  : undefined
-              }
-              aria-invalid={Boolean(form.formState.errors.warehouseId)}
-              autoComplete="off"
-              className="h-11 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              disabled={!selectedCityId}
-              id="delivery-warehouse"
-              onChange={(event) => {
-                form.setValue("warehouseAddress", "");
-                form.setValue("warehouseId", "", { shouldValidate: true });
-                form.setValue("warehouseName", "");
-                setWarehouseQuery(event.target.value);
-              }}
-              placeholder="Введіть номер або адресу"
-              value={warehouseQuery}
-            />
-          </div>
-          <FieldError
-            id="delivery-warehouse-error"
-            message={form.formState.errors.warehouseId?.message}
-          />
-          {!selectedWarehouseId ? (
-            <LookupResults
-              emptyMessage="Відділення не знайдено"
-              errorMessage="Не вдалося завантажити відділення"
-              loadingMessage="Пошук відділень…"
-              onSelect={selectWarehouse}
-              renderItem={(warehouse) => (
-                <>
-                  <span>{warehouse.name}</span>
-                  {warehouse.address ? (
-                    <span className="text-muted-foreground">
-                      {warehouse.address}
+          {stepper.currentStep.id === "delivery" ? (
+            <section className="grid min-w-0 gap-5">
+              <div className="grid min-w-0 gap-2">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="delivery-carrier"
+                >
+                  Служба доставки
+                </label>
+                <select
+                  aria-describedby={
+                    form.formState.errors.carrier
+                      ? "delivery-carrier-error"
+                      : undefined
+                  }
+                  aria-invalid={Boolean(form.formState.errors.carrier)}
+                  autoComplete="off"
+                  className={inputClassName}
+                  id="delivery-carrier"
+                  {...carrierField}
+                  onChange={(event) => {
+                    void carrierField.onChange(event);
+                    resetDeliverySelection();
+                  }}
+                >
+                  {activeShippingCarriers.map((deliveryCarrier) => (
+                    <option
+                      key={deliveryCarrier.code}
+                      value={deliveryCarrier.code}
+                    >
+                      {deliveryCarrier.label}
+                    </option>
+                  ))}
+                </select>
+                <FieldError
+                  id="delivery-carrier-error"
+                  message={form.formState.errors.carrier?.message}
+                />
+              </div>
+
+              <div className="grid min-w-0 gap-2">
+                <label className="text-sm font-medium" htmlFor="delivery-city">
+                  Місто або населений пункт
+                </label>
+                <div className="relative min-w-0">
+                  <Search
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <input
+                    aria-describedby={
+                      form.formState.errors.cityId
+                        ? "delivery-city-error"
+                        : undefined
+                    }
+                    aria-invalid={Boolean(form.formState.errors.cityId)}
+                    autoComplete="address-level2"
+                    className={cn(inputClassName, "pl-10")}
+                    id="delivery-city"
+                    onChange={(event) => updateCityQuery(event.target.value)}
+                    placeholder="Введіть назву міста"
+                    value={cityQuery}
+                  />
+                </div>
+                <FieldError
+                  id="delivery-city-error"
+                  message={form.formState.errors.cityId?.message}
+                />
+                {selectedCityId ? (
+                  <SelectedLookupSummary
+                    actionLabel="Змінити місто"
+                    meta={carrierLabelForValue(carrier)}
+                    onReset={resetCitySelection}
+                    title="Обране місто"
+                    value={formValues.cityName}
+                  />
+                ) : cityQuery.trim().length < 2 ? (
+                  <LookupIdleMessage message="Введіть щонайменше 2 символи, щоб знайти місто." />
+                ) : (
+                  <LookupResults
+                    emptyMessage="Місто не знайдено"
+                    errorMessage="Не вдалося завантажити міста"
+                    loadingMessage="Пошук міст…"
+                    onSelect={selectCity}
+                    renderItem={(city) => (
+                      <>
+                        <span className="break-words font-medium">
+                          {city.name}
+                        </span>
+                        {city.region ? (
+                          <span className="break-words text-muted-foreground">
+                            {city.region}
+                          </span>
+                        ) : null}
+                      </>
+                    )}
+                    results={cities}
+                    status={cityStatus}
+                  />
+                )}
+              </div>
+
+              <div className="grid min-w-0 gap-2">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="delivery-warehouse"
+                >
+                  Відділення або поштове відділення
+                </label>
+                <div className="relative min-w-0">
+                  <Search
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <input
+                    aria-describedby={
+                      form.formState.errors.warehouseId
+                        ? "delivery-warehouse-error"
+                        : undefined
+                    }
+                    aria-invalid={Boolean(form.formState.errors.warehouseId)}
+                    autoComplete="off"
+                    className={cn(inputClassName, "pl-10")}
+                    disabled={!selectedCityId}
+                    id="delivery-warehouse"
+                    onChange={(event) =>
+                      updateWarehouseQuery(event.target.value)
+                    }
+                    placeholder="Введіть номер або адресу"
+                    value={warehouseQuery}
+                  />
+                </div>
+                <FieldError
+                  id="delivery-warehouse-error"
+                  message={form.formState.errors.warehouseId?.message}
+                />
+                {selectedWarehouseId ? (
+                  <SelectedLookupSummary
+                    actionLabel="Змінити відділення"
+                    meta={formValues.warehouseAddress}
+                    onReset={resetWarehouseSelection}
+                    title="Обране відділення"
+                    value={formValues.warehouseName}
+                  />
+                ) : !selectedCityId ? (
+                  <LookupIdleMessage message="Спочатку оберіть місто." />
+                ) : (
+                  <LookupResults
+                    emptyMessage="Відділення не знайдено"
+                    errorMessage="Не вдалося завантажити відділення"
+                    loadingMessage="Пошук відділень…"
+                    onSelect={selectWarehouse}
+                    renderItem={(warehouse) => (
+                      <>
+                        <span className="break-words font-medium">
+                          {warehouse.name}
+                        </span>
+                        {warehouse.address ? (
+                          <span className="break-words text-muted-foreground">
+                            {warehouse.address}
+                          </span>
+                        ) : null}
+                      </>
+                    )}
+                    results={warehouses}
+                    status={warehouseStatus}
+                  />
+                )}
+              </div>
+
+              <DeliverySummary values={formValues} />
+            </section>
+          ) : null}
+
+          {stepper.currentStep.id === "payment" ? (
+            <fieldset className="grid min-w-0 gap-3">
+              <legend className="sr-only">Спосіб оплати</legend>
+              {paymentMethodOptions.map((option) => {
+                const checked = formValues.paymentMethod === option.value;
+                const descriptionId = `delivery-payment-${option.value}-description`;
+
+                return (
+                  <label
+                    className={cn(
+                      "grid min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-md border border-border/80 bg-background p-4 transition-colors",
+                      checked
+                        ? "border-primary bg-primary/10"
+                        : "hover:border-accent hover:bg-accent/20",
+                    )}
+                    htmlFor={`delivery-payment-${option.value}`}
+                    key={option.value}
+                  >
+                    <input
+                      aria-describedby={descriptionId}
+                      className="mt-1 size-5 shrink-0 rounded-full border-input"
+                      id={`delivery-payment-${option.value}`}
+                      type="radio"
+                      value={option.value}
+                      {...form.register("paymentMethod")}
+                    />
+                    <span className="grid min-w-0 gap-1">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <PaymentIcon value={option.value} />
+                        <span className="break-words text-sm font-semibold">
+                          {option.label}
+                        </span>
+                        {checked ? (
+                          <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground">
+                            <Check aria-hidden="true" className="size-3.5" />
+                            Обрано
+                          </span>
+                        ) : null}
+                      </span>
+                      <span
+                        className="text-sm leading-6 text-muted-foreground"
+                        id={descriptionId}
+                      >
+                        {option.description}
+                      </span>
                     </span>
-                  ) : null}
-                </>
-              )}
-              results={warehouses}
-              status={warehouseStatus}
-            />
+                  </label>
+                );
+              })}
+              <FieldError
+                id="delivery-payment-error"
+                message={form.formState.errors.paymentMethod?.message}
+              />
+            </fieldset>
           ) : null}
-        </div>
-      </section>
 
-      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
-        <div className="grid gap-2">
-          <label className="text-sm font-medium" htmlFor="delivery-payment">
-            Спосіб оплати
-          </label>
-          <select
-            aria-describedby={
-              form.formState.errors.paymentMethod
-                ? "delivery-payment-error"
-                : undefined
-            }
-            aria-invalid={Boolean(form.formState.errors.paymentMethod)}
-            autoComplete="off"
-            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            id="delivery-payment"
-            {...form.register("paymentMethod")}
-          >
-            <option value="MONOBANK">MonoPay</option>
-            <option value="CASH_ON_DELIVERY">Післяплата</option>
-          </select>
-          <FieldError
-            id="delivery-payment-error"
-            message={form.formState.errors.paymentMethod?.message}
-          />
-        </div>
-      </section>
+          {stepper.currentStep.id === "review" ? (
+            <section className="grid min-w-0 gap-4">
+              <FormSummaryCard
+                items={[
+                  {
+                    id: "full-name",
+                    label: "Отримувач",
+                    value: summaryText(formValues.fullName),
+                  },
+                  {
+                    id: "phone",
+                    label: "Телефон",
+                    value: summaryText(formValues.phone),
+                  },
+                ]}
+                title="Контакти"
+              />
+              <FormSummaryCard
+                items={[
+                  {
+                    id: "carrier",
+                    label: "Служба доставки",
+                    value: carrierLabelForValue(formValues.carrier),
+                  },
+                  {
+                    id: "city",
+                    label: "Місто",
+                    value: summaryText(formValues.cityName),
+                  },
+                  {
+                    id: "warehouse",
+                    label: "Відділення",
+                    value: (
+                      <span className="grid min-w-0 gap-1">
+                        <span>{summaryText(formValues.warehouseName)}</span>
+                        {formValues.warehouseAddress ? (
+                          <span className="text-muted-foreground">
+                            {formValues.warehouseAddress}
+                          </span>
+                        ) : null}
+                      </span>
+                    ),
+                  },
+                ]}
+                title="Доставка"
+              />
+              <FormSummaryCard
+                items={[
+                  {
+                    id: "payment",
+                    label: "Спосіб оплати",
+                    value: selectedPaymentOption.label,
+                  },
+                  {
+                    id: "payment-note",
+                    label: "Умови",
+                    value: selectedPaymentOption.description,
+                  },
+                ]}
+                title="Оплата"
+              />
+            </section>
+          ) : null}
+        </StepCard>
 
-      <Button disabled={isPending || isConfirmed} type="submit">
-        <CheckCircle2 aria-hidden="true" className="size-4" />
-        {isPending ? "Підтвердження…" : "Підтвердити замовлення"}
-      </Button>
+        <StepActions
+          isFirstStep={stepper.isFirstStep}
+          isLastStep={stepper.isLastStep}
+          isPending={isBusy || isConfirmed}
+          onBack={stepper.goBack}
+          onNext={stepper.goNext}
+          submitLabel={
+            <>
+              <CheckCircle2 aria-hidden="true" className="size-4" />
+              {isBusy ? "Підтвердження…" : "Підтвердити замовлення"}
+            </>
+          }
+        />
+      </div>
     </form>
   );
 }
@@ -458,7 +772,10 @@ function LookupResults<T>({
 
   if (status === "loading") {
     return (
-      <p aria-live="polite" className="text-sm text-muted-foreground">
+      <p
+        aria-live="polite"
+        className="rounded-md border border-dashed p-3 text-sm text-muted-foreground"
+      >
         {loadingMessage}
       </p>
     );
@@ -466,7 +783,11 @@ function LookupResults<T>({
 
   if (status === "error") {
     return (
-      <p aria-live="polite" className="text-sm text-destructive" role="alert">
+      <p
+        aria-live="polite"
+        className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+        role="alert"
+      >
         {errorMessage}
       </p>
     );
@@ -474,17 +795,20 @@ function LookupResults<T>({
 
   if (!results.length) {
     return (
-      <p aria-live="polite" className="text-sm text-muted-foreground">
+      <p
+        aria-live="polite"
+        className="rounded-md border border-dashed p-3 text-sm text-muted-foreground"
+      >
         {emptyMessage}
       </p>
     );
   }
 
   return (
-    <div className="grid gap-2 rounded-md border border-border/80 bg-background p-2 shadow-sm">
+    <div className="grid min-w-0 gap-2 rounded-md border border-border/80 bg-background p-2 shadow-sm">
       {results.map((result, index) => (
         <button
-          className="grid min-h-11 gap-1 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="grid min-h-14 min-w-0 gap-1 rounded-md px-3 py-3 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           key={index}
           onClick={() => onSelect(result)}
           type="button"
@@ -494,6 +818,111 @@ function LookupResults<T>({
       ))}
     </div>
   );
+}
+
+function LookupIdleMessage({ message }: { message: string }) {
+  return (
+    <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+      {message}
+    </p>
+  );
+}
+
+function SelectedLookupSummary({
+  actionLabel,
+  meta,
+  onReset,
+  title,
+  value,
+}: {
+  actionLabel: string;
+  meta?: string | null;
+  onReset: () => void;
+  title: string;
+  value: string;
+}) {
+  return (
+    <div className="grid min-w-0 gap-3 rounded-md border border-primary/30 bg-primary/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="grid min-w-0 gap-1">
+        <p className="text-xs font-medium uppercase text-muted-foreground">
+          {title}
+        </p>
+        <p className="break-words text-sm font-semibold">{value}</p>
+        {meta ? (
+          <p className="break-words text-sm text-muted-foreground">{meta}</p>
+        ) : null}
+      </div>
+      <Button
+        className="w-full sm:w-auto"
+        onClick={onReset}
+        type="button"
+        variant="outline"
+      >
+        <RotateCcw aria-hidden="true" className="size-4" />
+        {actionLabel}
+      </Button>
+    </div>
+  );
+}
+
+function DeliverySummary({ values }: { values: DeliveryFormValues }) {
+  const hasDelivery = values.cityName && values.warehouseName;
+
+  return (
+    <FormSummaryCard
+      items={
+        hasDelivery
+          ? [
+              {
+                id: "carrier",
+                label: "Служба доставки",
+                value: carrierLabelForValue(values.carrier),
+              },
+              {
+                id: "city",
+                label: "Місто",
+                value: values.cityName,
+              },
+              {
+                id: "warehouse",
+                label: "Відділення",
+                value: (
+                  <span className="grid min-w-0 gap-1">
+                    <span>{values.warehouseName}</span>
+                    {values.warehouseAddress ? (
+                      <span className="text-muted-foreground">
+                        {values.warehouseAddress}
+                      </span>
+                    ) : null}
+                  </span>
+                ),
+              },
+            ]
+          : []
+      }
+      title="Підсумок доставки"
+    >
+      {!hasDelivery ? (
+        <p className="text-sm text-muted-foreground">
+          Оберіть місто та відділення, щоб побачити підсумок доставки.
+        </p>
+      ) : null}
+    </FormSummaryCard>
+  );
+}
+
+function PaymentIcon({
+  value,
+}: {
+  value: (typeof paymentMethodOptions)[number]["value"];
+}) {
+  if (value === "MONOBANK") {
+    return (
+      <CreditCard aria-hidden="true" className="size-4 text-muted-foreground" />
+    );
+  }
+
+  return <Banknote aria-hidden="true" className="size-4 text-muted-foreground" />;
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -506,4 +935,61 @@ function FieldError({ id, message }: { id: string; message?: string }) {
       {message}
     </p>
   );
+}
+
+function summaryText(value: string) {
+  return value.trim() || "Не вказано";
+}
+
+function carrierLabelForValue(value: string) {
+  return (
+    activeShippingCarriers.find((carrier) => carrier.code === value)?.label ??
+    "Не вибрано"
+  );
+}
+
+function firstServerErrorField(fieldErrors?: Record<string, string[]>) {
+  if (!fieldErrors) {
+    return null;
+  }
+
+  return (
+    Object.entries(fieldErrors).find(([, messages]) =>
+      messages.some(Boolean),
+    )?.[0] ?? null
+  );
+}
+
+function fieldPathFromServerField(
+  field: string,
+): FieldPath<DeliveryFormValues> | null {
+  if (
+    field === "carrier" ||
+    field === "cityId" ||
+    field === "cityName" ||
+    field === "fullName" ||
+    field === "paymentMethod" ||
+    field === "phone" ||
+    field === "warehouseAddress" ||
+    field === "warehouseId" ||
+    field === "warehouseName"
+  ) {
+    return field;
+  }
+
+  return null;
+}
+
+function stepIndexForField(field: string) {
+  const stepIndex = deliveryFormSteps.findIndex((step) =>
+    step.fields.some((stepField) => stepField === field),
+  );
+
+  return stepIndex >= 0 ? stepIndex : deliveryFormSteps.length - 1;
+}
+
+function focusElement(id: string) {
+  window.setTimeout(() => {
+    document.getElementById(id)?.focus();
+  }, 0);
 }

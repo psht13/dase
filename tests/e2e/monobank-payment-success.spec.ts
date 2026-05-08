@@ -39,11 +39,15 @@ test("customer completes a mocked MonoPay payment success flow", async ({
     .click();
   await page.getByLabel("Повне ім’я").fill("Олена Петренко");
   await page.getByLabel("Телефон").fill("+380671234567");
+  await page.getByRole("button", { name: "Далі" }).click();
   await page.getByLabel("Місто або населений пункт").fill("Київ");
   await page.getByRole("button", { name: /Київ.*Київська область/ }).click();
   await page.getByLabel("Відділення або поштове відділення").fill("1");
   await page.getByRole("button", { name: /Відділення №1/ }).click();
-  await page.getByLabel("Спосіб оплати").selectOption("MONOBANK");
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(page.getByRole("radio", { name: /MonoPay/ })).toBeChecked();
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();
 
   await page.waitForURL(/payment=monobank/);

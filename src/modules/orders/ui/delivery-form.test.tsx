@@ -14,41 +14,82 @@ describe("DeliveryForm", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders Ukrainian labels and validation messages", async () => {
+  it("renders Ukrainian step navigation and validates contacts first", async () => {
     const user = userEvent.setup();
     const action = vi.fn();
 
     render(<DeliveryForm action={action} />);
 
+    expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
+    expect(screen.getAllByText("Крок 1 з 4")[0]).toBeVisible();
+    expect(screen.getByText("Доставка")).toBeVisible();
+    expect(screen.getByText("Оплата")).toBeVisible();
+    expect(screen.getByText("Перевірка")).toBeVisible();
     expect(screen.getByLabelText("Повне ім’я")).toBeVisible();
-    expect(screen.getByLabelText("Телефон")).toBeVisible();
-    expect(screen.getByLabelText("Служба доставки")).toBeVisible();
-    expect(screen.getByRole("option", { name: "Нова пошта" })).toBeVisible();
-    expect(screen.queryByRole("option", { name: /Укрпошта/ })).toBeNull();
-    expect(screen.getByLabelText("Місто або населений пункт")).toBeVisible();
-    expect(
-      screen.getByLabelText("Відділення або поштове відділення"),
-    ).toBeVisible();
-    expect(screen.getByLabelText("Спосіб оплати")).toBeVisible();
+    expect(screen.queryByLabelText("Служба доставки")).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Підтвердити замовлення" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Далі" }));
 
     expect(await screen.findByText("Вкажіть ім’я та прізвище")).toBeVisible();
     expect(
       screen.getByText("Вкажіть телефон у форматі +380XXXXXXXXX"),
     ).toBeVisible();
-    expect(screen.getByText("Оберіть місто зі списку")).toBeVisible();
-    expect(screen.getByText("Оберіть відділення зі списку")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
     expect(action).not.toHaveBeenCalled();
   });
 
-  it("submits selected carrier directory DTOs to the action", async () => {
+  it("navigates between contact and delivery steps", async () => {
     const user = userEvent.setup();
+
+    render(<DeliveryForm action={vi.fn()} />);
+
+    await fillContacts(user);
+    await user.click(screen.getByRole("button", { name: "Далі" }));
+
+    expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
+    expect(screen.getByLabelText("Служба доставки")).toHaveValue(
+      "NOVA_POSHTA",
+    );
+    expect(screen.getByRole("option", { name: "Нова пошта" })).toBeVisible();
+    expect(screen.queryByRole("option", { name: /Укрпошта/ })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+
+    expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
+    expect(screen.getByLabelText("Повне ім’я")).toHaveValue("Олена Петренко");
+  });
+
+  it("keeps city and warehouse lookup selection mobile-friendly", async () => {
+    const user = userEvent.setup();
+    stubCarrierLookup();
+
+    render(<DeliveryForm action={vi.fn()} />);
+
+    await fillContacts(user);
+    await user.click(screen.getByRole("button", { name: "Далі" }));
+    await selectDelivery(user);
+
+    expect(screen.getByText("Обране місто")).toBeVisible();
+    expect(screen.getAllByText("Київ")[0]).toBeVisible();
+    expect(screen.getByText("Обране відділення")).toBeVisible();
+    expect(screen.getAllByText("Відділення №1")[0]).toBeVisible();
+    expect(screen.getAllByText("вул. Хрещатик, 1")[0]).toBeVisible();
+    expect(screen.getByText("Підсумок доставки")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Змінити відділення" }));
+
+    expect(screen.getByLabelText("Відділення або поштове відділення")).toHaveValue(
+      "",
+    );
+    expect(screen.queryByText("Обране відділення")).not.toBeInTheDocument();
+  });
+
+  it("shows the payment step and final review before cash confirmation", async () => {
+    const user = userEvent.setup();
+    const submittedForms: FormData[] = [];
     const action = vi.fn(
       async (formData: FormData): Promise<DeliveryActionResult> => {
-        expect(formData).toBeInstanceOf(FormData);
+        submittedForms.push(formData);
 
         return {
           message: "Замовлення підтверджено. Оплата при отриманні.",
@@ -56,70 +97,134 @@ describe("DeliveryForm", () => {
         };
       },
     );
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
-        if (url.includes("/api/carriers/cities")) {
-          return jsonResponse({
-            cities: [
-              { id: "city-1", name: "Київ", region: "Київська область" },
-            ],
-          });
-        }
-
-        return jsonResponse({
-          warehouses: [
-            {
-              address: "вул. Хрещатик, 1",
-              cityId: "city-1",
-              id: "warehouse-1",
-              name: "Відділення №1",
-              number: "1",
-              type: "warehouse",
-            },
-          ],
-        });
-      }),
-    );
+    stubCarrierLookup();
 
     render(<DeliveryForm action={action} />);
 
-    await user.type(screen.getByLabelText("Повне ім’я"), "Олена Петренко");
-    await user.clear(screen.getByLabelText("Телефон"));
-    await user.type(screen.getByLabelText("Телефон"), "+380671234567");
-    await user.type(screen.getByLabelText("Місто або населений пункт"), "Київ");
-    await user.click(
-      await screen.findByRole("button", { name: /Київ.*Київська область/ }),
+    await completeDeliveryStep(user);
+    await user.click(screen.getByRole("button", { name: "Далі" }));
+
+    expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
+    expect(screen.getByRole("radio", { name: /MonoPay/ })).toBeChecked();
+    expect(screen.getByText(/Далі відкриється сторінка MonoPay/)).toBeVisible();
+
+    await user.click(screen.getByRole("radio", { name: /Післяплата/ }));
+    await user.click(screen.getByRole("button", { name: "Далі" }));
+
+    expect(screen.getByRole("heading", { name: "Перевірка" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
+    expect(screen.getByText("Олена Петренко")).toBeVisible();
+    expect(screen.getByText("Післяплата")).toBeVisible();
+
+    await user.dblClick(
+      screen.getByRole("button", { name: "Підтвердити замовлення" }),
     );
-    await waitFor(() =>
-      expect(screen.queryByText("Місто не знайдено")).not.toBeInTheDocument(),
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const formData = submittedForms[0];
+
+    expect(formData?.get("cityId")).toBe("city-1");
+    expect(formData?.get("warehouseId")).toBe("warehouse-1");
+    expect(formData?.get("paymentMethod")).toBe("CASH_ON_DELIVERY");
+    expect(
+      await screen.findByText("Замовлення підтверджено. Оплата при отриманні."),
+    ).toBeVisible();
+  });
+
+  it("redirects to MonoPay when the existing action returns a payment URL", async () => {
+    const user = userEvent.setup();
+    const navigateToPayment = vi.fn();
+    const submittedForms: FormData[] = [];
+    const action = vi.fn(
+      async (formData: FormData): Promise<DeliveryActionResult> => {
+        submittedForms.push(formData);
+
+        return {
+          message: "Замовлення підтверджено. Переходимо до оплати MonoPay.",
+          ok: true,
+          paymentRedirectUrl: "https://pay.example.test/invoice-1",
+        };
+      },
     );
-    await user.click(
-      await screen.findByRole("button", { name: /Відділення №1/ }),
+    stubCarrierLookup();
+
+    render(
+      <DeliveryForm action={action} navigateToPayment={navigateToPayment} />,
     );
-    await waitFor(() =>
-      expect(
-        screen.queryByText("Відділення не знайдено"),
-      ).not.toBeInTheDocument(),
-    );
-    await user.selectOptions(screen.getByLabelText("Спосіб оплати"), [
-      "CASH_ON_DELIVERY",
-    ]);
+
+    await completeDeliveryStep(user);
+    await user.click(screen.getByRole("button", { name: "Далі" }));
+    await user.click(screen.getByRole("button", { name: "Далі" }));
     await user.click(
       screen.getByRole("button", { name: "Підтвердити замовлення" }),
     );
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
-    const formData = action.mock.calls[0][0];
-
-    expect(formData.get("cityId")).toBe("city-1");
-    expect(formData.get("warehouseId")).toBe("warehouse-1");
-    expect(formData.get("paymentMethod")).toBe("CASH_ON_DELIVERY");
+    expect(submittedForms[0]?.get("paymentMethod")).toBe("MONOBANK");
+    expect(navigateToPayment).toHaveBeenCalledWith(
+      "https://pay.example.test/invoice-1",
+    );
     expect(
-      await screen.findByText("Замовлення підтверджено. Оплата при отриманні."),
+      await screen.findByText(
+        "Замовлення підтверджено. Переходимо до оплати MonoPay.",
+      ),
     ).toBeVisible();
   });
 });
+
+async function completeDeliveryStep(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  await fillContacts(user);
+  await user.click(screen.getByRole("button", { name: "Далі" }));
+  await selectDelivery(user);
+}
+
+async function fillContacts(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText("Повне ім’я"), "Олена Петренко");
+  await user.clear(screen.getByLabelText("Телефон"));
+  await user.type(screen.getByLabelText("Телефон"), "+380671234567");
+}
+
+async function selectDelivery(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText("Місто або населений пункт"), "Київ");
+  await user.click(
+    await screen.findByRole("button", { name: /Київ.*Київська область/ }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: /Відділення №1/ }),
+  );
+}
+
+function stubCarrierLookup() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (url.includes("/api/carriers/cities")) {
+        return jsonResponse({
+          cities: [
+            { id: "city-1", name: "Київ", region: "Київська область" },
+          ],
+        });
+      }
+
+      return jsonResponse({
+        warehouses: [
+          {
+            address: "вул. Хрещатик, 1",
+            cityId: "city-1",
+            id: "warehouse-1",
+            name: "Відділення №1",
+            number: "1",
+            type: "warehouse",
+          },
+        ],
+      });
+    }),
+  );
+}
 
 function jsonResponse(body: unknown): Response {
   return {

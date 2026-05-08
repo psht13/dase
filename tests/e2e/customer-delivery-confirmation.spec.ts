@@ -42,22 +42,43 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
   await expect(
     page.getByRole("heading", { name: "Доставка та оплата" }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Контакти" })).toBeVisible();
+  await expect(page.getByText("Крок 1 з 4").first()).toBeVisible();
   await expect(page.getByLabel("Повне ім’я")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.getByLabel("Повне ім’я").fill("Олена Петренко");
+  await page.getByLabel("Телефон").fill("+380671234567");
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Доставка" }),
+  ).toBeVisible();
   await expect(page.getByLabel("Служба доставки")).toHaveValue("NOVA_POSHTA");
   await expect(page.locator("#delivery-carrier option")).toHaveText([
     "Нова пошта",
   ]);
   await expect(page.getByLabel("Місто або населений пункт")).toBeVisible();
-  await expect(page.getByLabel("Спосіб оплати")).toBeVisible();
   await expectNoHorizontalOverflow(page);
-
-  await page.getByLabel("Повне ім’я").fill("Олена Петренко");
-  await page.getByLabel("Телефон").fill("+380671234567");
   await page.getByLabel("Місто або населений пункт").fill("Київ");
   await page.getByRole("button", { name: /Київ.*Київська область/ }).click();
   await page.getByLabel("Відділення або поштове відділення").fill("1");
   await page.getByRole("button", { name: /Відділення №1/ }).click();
-  await page.getByLabel("Спосіб оплати").selectOption("CASH_ON_DELIVERY");
+  await expect(page.getByText("Підсумок доставки")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Змінити місто" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Оплата" }),
+  ).toBeVisible();
+  await page.getByRole("radio", { name: /Післяплата/ }).check();
+  await expectNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Перевірка" }),
+  ).toBeVisible();
+  await expect(page.getByText("Олена Петренко")).toBeVisible();
+  await expect(page.getByText("Післяплата")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();
 
   await expect(
