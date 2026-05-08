@@ -1,9 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { ProductTable } from "./product-table";
 import type { ProductRecord } from "@/modules/catalog/application/product-repository";
 
 describe("ProductTable", () => {
-  it("renders Ukrainian table labels and product status", () => {
+  it("renders compact Ukrainian desktop table hierarchy", () => {
     render(
       <ProductTable
         products={[createProduct({ isActive: true })]}
@@ -11,12 +11,46 @@ describe("ProductTable", () => {
       />,
     );
 
-    expect(screen.getByRole("columnheader", { name: "Назва" })).toBeVisible();
-    expect(screen.getByRole("columnheader", { name: "Артикул" })).toBeVisible();
-    expect(screen.getByRole("columnheader", { name: "Ціна" })).toBeVisible();
-    expect(screen.getByText("Активний")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Редагувати/i })).toBeVisible();
-    expect(screen.getByRole("button", { name: /Вимкнути/i })).toBeVisible();
+    const table = within(screen.getByTestId("product-desktop-table"));
+
+    expect(table.getByRole("columnheader", { name: "Товар" })).toBeVisible();
+    expect(
+      table.getByRole("columnheader", { name: "Ціна і залишок" }),
+    ).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Стан" })).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Дії" })).toBeVisible();
+    expect(
+      table.queryByRole("columnheader", { name: "Фото" }),
+    ).not.toBeInTheDocument();
+    expect(
+      table.queryByRole("columnheader", { name: "Артикул" }),
+    ).not.toBeInTheDocument();
+    expect(table.getByText("Каблучка")).toBeVisible();
+    expect(table.getByText("Артикул: RING-1")).toBeVisible();
+    expect(table.getByText("Залишок: 3")).toBeVisible();
+    expect(table.getByText("Активний")).toBeVisible();
+    expect(table.getByRole("link", { name: /Редагувати/i })).toBeVisible();
+    expect(table.getByRole("button", { name: /Вимкнути/i })).toBeVisible();
+  });
+
+  it("renders mobile product cards with key details and actions", () => {
+    render(
+      <ProductTable
+        products={[createProduct({ isActive: false })]}
+        toggleAction={vi.fn()}
+      />,
+    );
+
+    const card = within(screen.getByTestId("product-mobile-card"));
+
+    expect(card.getByRole("heading", { name: "Каблучка" })).toBeVisible();
+    expect(card.getByText("Артикул: RING-1")).toBeVisible();
+    expect(card.getByText(/120,00/)).toBeVisible();
+    expect(card.getByText("Залишок")).toBeVisible();
+    expect(card.getByText("3")).toBeVisible();
+    expect(card.getByText("Неактивний")).toBeVisible();
+    expect(card.getByRole("link", { name: /Редагувати/i })).toBeVisible();
+    expect(card.getByRole("button", { name: /Увімкнути/i })).toBeVisible();
   });
 
   it("renders a Ukrainian empty state", () => {

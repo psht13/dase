@@ -235,6 +235,16 @@ Mobile dashboard shell update on 2026-05-08:
 - Playwright coverage now includes a 360 px dashboard shell/logout check and a 360 px no-horizontal-overflow check for the public/auth/order pages.
 - Local Playwright E2E runs use one browser worker because the E2E-safe fallback repositories are process-global in the dev server; this keeps seeded owner/order flows deterministic.
 
+Responsive product and order list update on 2026-05-08:
+- `/dashboard/products` now renders mobile product cards below `lg` and a simplified desktop table at `lg` and wider.
+- Product cards show image, product name, SKU, active/inactive badge, price, stock, edit action, and active toggle action with comfortable mobile targets.
+- The desktop product table now groups image, name, and SKU into one primary product column, groups price and stock into one secondary column, and keeps status/action columns compact.
+- `/dashboard/orders` now renders mobile order cards below `lg` and a simplified desktop table at `lg` and wider.
+- Order cards show short order id, status badge, customer name/phone, total, date, delivery, payment, key tags, and the details action without horizontal table scrolling.
+- The desktop order table now groups date under the order id, phone under the customer, delivery/payment under status, and tags under the amount column while preserving existing filters and owner-only access.
+- Product/order reads still go through existing application use cases and repositories; no business logic, filters, roles, database schema, object storage, or external API behavior changed.
+- Component tests cover the compact desktop hierarchy and mobile card rendering for both lists. Playwright coverage checks `/dashboard/products` and `/dashboard/orders` at desktop and 390 px, plus no page-level horizontal overflow at phone widths.
+
 Ukrposhta active-MVP removal update on 2026-05-07:
 - Added a central shipping carrier registry at `src/modules/shipping/application/shipping-carrier-registry.ts`.
 - The active customer-facing carrier list contains only Nova Post with the Ukrainian label `Нова пошта`.

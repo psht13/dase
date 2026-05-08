@@ -96,10 +96,12 @@ test("product create and edit forms do not overflow at 360px", async ({
   await page.getByRole("button", { name: "Створити товар" }).click();
   await expect(page).toHaveURL(/\/dashboard\/products$/);
 
-  const productRow = page.getByRole("row", {
-    name: new RegExp(productName),
-  });
-  const editHref = await productRow
+  const productCard = page
+    .getByTestId("product-mobile-card")
+    .filter({ hasText: productName })
+    .first();
+  await expect(productCard).toBeVisible();
+  const editHref = await productCard
     .getByRole("link", { name: "Редагувати" })
     .getAttribute("href");
 

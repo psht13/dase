@@ -18,7 +18,9 @@ test("customer completes a mocked MonoPay payment success flow", async ({
     stock: "3",
   });
   await expect(page).toHaveURL(/\/dashboard\/products$/);
-  await expect(page.getByText(productName)).toBeVisible();
+  await expect(
+    page.getByTestId("product-desktop-table").getByText(productName),
+  ).toBeVisible();
 
   await page.goto("/dashboard/orders/new");
   await page.getByLabel(`Додати ${productName}`).check();

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { getCustomerRepository } from "@/modules/orders/infrastructure/customer-repository-factory";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { getOrderTagRepository } from "@/modules/orders/infrastructure/order-tag-repository-factory";
@@ -106,7 +106,8 @@ describe("OrdersPage", () => {
 
     expect(screen.getByRole("heading", { name: "Замовлення" })).toBeVisible();
     expect(screen.getByRole("link", { name: /Створити замовлення/i })).toBeVisible();
-    expect(screen.getByText("Олена Петренко")).toBeVisible();
-    expect(screen.getAllByText("Готується відправлення")[1]).toBeVisible();
+    const ordersTable = within(screen.getByTestId("owner-orders-desktop-table"));
+    expect(ordersTable.getByText("Олена Петренко")).toBeVisible();
+    expect(ordersTable.getByText("Готується відправлення")).toBeVisible();
   });
 });

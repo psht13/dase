@@ -30,8 +30,9 @@ test("owner creates an order link and the public page shows selected products", 
   });
 
   await expect(page).toHaveURL(/\/dashboard\/products$/);
-  await expect(page.getByText(productName)).toBeVisible();
-  await expect(page.getByText(secondProductName)).toBeVisible();
+  const productTable = page.getByTestId("product-desktop-table");
+  await expect(productTable.getByText(productName)).toBeVisible();
+  await expect(productTable.getByText(secondProductName)).toBeVisible();
 
   await page.setViewportSize({ height: 844, width: 390 });
   await page.goto("/dashboard/orders/new");

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ProductRecord } from "@/modules/catalog/application/product-repository";
 import { getProductRepository } from "@/modules/catalog/infrastructure/product-repository-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
@@ -30,8 +30,9 @@ describe("ProductsPage", () => {
       screen.getByRole("heading", { name: "Каталог товарів" }),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: /Створити товар/i })).toBeVisible();
-    expect(screen.getByText("Каблучка")).toBeVisible();
-    expect(screen.getByText("RING-1")).toBeVisible();
+    const productTable = within(screen.getByTestId("product-desktop-table"));
+    expect(productTable.getByText("Каблучка")).toBeVisible();
+    expect(productTable.getByText("Артикул: RING-1")).toBeVisible();
   });
 });
 

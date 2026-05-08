@@ -16,7 +16,9 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
     stock: "4",
   });
   await expect(page).toHaveURL(/\/dashboard\/products$/);
-  await expect(page.getByText(productName)).toBeVisible();
+  await expect(
+    page.getByTestId("product-desktop-table").getByText(productName),
+  ).toBeVisible();
 
   await page.goto("/dashboard/orders/new");
   await page.getByLabel(`Додати ${productName}`).check();

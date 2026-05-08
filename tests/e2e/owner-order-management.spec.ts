@@ -22,7 +22,9 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
     stock: "5",
   });
   await expect(page).toHaveURL(/\/dashboard\/products$/, { timeout: 15_000 });
-  await expect(page.getByText(productName)).toBeVisible();
+  await expect(
+    page.getByTestId("product-desktop-table").getByText(productName),
+  ).toBeVisible();
 
   await page.goto("/dashboard/orders/new");
   await page.getByLabel(`Додати ${productName}`).check();
@@ -58,13 +60,15 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
 
   await page.goto("/dashboard/orders");
   await expect(page.getByRole("heading", { name: "Замовлення" })).toBeVisible();
-  await expect(page.getByText(customerName)).toBeVisible();
+  await expect(
+    page.getByTestId("owner-orders-desktop-table").getByText(customerName),
+  ).toBeVisible();
   await page.getByLabel("Пошук").fill(customerPhone.replace(/\D/g, ""));
   await page.getByLabel("Служба доставки").selectOption("NOVA_POSHTA");
   await page.getByLabel("Спосіб оплати").selectOption("CASH_ON_DELIVERY");
   await page.getByRole("button", { name: "Застосувати фільтри" }).click();
-  await expect(page.getByText(customerName)).toBeVisible();
   const orderRow = page.getByRole("row", { name: new RegExp(customerName) });
+  await expect(orderRow).toBeVisible();
   await expect(orderRow.getByText("Готується відправлення")).toBeVisible();
 
   await orderRow.getByRole("link", { name: "Відкрити" }).click();
@@ -95,10 +99,9 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await page.goto("/dashboard/orders");
   await page.getByLabel("Тег").selectOption({ label: tagName });
   await page.getByRole("button", { name: "Застосувати фільтри" }).click();
-  await expect(page.getByText(customerName)).toBeVisible();
-  await expect(
-    page.getByRole("row", { name: new RegExp(customerName) }).getByText(tagName),
-  ).toBeVisible();
+  const taggedOrderRow = page.getByRole("row", { name: new RegExp(customerName) });
+  await expect(taggedOrderRow).toBeVisible();
+  await expect(taggedOrderRow.getByText(tagName)).toBeVisible();
 });
 
 async function createProduct(

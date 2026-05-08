@@ -116,9 +116,9 @@ Rules:
 - If a true wide data comparison must remain scrollable, label the region and ensure the scroll is inside the card only, not the document.
 
 Component targets:
-- `ProductTable`: render product cards on mobile; keep table on wide screens.
+- `ProductTable`: implemented with product cards below `lg` and a compact table on wide screens.
 - `OrderBuilderForm`: implemented as a four-step flow with selectable product cards, large quantity controls, review summary, and link result.
-- `OwnerOrdersTable`: render order summary cards on mobile; keep the table for wide screens.
+- `OwnerOrdersTable`: implemented with order summary cards below `lg` and a compact table on wide screens.
 - `OwnerOrderDetailsView`: convert product and audit tables into mobile cards or a timeline.
 
 ## Dashboard Navigation Behavior
@@ -219,16 +219,17 @@ Remaining plan:
 
 ### `/dashboard/products`
 
-Current state:
-- Table has `min-w-[760px]`; with sample content it rendered about 954 px.
-- The table is inside a horizontal scroll container at 360-768 px.
-- Table action buttons are about 36 px high.
+Current state after 2026-05-08 responsive list refactor:
+- The horizontal-scroll `min-w-[760px]` catalog table was replaced below `lg` with product cards.
+- Mobile product cards show image, name, SKU, price, stock, active/inactive badge, edit action, and active toggle action.
+- Card actions use full-width 44 px targets where practical; desktop actions remain grouped at the end of each row.
+- The desktop table remains semantic but now has four columns: `Товар`, `Ціна і залишок`, `Стан`, and `Дії`.
+- The product table component still receives products from the owner-scoped application read use case and still calls the existing product toggle server action.
+- External image URLs remain the only product image strategy; no upload or object storage behavior changed.
+- Component tests cover the desktop hierarchy and mobile card rendering. Playwright E2E checks `/dashboard/products` at 390 px and desktop with no page-level horizontal overflow.
 
-Plan:
-- Add a mobile product-card list for product image, name, SKU, price, stock, active state, and actions.
-- Keep the table for wide desktop.
-- Make edit/toggle actions full-width or 44 px high on mobile.
-- Preserve external image URL strategy only.
+Remaining plan:
+- Continue checking very long product names, SKUs, and image alt text in browser screenshots when catalog density changes.
 
 ### `/dashboard/products/new`
 
@@ -271,16 +272,16 @@ Remaining plan:
 
 ### `/dashboard/orders`
 
-Current state:
-- Filters occupy a long block on phone widths.
-- Order table has `min-w-[980px]`; sample table rendered about 1,090 px.
-- Page-level overflow appeared at 768x1024.
+Current state after 2026-05-08 responsive list refactor:
+- The horizontal-scroll `min-w-[980px]` order table was replaced below `lg` with order cards.
+- Mobile order cards show short order id, status badge, customer name/phone, total, date, delivery, payment, key tags, and the `Відкрити` action.
+- The desktop table remains semantic but now has five columns: `Замовлення`, `Клієнт`, `Статус`, `Сума і теги`, and `Дії`.
+- Date is grouped under the order id, phone under customer, delivery/payment under status, and tags under the amount so rows are easier to scan.
+- URL-backed filters, server-side filtering, owner-only access, tag behavior, payment/shipment labels, and details navigation are unchanged.
+- Component tests cover the desktop hierarchy and mobile card rendering. Playwright E2E checks `/dashboard/orders` at 390 px and desktop with no page-level horizontal overflow, plus a 360 px overflow guard.
 
-Plan:
-- Collapse filters behind a mobile disclosure or split into primary search plus secondary filters.
-- Render order cards on mobile with order id, status, customer, phone, delivery, payment, total, tags, and open action.
-- Keep URL-backed filters and server-side read model unchanged.
-- Keep desktop table for wide screens.
+Remaining plan:
+- Filters still occupy a long block on phone widths. A later slice can collapse secondary filters without changing query parameters or server-side filtering.
 
 ### `/dashboard/orders/[orderId]`
 
