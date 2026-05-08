@@ -67,6 +67,12 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await page.getByLabel("Служба доставки").selectOption("NOVA_POSHTA");
   await page.getByLabel("Спосіб оплати").selectOption("CASH_ON_DELIVERY");
   await page.getByRole("button", { name: "Застосувати фільтри" }).click();
+  const activeFilters = page.getByLabel("Активні фільтри");
+  await expect(
+    activeFilters.getByText(`Пошук: ${customerPhone.replace(/\D/g, "")}`),
+  ).toBeVisible();
+  await expect(activeFilters.getByText("Доставка: Нова пошта")).toBeVisible();
+  await expect(activeFilters.getByText("Оплата: Післяплата")).toBeVisible();
   const orderRow = page.getByRole("row", { name: new RegExp(customerName) });
   await expect(orderRow).toBeVisible();
   await expect(orderRow.getByText("Готується відправлення")).toBeVisible();
@@ -99,6 +105,9 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await page.goto("/dashboard/orders");
   await page.getByLabel("Тег").selectOption({ label: tagName });
   await page.getByRole("button", { name: "Застосувати фільтри" }).click();
+  await expect(
+    page.getByLabel("Активні фільтри").getByText(`Тег: ${tagName}`),
+  ).toBeVisible();
   const taggedOrderRow = page.getByRole("row", { name: new RegExp(customerName) });
   await expect(taggedOrderRow).toBeVisible();
   await expect(taggedOrderRow.getByText(tagName)).toBeVisible();

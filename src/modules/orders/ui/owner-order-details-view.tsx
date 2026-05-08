@@ -156,9 +156,7 @@ export function OwnerOrderDetailsView({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Дані доставки ще не вказано.
-              </p>
+              <EmptyInlineState message="Доставка ще не вказана. Дані зʼявляться після підтвердження замовлення клієнтом." />
             )}
 
             <OwnerOrderRetryShipmentForm
@@ -205,9 +203,7 @@ export function OwnerOrderDetailsView({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Дані оплати ще не вказано.
-              </p>
+              <EmptyInlineState message="Оплата ще не створена. Після підтвердження клієнтом тут буде спосіб оплати та статус рахунку." />
             )}
 
             <div className="grid min-w-0 gap-3">
@@ -250,48 +246,57 @@ export function OwnerOrderDetailsView({
 
         <div className="grid min-w-0 gap-6 xl:col-start-1 xl:row-start-1">
           <DetailSection testId="products" title="Товари">
-            <ul
-              className="grid min-w-0 gap-3"
-              data-testid="owner-order-products-list"
-            >
-              {order.items.map((item) => (
-                <li
-                  className="grid min-w-0 gap-3 rounded-md border border-border/70 p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
-                  data-testid="owner-order-product-card"
-                  key={item.id}
+            {order.items.length ? (
+              <>
+                <ul
+                  className="grid min-w-0 gap-3"
+                  data-testid="owner-order-products-list"
                 >
-                  <div className="min-w-0">
-                    <p className="break-words font-medium">
-                      {item.productNameSnapshot}
-                    </p>
-                    <p className="mt-1 break-words text-sm text-muted-foreground">
-                      Артикул: {item.productSkuSnapshot}
-                    </p>
-                  </div>
-                  <dl className="grid min-w-0 grid-cols-2 gap-3 text-sm sm:min-w-64">
-                    <CompactInfo label="Кількість" value={String(item.quantity)} />
-                    <CompactInfo
-                      label="Ціна"
-                      value={formatMoneyMinor(
-                        item.unitPriceMinor,
-                        order.currency,
-                      )}
-                    />
-                    <CompactInfo
-                      className="col-span-2"
-                      label="Сума"
-                      value={formatMoneyMinor(
-                        item.lineTotalMinor,
-                        order.currency,
-                      )}
-                    />
-                  </dl>
-                </li>
-              ))}
-            </ul>
-            <p className="text-right text-base font-semibold">
-              Разом: {formatMoneyMinor(order.totalMinor, order.currency)}
-            </p>
+                  {order.items.map((item) => (
+                    <li
+                      className="grid min-w-0 gap-3 rounded-md border border-border/70 p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+                      data-testid="owner-order-product-card"
+                      key={item.id}
+                    >
+                      <div className="min-w-0">
+                        <p className="break-words font-medium">
+                          {item.productNameSnapshot}
+                        </p>
+                        <p className="mt-1 break-words text-sm text-muted-foreground">
+                          Артикул: {item.productSkuSnapshot}
+                        </p>
+                      </div>
+                      <dl className="grid min-w-0 grid-cols-2 gap-3 text-sm sm:min-w-64">
+                        <CompactInfo
+                          label="Кількість"
+                          value={String(item.quantity)}
+                        />
+                        <CompactInfo
+                          label="Ціна"
+                          value={formatMoneyMinor(
+                            item.unitPriceMinor,
+                            order.currency,
+                          )}
+                        />
+                        <CompactInfo
+                          className="col-span-2"
+                          label="Сума"
+                          value={formatMoneyMinor(
+                            item.lineTotalMinor,
+                            order.currency,
+                          )}
+                        />
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-right text-base font-semibold">
+                  Разом: {formatMoneyMinor(order.totalMinor, order.currency)}
+                </p>
+              </>
+            ) : (
+              <EmptyInlineState message="У замовленні немає товарів. Створіть нове посилання з актуального каталогу." />
+            )}
           </DetailSection>
 
           <DetailSection testId="status-history" title="Історія статусів">
@@ -314,9 +319,7 @@ export function OwnerOrderDetailsView({
                 ))}
               </ol>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Історія статусів порожня.
-              </p>
+              <EmptyInlineState message="Історія статусів ще порожня. Нові події зʼявляться після підтвердження, оплати або ручної зміни статусу." />
             )}
           </DetailSection>
 
@@ -354,9 +357,7 @@ export function OwnerOrderDetailsView({
                 ))}
               </ol>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Подій аудиту ще немає.
-              </p>
+              <EmptyInlineState message="Подій аудиту ще немає. Тут зʼявляться зміни статусів, тегів, оплат і відправлень." />
             )}
           </DetailSection>
         </div>
@@ -429,6 +430,17 @@ function CompactInfo({
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="break-words font-medium">{value}</dd>
     </div>
+  );
+}
+
+function EmptyInlineState({ message }: { message: string }) {
+  return (
+    <p
+      className="rounded-md border border-dashed bg-muted/20 p-3 text-sm text-muted-foreground"
+      role="status"
+    >
+      {message}
+    </p>
   );
 }
 

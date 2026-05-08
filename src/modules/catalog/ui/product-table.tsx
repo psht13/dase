@@ -13,11 +13,17 @@ type ProductTableProps = {
 export function ProductTable({ products, toggleAction }: ProductTableProps) {
   if (!products.length) {
     return (
-      <div className="rounded-md border border-dashed p-8 text-center">
+      <div className="grid min-w-0 gap-3 rounded-md border border-dashed p-6 text-center sm:p-8">
         <h2 className="text-lg font-semibold">Каталог порожній</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Створіть перший товар, щоб додавати його до замовлень.
+        <p className="mx-auto max-w-xl text-sm text-muted-foreground">
+          Додайте товар із ціною, залишком і зовнішнім URL зображення, щоб
+          використовувати його в нових замовленнях.
         </p>
+        <div>
+          <Button asChild>
+            <Link href="/dashboard/products/new">Створити товар</Link>
+          </Button>
+        </div>
       </div>
     );
   }

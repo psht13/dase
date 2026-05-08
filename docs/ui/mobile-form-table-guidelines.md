@@ -226,6 +226,7 @@ Current state after 2026-05-08 responsive list refactor:
 - The desktop table remains semantic but now has four columns: `Товар`, `Ціна і залишок`, `Стан`, and `Дії`.
 - The product table component still receives products from the owner-scoped application read use case and still calls the existing product toggle server action.
 - External image URLs remain the only product image strategy; no upload or object storage behavior changed.
+- The empty catalog state is Ukrainian, explains the next useful step, and links to `Створити товар`.
 - Component tests cover the desktop hierarchy and mobile card rendering. Playwright E2E checks `/dashboard/products` at 390 px and desktop with no page-level horizontal overflow.
 
 Remaining plan:
@@ -264,6 +265,7 @@ Current state after 2026-05-08 order-builder stepper refactor:
 - The review step keeps the total and create-link action close to the selected-item summary.
 - The link step displays the generated token-based public URL with copy and quick-open actions.
 - The existing order creation server action, use case, product snapshot behavior, and public-token URL behavior are unchanged.
+- Empty states cover no active products, no product search results, no selected products, and no generated link yet without adding new order business rules.
 - Focused unit coverage checks product selection/search, quantity validation, summary review, link display, and Ukrainian labels.
 - Playwright E2E creates a multi-product owner order link at 390 px and asserts no page-level horizontal overflow through the builder steps.
 
@@ -278,10 +280,13 @@ Current state after 2026-05-08 responsive list refactor:
 - The desktop table remains semantic but now has five columns: `Замовлення`, `Клієнт`, `Статус`, `Сума і теги`, and `Дії`.
 - Date is grouped under the order id, phone under customer, delivery/payment under status, and tags under the amount so rows are easier to scan.
 - URL-backed filters, server-side filtering, owner-only access, tag behavior, payment/shipment labels, and details navigation are unchanged.
+- The dense filter block now renders as a responsive panel. It is collapsed by default on phone widths, opens automatically on desktop widths, shows active-filter summary chips, and includes a clear-filters action.
+- Empty states distinguish `Замовлень ще немає` from `За фільтрами нічого не знайдено`, with Ukrainian next actions for creating an order or clearing filters.
 - Component tests cover the desktop hierarchy and mobile card rendering. Playwright E2E checks `/dashboard/orders` at 390 px and desktop with no page-level horizontal overflow, plus a 360 px overflow guard.
+- Component and Playwright coverage now also verify mobile filter collapse/expand behavior, active summaries, and clear filters.
 
 Remaining plan:
-- Filters still occupy a long block on phone widths. A later slice can collapse secondary filters without changing query parameters or server-side filtering.
+- Keep filter fields URL-backed and avoid moving filtering rules into the UI when new filters are added.
 
 ### `/dashboard/orders/[orderId]`
 
@@ -292,7 +297,10 @@ Current state after 2026-05-08 order details refactor:
 - Wide desktop widths use a two-column layout: products, status history, and audit in the main column; overview, customer, delivery, payment, and tags in the side column.
 - Manual status update, MonoPay retry, shipment retry, and tag assignment/removal still use the existing server actions and application use cases.
 - Payment retry remains grouped under `Оплата`; shipment retry and disabled-shipping notice remain grouped under `Доставка`.
+- Empty states now cover no items, no tags, no status history, no audit events, and missing payment/shipment records with concise Ukrainian guidance.
+- Tag, status, payment retry, and shipment retry actions expose pending/success/error messages through live regions where appropriate.
 - Focused component tests cover section headings, stacked/collapsible structure, retry actions, manual status update, and audit visibility.
+- Focused component tests also cover Ukrainian empty states and successful/failed owner action feedback.
 - Playwright E2E covers the details page at 390 px and verifies no page-level horizontal overflow at 360 px.
 
 Remaining plan:

@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -253,6 +253,13 @@ Owner order details layout update on 2026-05-08:
 - Delivery and shipment details are grouped under `Доставка`; payment details and MonoPay retry are grouped under `Оплата`.
 - Focused component tests cover the Ukrainian section headings, collapsible stacked sections, MonoPay retry eligibility, shipment retry availability, manual status update submission, and compact audit visibility.
 - Playwright E2E covers the owner order details page at 390 px and checks the same page at 360 px for no horizontal overflow.
+
+Dashboard filter, empty-state, and feedback polish update on 2026-05-08:
+- `/dashboard/orders` filters now render as a responsive Ukrainian panel with a mobile-collapsed default, active-filter summary chips, accessible controls, and a clear-filters action. The same URL-backed GET parameters and application filtering behavior are unchanged.
+- Empty states now distinguish no orders from no filtered results and include useful Ukrainian next actions. Product catalog and order-builder empty states also point owners to create or enable products without changing product or order business rules.
+- `/dashboard/orders/[orderId]` now has clearer Ukrainian empty states for no items, no tags, no status history, no audit events, and missing payment/shipment records.
+- Tag updates, manual status updates, MonoPay retry, and shipment retry now share live-region feedback for pending, successful, and failed action states where applicable.
+- Component tests cover mobile filter panel behavior, active summaries, clear filters, Ukrainian empty states, and action feedback messages. Playwright E2E now exercises the owner order filter panel and active-summary behavior after filtering.
 
 Ukrposhta active-MVP removal update on 2026-05-07:
 - Added a central shipping carrier registry at `src/modules/shipping/application/shipping-carrier-registry.ts`.

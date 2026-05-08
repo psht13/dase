@@ -11,6 +11,7 @@ import {
   Search,
   Send,
 } from "lucide-react";
+import Link from "next/link";
 import type { FormEvent } from "react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import type { OrderBuilderProduct } from "@/modules/orders/application/list-order-builder-products";
@@ -299,11 +300,17 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
 
   if (!products.length) {
     return (
-      <div className="rounded-md border border-dashed p-8 text-center">
+      <div className="grid min-w-0 gap-3 rounded-md border border-dashed p-6 text-center sm:p-8">
         <h2 className="text-lg font-semibold">Немає активних товарів</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Увімкніть товари в каталозі, щоб створити посилання замовлення.
+        <p className="mx-auto max-w-xl text-sm text-muted-foreground">
+          Створіть або увімкніть товар у каталозі. Після цього він зʼявиться на
+          першому кроці створення замовлення.
         </p>
+        <div>
+          <Button asChild>
+            <Link href="/dashboard/products/new">Створити товар</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -435,7 +442,8 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                   className="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
                   role="status"
                 >
-                  За цим пошуком активних товарів не знайдено.
+                  За цим пошуком активних товарів не знайдено. Перевірте назву
+                  або артикул чи увімкніть потрібний товар у каталозі.
                 </p>
               )}
             </div>
@@ -542,8 +550,12 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                   })}
                 </ul>
               ) : (
-                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Поверніться до вибору товарів і додайте хоча б один товар.
+                <p
+                  className="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
+                  role="status"
+                >
+                  У замовленні ще немає товарів. Поверніться до першого кроку й
+                  оберіть хоча б один товар.
                 </p>
               )}
             </div>
@@ -649,8 +661,12 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                   ) : null}
                 </FormSummaryCard>
               ) : (
-                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Створіть посилання на кроці перевірки.
+                <p
+                  className="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
+                  role="status"
+                >
+                  Посилання ще не створено. Перевірте склад замовлення й
+                  натисніть «Створити посилання».
                 </p>
               )}
             </div>

@@ -15,18 +15,17 @@ import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/utils/cn";
 
 type OwnerOrdersTableProps = {
+  hasActiveFilters?: boolean;
   orders: OwnerOrderSummary[];
 };
 
-export function OwnerOrdersTable({ orders }: OwnerOrdersTableProps) {
+export function OwnerOrdersTable({
+  hasActiveFilters = false,
+  orders,
+}: OwnerOrdersTableProps) {
   if (!orders.length) {
     return (
-      <div className="rounded-md border border-dashed p-8 text-center">
-        <h2 className="text-lg font-semibold">Замовлення не знайдено</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Змініть фільтри або створіть нове посилання замовлення.
-        </p>
-      </div>
+      <EmptyOrdersState hasActiveFilters={hasActiveFilters} />
     );
   }
 
@@ -95,6 +94,37 @@ export function OwnerOrdersTable({ orders }: OwnerOrdersTableProps) {
         </table>
       </div>
     </>
+  );
+}
+
+function EmptyOrdersState({
+  hasActiveFilters,
+}: {
+  hasActiveFilters: boolean;
+}) {
+  return (
+    <div className="grid min-w-0 gap-3 rounded-md border border-dashed p-6 text-center sm:p-8">
+      <h2 className="text-lg font-semibold">
+        {hasActiveFilters
+          ? "За фільтрами нічого не знайдено"
+          : "Замовлень ще немає"}
+      </h2>
+      <p className="mx-auto max-w-xl text-sm text-muted-foreground">
+        {hasActiveFilters
+          ? "Змініть або скиньте фільтри, щоб побачити інші замовлення."
+          : "Створіть посилання замовлення і надішліть його клієнту для підтвердження."}
+      </p>
+      <div className="flex min-w-0 flex-col justify-center gap-3 sm:flex-row">
+        {hasActiveFilters ? (
+          <Button asChild variant="outline">
+            <Link href="/dashboard/orders">Скинути фільтри</Link>
+          </Button>
+        ) : null}
+        <Button asChild>
+          <Link href="/dashboard/orders/new">Створити замовлення</Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 

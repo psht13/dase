@@ -1,5 +1,8 @@
-import { Search } from "lucide-react";
+"use client";
+
+import { ChevronDown, Search, SlidersHorizontal, XCircle } from "lucide-react";
 import Link from "next/link";
+import { useId, useState } from "react";
 import type { OrderTagRecord } from "@/modules/orders/application/order-tag-repository";
 import {
   orderStatusLabels,
@@ -10,6 +13,7 @@ import type { OwnerOrderFilters } from "@/modules/orders/application/owner-order
 import { orderStatuses } from "@/modules/orders/domain/status";
 import type { ShippingCarrierRegistryEntry } from "@/modules/shipping/application/shipping-carrier-registry";
 import { Button } from "@/shared/ui/button";
+import { cn } from "@/shared/utils/cn";
 
 type OwnerOrdersFilterFormProps = {
   deliveryCarrierOptions: ShippingCarrierRegistryEntry[];
@@ -22,8 +26,92 @@ export function OwnerOrdersFilterForm({
   filters,
   tagOptions,
 }: OwnerOrdersFilterFormProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const panelId = useId();
+  const activeFilters = buildActiveFilterSummary({
+    deliveryCarrierOptions,
+    filters,
+    tagOptions,
+  });
+  const hasActiveFilters = activeFilters.length > 0;
+
   return (
-    <form className="grid min-w-0 gap-4 rounded-md border p-4" method="get">
+    <section
+      aria-labelledby={`${panelId}-heading`}
+      className="min-w-0 rounded-md border bg-card"
+    >
+      <div className="grid min-w-0 gap-4 p-4">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h2
+              className="text-base font-semibold"
+              id={`${panelId}-heading`}
+            >
+              Фільтри замовлень
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Звузьте список за статусом, оплатою, доставкою, тегом або пошуком.
+            </p>
+          </div>
+          <Button
+            aria-controls={`${panelId}-content`}
+            aria-expanded={isExpanded}
+            className="w-full sm:w-auto lg:hidden"
+            onClick={() => setIsExpanded((current) => !current)}
+            type="button"
+            variant="outline"
+          >
+            <SlidersHorizontal aria-hidden="true" className="size-4" />
+            {isExpanded ? "Сховати фільтри" : "Показати фільтри"}
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                "size-4 transition-transform",
+                isExpanded ? "rotate-180" : null,
+              )}
+            />
+          </Button>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            aria-label="Активні фільтри"
+            className="flex min-w-0 flex-wrap gap-2"
+          >
+            {hasActiveFilters ? (
+              activeFilters.map((filter) => (
+                <span
+                  className="max-w-full break-words rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground"
+                  key={filter.id}
+                >
+                  {filter.label}
+                </span>
+              ))
+            ) : (
+              <span className="rounded-md border border-dashed px-2 py-1 text-xs font-medium text-muted-foreground">
+                Фільтри не застосовано
+              </span>
+            )}
+          </div>
+          {hasActiveFilters ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href="/dashboard/orders">
+                <XCircle aria-hidden="true" className="size-4" />
+                Скинути фільтри
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <form
+        className={cn(
+          "min-w-0 gap-4 border-t p-4",
+          isExpanded ? "grid" : "hidden lg:grid",
+        )}
+        id={`${panelId}-content`}
+        method="get"
+      >
       <div className="grid min-w-0 gap-4 md:grid-cols-3">
         <label className="grid gap-2 text-sm font-medium">
           Статус
@@ -136,11 +224,87 @@ export function OwnerOrdersFilterForm({
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button asChild variant="outline">
-          <Link href="/dashboard/orders">Скинути</Link>
+          <Link href="/dashboard/orders">Очистити</Link>
         </Button>
         <Button type="submit">Застосувати фільтри</Button>
       </div>
-    </form>
+      </form>
+    </section>
+  );
+}
+
+type ActiveFilterSummaryInput = {
+  deliveryCarrierOptions: ShippingCarrierRegistryEntry[];
+  filters: OwnerOrderFilters;
+  tagOptions: OrderTagRecord[];
+};
+
+function buildActiveFilterSummary({
+  deliveryCarrierOptions,
+  filters,
+  tagOptions,
+}: ActiveFilterSummaryInput): Array<{ id: string; label: string }> {
+  const summary: Array<{ id: string; label: string }> = [];
+
+  if (filters.status) {
+    summary.push({
+      id: "status",
+      label: `Статус: ${orderStatusLabels[filters.status]}`,
+    });
+  }
+
+  if (filters.deliveryCarrier) {
+    summary.push({
+      id: "deliveryCarrier",
+      label: `Доставка: ${shipmentCarrierLabels[filters.deliveryCarrier]}`,
+    });
+  }
+
+  if (filters.paymentMethod) {
+    summary.push({
+      id: "paymentMethod",
+      label: `Оплата: ${paymentProviderLabels[filters.paymentMethod]}`,
+    });
+  }
+
+  if (filters.tagId) {
+    const tagName =
+      tagOptions.find((tag) => tag.id === filters.tagId)?.name ??
+      "вибраний тег";
+
+    summary.push({
+      id: "tagId",
+      label: `Тег: ${tagName}`,
+    });
+  }
+
+  if (filters.dateFrom) {
+    summary.push({
+      id: "dateFrom",
+      label: `Від: ${dateInputValue(filters.dateFrom)}`,
+    });
+  }
+
+  if (filters.dateTo) {
+    summary.push({
+      id: "dateTo",
+      label: `До: ${dateInputValue(filters.dateTo)}`,
+    });
+  }
+
+  if (filters.search?.trim()) {
+    summary.push({
+      id: "search",
+      label: `Пошук: ${filters.search.trim()}`,
+    });
+  }
+
+  return summary.filter((filter) =>
+    filter.id === "deliveryCarrier"
+      ? deliveryCarrierOptions.some(
+          (carrier) => carrier.code === filters.deliveryCarrier,
+        )
+      : true,
   );
 }
 

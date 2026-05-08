@@ -87,7 +87,10 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         filters={filters}
         tagOptions={tags}
       />
-      <OwnerOrdersTable orders={orders} />
+      <OwnerOrdersTable
+        hasActiveFilters={hasActiveOrderFilters(filters)}
+        orders={orders}
+      />
     </div>
   );
 }
@@ -130,4 +133,16 @@ function endOfDay(value: string | null): Date | null {
 
 function isPaymentProvider(value: string | null): value is PaymentProviderCode {
   return value === "MONOBANK" || value === "CASH_ON_DELIVERY";
+}
+
+function hasActiveOrderFilters(filters: OwnerOrderFilters): boolean {
+  return Boolean(
+    filters.dateFrom ||
+      filters.dateTo ||
+      filters.deliveryCarrier ||
+      filters.paymentMethod ||
+      filters.search?.trim() ||
+      filters.status ||
+      filters.tagId,
+  );
 }

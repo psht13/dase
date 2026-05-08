@@ -57,7 +57,8 @@ describe("ProductTable", () => {
     render(<ProductTable products={[]} toggleAction={vi.fn()} />);
 
     expect(screen.getByText("Каталог порожній")).toBeVisible();
-    expect(screen.getByText(/Створіть перший товар/i)).toBeVisible();
+    expect(screen.getByText(/Додайте товар із ціною/i)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Створити товар" })).toBeVisible();
   });
 });
 

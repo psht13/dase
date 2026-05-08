@@ -10,6 +10,7 @@ import {
   orderStatuses,
   type OrderStatus,
 } from "@/modules/orders/domain/status";
+import { ActionFeedbackMessage } from "@/shared/ui/action-feedback-message";
 import { Button } from "@/shared/ui/button";
 
 type OwnerOrderStatusFormProps = {
@@ -53,17 +54,15 @@ export function OwnerOrderStatusForm({
       </div>
 
       {message ? (
-        <p
-          className={
-            message.ok
-              ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
-              : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          }
-          aria-live="polite"
-          role={message.ok ? "status" : "alert"}
-        >
-          {message.message}
-        </p>
+        <ActionFeedbackMessage
+          kind={message.ok ? "success" : "error"}
+          message={message.message}
+        />
+      ) : isPending ? (
+        <ActionFeedbackMessage
+          kind="pending"
+          message="Оновлюємо статус замовлення…"
+        />
       ) : null}
 
       <form action={onSubmit} className="flex flex-col gap-3 sm:flex-row">

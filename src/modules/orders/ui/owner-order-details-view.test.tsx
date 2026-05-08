@@ -1,8 +1,13 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { OwnerOrderDetails } from "@/modules/orders/application/owner-order-read-model";
-import { updateOwnerOrderStatusAction } from "@/modules/orders/ui/owner-order-actions";
+import {
+  createAndAssignOrderTagAction,
+  updateOwnerOrderStatusAction,
+} from "@/modules/orders/ui/owner-order-actions";
 import { OwnerOrderDetailsView } from "@/modules/orders/ui/owner-order-details-view";
+import { retryOwnerMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
+import { retryShipmentCreationAction } from "@/modules/shipping/ui/shipment-actions";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -27,7 +32,7 @@ vi.mock("@/modules/payments/ui/payment-actions", () => ({
 
 describe("OwnerOrderDetailsView", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("renders the requested Ukrainian sections", () => {
@@ -166,9 +171,150 @@ describe("OwnerOrderDetailsView", () => {
         expect.any(FormData),
       );
     });
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Статус замовлення оновлено",
+    await waitFor(() => {
+      expect(screen.getByText("Статус замовлення оновлено")).toBeVisible();
+    });
+  });
+
+  it("shows failed manual status update feedback", async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateOwnerOrderStatusAction).mockResolvedValue({
+      message: "Такий перехід статусу недоступний",
+      ok: false,
+    });
+
+    render(
+      <OwnerOrderDetailsView availableTags={[]} order={createOrderDetails()} />,
     );
+
+    await user.selectOptions(screen.getByLabelText("Новий статус"), "CANCELLED");
+    await user.click(screen.getByRole("button", { name: "Оновити статус" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Такий перехід статусу недоступний",
+    );
+  });
+
+  it("shows successful tag update feedback", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createAndAssignOrderTagAction).mockResolvedValue({
+      message: "Тег додано до замовлення",
+      ok: true,
+    });
+
+    render(
+      <OwnerOrderDetailsView availableTags={[]} order={createOrderDetails()} />,
+    );
+
+    await user.type(screen.getByLabelText("Новий тег"), "VIP");
+    await user.click(screen.getAllByRole("button", { name: "Додати" })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText("Тег додано до замовлення")).toBeVisible();
+    });
+  });
+
+  it("shows failed tag update feedback", async () => {
+    const user = userEvent.setup();
+    vi.mocked(createAndAssignOrderTagAction).mockResolvedValue({
+      message: "Назва тегу має містити від 2 до 40 символів",
+      ok: false,
+    });
+
+    render(
+      <OwnerOrderDetailsView availableTags={[]} order={createOrderDetails()} />,
+    );
+
+    await user.type(screen.getByLabelText("Новий тег"), "A");
+    await user.click(screen.getAllByRole("button", { name: "Додати" })[0]);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Назва тегу має містити від 2 до 40 символів",
+    );
+  });
+
+  it("shows shipment retry feedback", async () => {
+    const user = userEvent.setup();
+    vi.mocked(retryShipmentCreationAction).mockResolvedValue({
+      message: "Повторне створення відправлення заплановано",
+      ok: true,
+    });
+
+    render(
+      <OwnerOrderDetailsView availableTags={[]} order={createOrderDetails()} />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Повторити створення відправлення" }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Повторне створення відправлення заплановано"),
+      ).toBeVisible();
+    });
+  });
+
+  it("shows failed payment retry feedback", async () => {
+    const user = userEvent.setup();
+    vi.mocked(retryOwnerMonobankPaymentAction).mockResolvedValue({
+      message: "Повторити оплату MonoPay зараз неможливо.",
+      ok: false,
+    });
+
+    render(
+      <OwnerOrderDetailsView
+        availableTags={[]}
+        order={createOrderDetails({
+          payments: [
+            {
+              amountMinor: 2_400_00,
+              createdAt: new Date("2026-04-30T10:00:00.000Z"),
+              currency: "UAH",
+              failureReason: "Оплату відхилено",
+              id: "payment-2",
+              orderId: "order-1",
+              paidAt: null,
+              provider: "MONOBANK",
+              providerInvoiceId: "invoice-old",
+              providerModifiedAt: null,
+              status: "FAILED",
+              updatedAt: new Date("2026-04-30T10:00:00.000Z"),
+            },
+          ],
+          status: "PAYMENT_FAILED",
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Повторити оплату" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Повторити оплату MonoPay зараз неможливо.",
+    );
+  });
+
+  it("renders Ukrainian empty states for missing related records", () => {
+    render(
+      <OwnerOrderDetailsView
+        availableTags={[]}
+        order={createOrderDetails({
+          auditEvents: [],
+          items: [],
+          payments: [],
+          shipments: [],
+          statusHistory: [],
+          tags: [],
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/У замовленні немає товарів/i)).toBeVisible();
+    expect(screen.getByText(/Доставка ще не вказана/i)).toBeVisible();
+    expect(screen.getByText(/Оплата ще не створена/i)).toBeVisible();
+    expect(screen.getByText(/У замовлення ще немає тегів/i)).toBeVisible();
+    expect(screen.getByText(/Історія статусів ще порожня/i)).toBeVisible();
+    expect(screen.getByText(/Подій аудиту ще немає/i)).toBeVisible();
   });
 
   it("shows historical Ukrposhta shipments as disabled without retry access", () => {

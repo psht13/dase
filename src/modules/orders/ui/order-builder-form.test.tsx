@@ -142,7 +142,8 @@ describe("OrderBuilderForm", () => {
     render(<OrderBuilderForm action={vi.fn()} products={[]} />);
 
     expect(screen.getByText("Немає активних товарів")).toBeVisible();
-    expect(screen.getByText(/Увімкніть товари в каталозі/i)).toBeVisible();
+    expect(screen.getByText(/Створіть або увімкніть товар/i)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Створити товар" })).toBeVisible();
   });
 
   it("renders a Ukrainian alert when no product is selected", async () => {

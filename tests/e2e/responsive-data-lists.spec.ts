@@ -92,6 +92,20 @@ test("owner product and order lists use desktop tables and mobile cards", async 
   await expect(orderCard.getByRole("link", { name: "Відкрити" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
+  await page.goto("/dashboard/orders?status=SHIPMENT_PENDING");
+  const filterToggle = page.getByRole("button", {
+    name: /^(Показати|Сховати) фільтри$/,
+  });
+  await expect(filterToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("Статус: Готується відправлення")).toBeVisible();
+  await expect(page.getByLabel("Статус")).toBeHidden();
+  await filterToggle.click();
+  await expect(filterToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByLabel("Статус")).toBeVisible();
+  await page.getByRole("link", { name: "Скинути фільтри" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/orders$/);
+  await expectNoHorizontalOverflow(page);
+
   await page.setViewportSize({ height: 740, width: 360 });
   await page.goto("/dashboard/orders");
   await expectNoHorizontalOverflow(page);

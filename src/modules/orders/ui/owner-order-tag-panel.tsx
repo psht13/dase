@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import type { OrderTagRecord } from "@/modules/orders/application/order-tag-repository";
 import type { OwnerOrderActionResult } from "@/modules/orders/ui/owner-order-actions";
+import { ActionFeedbackMessage } from "@/shared/ui/action-feedback-message";
 import { Button } from "@/shared/ui/button";
 
 type OwnerOrderTagPanelProps = {
@@ -58,17 +59,12 @@ export function OwnerOrderTagPanel({
       </div>
 
       {message ? (
-        <p
-          className={
-            message.ok
-              ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
-              : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          }
-          aria-live="polite"
-          role={message.ok ? "status" : "alert"}
-        >
-          {message.message}
-        </p>
+        <ActionFeedbackMessage
+          kind={message.ok ? "success" : "error"}
+          message={message.message}
+        />
+      ) : isPending ? (
+        <ActionFeedbackMessage kind="pending" message="Оновлюємо теги…" />
       ) : null}
 
       <div className="flex flex-wrap gap-2">
@@ -93,8 +89,12 @@ export function OwnerOrderTagPanel({
             </form>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">
-            У замовлення ще немає тегів.
+          <p
+            className="rounded-md border border-dashed bg-muted/20 p-3 text-sm text-muted-foreground"
+            role="status"
+          >
+            У замовлення ще немає тегів. Створіть новий тег або додайте
+            наявний, щоб швидше знаходити це замовлення у списку.
           </p>
         )}
       </div>
@@ -149,7 +149,7 @@ export function OwnerOrderTagPanel({
                   </option>
                 ))
               ) : (
-                <option value="">Немає доступних тегів</option>
+                <option value="">Усі доступні теги вже додано</option>
               )}
             </select>
             <Button

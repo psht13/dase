@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { OwnerOrdersFilterForm } from "@/modules/orders/ui/owner-orders-filter-form";
 import { OwnerOrdersTable } from "@/modules/orders/ui/owner-orders-table";
 import type { OwnerOrderSummary } from "@/modules/orders/application/owner-order-read-model";
@@ -8,33 +9,51 @@ import {
 } from "@/modules/shipping/application/shipping-carrier-registry";
 
 describe("owner orders UI", () => {
-  it("renders Ukrainian filters and compact desktop table hierarchy", () => {
+  it("renders a collapsed filter panel with active summary and clear action", async () => {
+    const user = userEvent.setup();
+
     render(
-      <>
-        <OwnerOrdersFilterForm
-          deliveryCarrierOptions={activeShippingCarriers}
-          filters={{
-            deliveryCarrier: "NOVA_POSHTA",
-            paymentMethod: "CASH_ON_DELIVERY",
-            search: "067",
-            status: "SHIPMENT_PENDING",
-            tagId: "tag-1",
-          }}
-          tagOptions={[
-            {
-              color: null,
-              createdAt: new Date("2026-04-30T10:00:00.000Z"),
-              id: "tag-1",
-              name: "Подарунок",
-              ownerId: "owner-1",
-              updatedAt: new Date("2026-04-30T10:00:00.000Z"),
-            },
-          ]}
-        />
-        <OwnerOrdersTable orders={[createOrderSummary()]} />
-      </>,
+      <OwnerOrdersFilterForm
+        deliveryCarrierOptions={activeShippingCarriers}
+        filters={{
+          dateFrom: new Date("2026-05-01T00:00:00.000Z"),
+          deliveryCarrier: "NOVA_POSHTA",
+          paymentMethod: "CASH_ON_DELIVERY",
+          search: "067",
+          status: "SHIPMENT_PENDING",
+          tagId: "tag-1",
+        }}
+        tagOptions={[
+          {
+            color: null,
+            createdAt: new Date("2026-04-30T10:00:00.000Z"),
+            id: "tag-1",
+            name: "Подарунок",
+            ownerId: "owner-1",
+            updatedAt: new Date("2026-04-30T10:00:00.000Z"),
+          },
+        ]}
+      />,
     );
 
+    const toggle = screen.getByRole("button", {
+      name: /Показати фільтри/i,
+    });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Статус: Готується відправлення")).toBeVisible();
+    expect(screen.getByText("Доставка: Нова пошта")).toBeVisible();
+    expect(screen.getByText("Оплата: Післяплата")).toBeVisible();
+    expect(screen.getByText("Тег: Подарунок")).toBeVisible();
+    expect(screen.getByText("Від: 2026-05-01")).toBeVisible();
+    expect(screen.getByText("Пошук: 067")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Скинути фільтри" }),
+    ).toHaveAttribute("href", "/dashboard/orders");
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByLabelText("Статус")).toBeVisible();
     expect(screen.getByLabelText("Служба доставки")).toBeVisible();
     expect(
@@ -43,7 +62,15 @@ describe("owner orders UI", () => {
     expect(screen.getByLabelText("Спосіб оплати")).toBeVisible();
     expect(screen.getByLabelText("Тег")).toBeVisible();
     expect(screen.getByPlaceholderText("Телефон або ТТН")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Застосувати фільтри" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Застосувати фільтри" }),
+    ).toBeVisible();
+  });
+
+  it("renders compact desktop table hierarchy", () => {
+    render(
+      <OwnerOrdersTable hasActiveFilters orders={[createOrderSummary()]} />,
+    );
 
     const table = within(screen.getByTestId("owner-orders-desktop-table"));
 
@@ -83,14 +110,28 @@ describe("owner orders UI", () => {
     expect(card.getByRole("link", { name: "Відкрити" })).toBeVisible();
   });
 
-  it("renders a Ukrainian empty state", () => {
+  it("renders a Ukrainian empty state when there are no orders yet", () => {
     render(<OwnerOrdersTable orders={[]} />);
 
-    expect(screen.getByText("Замовлення не знайдено")).toBeVisible();
-    expect(screen.getByText(/Змініть фільтри/i)).toBeVisible();
+    expect(screen.getByText("Замовлень ще немає")).toBeVisible();
+    expect(screen.getByText(/Створіть посилання замовлення/i)).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Створити замовлення" }),
+    ).toBeVisible();
   });
 
-  it("shows disabled legacy carrier filters only when historical records exist", () => {
+  it("renders a Ukrainian empty state for filtered results", () => {
+    render(<OwnerOrdersTable hasActiveFilters orders={[]} />);
+
+    expect(screen.getByText("За фільтрами нічого не знайдено")).toBeVisible();
+    expect(screen.getByText(/Змініть або скиньте фільтри/i)).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Скинути фільтри" }),
+    ).toHaveAttribute("href", "/dashboard/orders");
+  });
+
+  it("shows disabled legacy carrier filters only when historical records exist", async () => {
+    const user = userEvent.setup();
     const legacyOptions = getShippingCarrierOptionsForRecords(["UKRPOSHTA"]);
 
     render(
@@ -102,6 +143,8 @@ describe("owner orders UI", () => {
         tagOptions={[]}
       />,
     );
+
+    await user.click(screen.getByRole("button", { name: /Показати фільтри/i }));
 
     expect(
       screen.getByRole("option", { name: "Укрпошта (вимкнено)" }),

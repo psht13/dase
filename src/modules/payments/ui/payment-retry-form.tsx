@@ -3,6 +3,7 @@
 import { CreditCard } from "lucide-react";
 import { useState, useTransition } from "react";
 import type { PaymentRetryActionResult } from "@/modules/payments/ui/payment-actions";
+import { ActionFeedbackMessage } from "@/shared/ui/action-feedback-message";
 import { Button } from "@/shared/ui/button";
 
 type PaymentRetryFormProps = {
@@ -29,16 +30,15 @@ export function PaymentRetryForm({ action }: PaymentRetryFormProps) {
   return (
     <div className="grid gap-3">
       {message ? (
-        <p
-          className={
-            message.ok
-              ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
-              : "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-          }
-          role={message.ok ? "status" : "alert"}
-        >
-          {message.message}
-        </p>
+        <ActionFeedbackMessage
+          kind={message.ok ? "success" : "error"}
+          message={message.message}
+        />
+      ) : isPending ? (
+        <ActionFeedbackMessage
+          kind="pending"
+          message="Створюємо нове посилання для оплати…"
+        />
       ) : null}
 
       <form action={onSubmit}>
