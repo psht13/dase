@@ -308,6 +308,17 @@ Audit result:
 - After the adapter repair, a Railway-env local probe using the production `web` variables returned one Київ city record and five warehouse records from Nova Post stage data.
 - Live shipment creation remains intentionally blocked until `worker` is configured with `SHIPPING_LABEL_CREATION_MODE=live` and the complete Nova Post API, sender, payer, and parcel variables. Production still defaults to disabled label creation when the mode is omitted.
 
+## Mobile UI audit and refactor plan on 2026-05-08
+
+- Added `docs/ui/mobile-form-table-guidelines.md` as the concrete mobile-first refactor plan for forms, dashboard navigation, table-to-card rules, spacing, typography, accessibility, exact page targets, and the Playwright viewport checklist.
+- Audited `/`, `/login`, `/setup`, `/dashboard`, `/dashboard/products`, `/dashboard/products/new`, `/dashboard/products/[productId]/edit`, `/dashboard/orders/new`, `/dashboard/orders`, `/dashboard/orders/[orderId]`, `/o/[token]`, and `/o/[token]/delivery`.
+- Playwright MCP inspected the audited pages at 360x740, 390x844, 430x932, 768x1024, and 1440x900 using local E2E-safe owner/product/order data.
+- Public and auth pages avoid page-level horizontal scrolling, but common controls are currently 40-42 px tall and should move to at least 44 px for touch targets.
+- Dashboard mobile navigation is visually heavy because the full owner nav and account header appear before page content on phone widths; tablet portrait also starts the persistent sidebar at `md`, leaving data pages cramped.
+- Owner product/order tables currently depend on horizontal scrolling with fixed table minimum widths between 720 px and 980 px; `/dashboard/orders/new`, `/dashboard/orders`, and `/dashboard/orders/[orderId]` also showed page-level overflow at some audited widths.
+- Product create/edit forms and owner order details are the highest-risk mobile surfaces because they are long single-screen flows; they should move to stepper/card patterns without changing business logic, database schema, or application/domain boundaries.
+- No UI implementation, business logic, database schema, role model, object storage, or image upload behavior changed in this planning milestone.
+
 ## Core flows
 
 ### Product management
@@ -594,6 +605,13 @@ Latest local quality status on 2026-05-08 after Nova Post authorization header r
 - `pnpm test:e2e` passed with Chromium: 11 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-05-08 after the mobile UI audit and refactor plan:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.42% statements, 80.01% branches, 90.66% functions, and 88.42% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 11 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -822,6 +840,18 @@ Status: completed on 2026-04-30.
 - Added focused regression tests for the dashboard shell alignment and product image delete control.
 - Verified the visual fixes in Chromium with screenshots under ignored `output/playwright/` artifacts.
 
+### Milestone 9 - Mobile owner UI refactor
+
+Status: planned; audit and refactor plan documented on 2026-05-08.
+
+- Refactor the owner dashboard shell so phone and tablet portrait layouts use compact mobile navigation instead of the full stacked/persistent sidebar.
+- Replace mobile product/order/order-builder tables with card-first layouts while keeping desktop tables for wide screens.
+- Convert long product and order-builder flows to stepper/card patterns without moving business logic into UI components.
+- Improve owner order details by converting mobile product/audit tables into cards or timelines and reducing the single-page visual weight.
+- Raise touch targets to at least 44 px for mobile controls and action buttons.
+- Keep all new user-facing copy Ukrainian, keep roles limited to `owner` and `user`, keep product images as external URLs only, and avoid database schema changes unless a later UI requirement proves one is necessary.
+- Add focused UI and Playwright coverage for the changed pages using the documented viewport matrix.
+
 ## Commit message format
 
 Use English imperative sentence case without prefixes.
@@ -846,6 +876,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
+- Owner dashboard mobile responsiveness is documented but not yet implemented. Product/order tables still depend on horizontal scroll on small screens, the order builder can create page-level horizontal overflow at phone and tablet portrait widths, and long owner forms/details still need stepper/card refactors.
 - Real Monobank production credentials are not yet configured in Railway, so live payment smoke tests remain manual. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
