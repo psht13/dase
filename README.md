@@ -76,10 +76,10 @@ pnpm test:e2e
 pnpm build
 ```
 
-For local Playwright runs, use an isolated port if another app is already bound to port 3000:
+Local Playwright runs use isolated port 3100 by default so they do not attach to another app already bound to port 3000. To use a different port, set `PLAYWRIGHT_BASE_URL` and Playwright will start this repo's dev server on the matching port:
 
 ```bash
-PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3200 pnpm test:e2e
 ```
 
 The responsive QA coverage includes the critical owner and public routes at phone, tablet, and desktop viewports, including 390x844, 768x1024, and 1440x900.

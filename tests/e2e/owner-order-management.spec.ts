@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
-const cookieUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const cookieUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 test("owner filters an order, manages tags, updates status, and sees audit history", async ({
   page,

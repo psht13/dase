@@ -1,7 +1,20 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const isProductionSmoke = process.env.RUN_PROD_SMOKE === "1";
+const parsedBaseURL = new URL(baseURL);
+const devServerHost =
+  parsedBaseURL.hostname === "localhost" ? "127.0.0.1" : parsedBaseURL.hostname;
+const devServerPort =
+  parsedBaseURL.port || (parsedBaseURL.protocol === "https:" ? "443" : "80");
+const webServerCommand = [
+  "PLAYWRIGHT_E2E=1",
+  "SHIPPING_LABEL_CREATION_MODE=disabled",
+  `BETTER_AUTH_URL=${baseURL}`,
+  "pnpm dev",
+  `--hostname ${devServerHost}`,
+  `--port ${devServerPort}`,
+].join(" ");
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -21,9 +34,9 @@ export default defineConfig({
   webServer: isProductionSmoke
     ? undefined
     : {
-        command: `PLAYWRIGHT_E2E=1 SHIPPING_LABEL_CREATION_MODE=disabled BETTER_AUTH_URL=${baseURL} pnpm dev`,
+        command: webServerCommand,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 120_000,
       },
   projects: [

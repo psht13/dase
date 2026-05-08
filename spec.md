@@ -879,6 +879,12 @@ Latest local quality status on 2026-05-08 after Prompt 09 final QA:
 - A local browser customer-flow check confirmed the active manual-card UI contains `Оплата картою онлайн` and `Після оплати надішліть квитанцію продавцю в Instagram чат`, and does not contain `MonoPay` or `Monobank`.
 - Production unauthenticated health smoke passed against `https://web-production-26609.up.railway.app/api/health`; authenticated production smoke remains gated by temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD`.
 
+Prompt 10 recovery on 2026-05-08:
+- Plain `pnpm test:e2e` initially failed because an unrelated local Next.js app was already responding on `127.0.0.1:3000`. This repo's `next dev` process fell back to port 3001, while Playwright still used port 3000 and rendered the other app's generic 404 page.
+- Playwright local E2E now defaults to `http://127.0.0.1:3100`, starts this repo's dev server with the matching explicit host and port, and does not reuse arbitrary existing local servers. Set `PLAYWRIGHT_BASE_URL` to another loopback URL when port 3100 is unavailable.
+- E2E seeded-auth cookie defaults and environment documentation were aligned to the 3100 default.
+- Recovery verification passed with `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage` at 88.99% statements, 81.44% branches, 89.76% functions, and 88.99% lines, `pnpm test:e2e` with 22 passed and the production smoke skipped, and `pnpm build`.
+
 ## Commands
 
 Configured commands:
@@ -950,7 +956,7 @@ NODE_ENV=development
 CI=
 
 PLAYWRIGHT_E2E=
-PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100
 USE_MOCK_SHIPPING_CARRIERS=
 
 # Local shell only for authenticated production smoke tests. Do not configure

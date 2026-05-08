@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 export const cookieUrl =
-  process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+  process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 export const responsiveViewportMatrix = [
   { height: 740, label: "360x740", width: 360 },
