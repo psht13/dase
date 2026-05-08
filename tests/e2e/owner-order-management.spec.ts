@@ -12,6 +12,7 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   const tagName = `Подарунок ${stamp}`;
   const customerName = `Олена Управління ${stamp}`;
   const customerPhone = `+38067${String(stamp).slice(-7)}`;
+  const instagramUsername = `olena_mgmt_${String(stamp).slice(-6)}`;
 
   await createProduct(page, {
     description: "Срібні сережки для e2e перевірки",
@@ -44,6 +45,7 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
     .click();
   await page.getByLabel("Повне ім’я").fill(customerName);
   await page.getByLabel("Телефон").fill(customerPhone);
+  await page.getByLabel("Instagram нікнейм").fill(`@${instagramUsername}`);
   await page.getByRole("button", { name: "Далі" }).click();
   await page.getByLabel("Місто або населений пункт").fill("Київ");
   await page.getByRole("button", { name: /Київ.*Київська область/ }).click();
@@ -76,13 +78,22 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await expect(activeFilters.getByText("Оплата: Післяплата")).toBeVisible();
   const orderRow = page.getByRole("row", { name: new RegExp(customerName) });
   await expect(orderRow).toBeVisible();
+  await expect(orderRow.getByText(`@${instagramUsername}`)).toBeVisible();
   await expect(orderRow.getByText("Готується відправлення")).toBeVisible();
+
+  await page.getByLabel("Пошук").fill(`@${instagramUsername}`);
+  await page.getByRole("button", { name: "Застосувати фільтри" }).click();
+  await expect(
+    page.getByLabel("Активні фільтри").getByText(`Пошук: @${instagramUsername}`),
+  ).toBeVisible();
+  await expect(page.getByRole("row", { name: new RegExp(customerName) })).toBeVisible();
 
   await orderRow.getByRole("link", { name: "Відкрити" }).click();
   await expect(page.getByRole("heading", { name: /Замовлення #/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Товари" })).toBeVisible();
   await expect(page.getByText(productName)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Аудит подій" })).toBeVisible();
+  await expect(page.getByText(`@${instagramUsername}`)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Повторити створення відправлення" }),
   ).toBeVisible();

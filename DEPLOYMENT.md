@@ -120,6 +120,9 @@ Tooling-managed CI variable:
 
 Run migrations against development or staging PostgreSQL first. Do not run destructive tests or manual schema experiments against production. The worker should use the same migrated database because pg-boss manages its queue schema in PostgreSQL through `DATABASE_URL`.
 
+Current forward-only app migration:
+- `drizzle/0004_cute_veda.sql` adds nullable `customers.instagram_username` for optional customer Instagram nicknames. Existing customer rows remain valid and no secret or environment variable is involved.
+
 If a migration fails during Railway pre-deploy, Railway should not promote that web deployment. Fix the migration locally, verify it against a safe database, then redeploy.
 
 ## Rollback Notes

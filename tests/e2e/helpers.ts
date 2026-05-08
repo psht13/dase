@@ -164,6 +164,7 @@ export async function confirmPublicOrderDelivery(
   page: Page,
   input: {
     customerName: string;
+    customerInstagram?: string;
     customerPhone: string;
     publicUrl: string;
   },
@@ -174,6 +175,9 @@ export async function confirmPublicOrderDelivery(
     .click();
   await page.getByLabel("Повне ім’я").fill(input.customerName);
   await page.getByLabel("Телефон").fill(input.customerPhone);
+  if (input.customerInstagram) {
+    await page.getByLabel("Instagram нікнейм").fill(input.customerInstagram);
+  }
   await page.getByRole("button", { name: "Далі" }).click();
   await page.getByLabel("Місто або населений пункт").fill("Київ");
   await page.getByRole("button", { name: /Київ.*Київська область/ }).click();

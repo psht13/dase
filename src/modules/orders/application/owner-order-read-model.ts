@@ -6,6 +6,7 @@ import type {
   CustomerRecord,
   CustomerRepository,
 } from "@/modules/orders/application/customer-repository";
+import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
 import type {
   OrderRepository,
   PersistedOrder,
@@ -255,12 +256,20 @@ function matchesSearch(order: OwnerOrderSummary, rawSearch: string): boolean {
   const searchDigits = onlyDigits(search);
   const phone = order.customer?.phone ?? "";
   const phoneDigits = onlyDigits(phone);
+  const instagramUsername = formatInstagramUsername(
+    order.customer?.instagramUsername,
+  )?.toLowerCase();
+  const instagramSearch = search.replace(/^@+/, "");
   const trackingNumbers = order.shipments
     .map((shipment) => shipment.trackingNumber ?? "")
     .filter(Boolean);
 
   return (
     (searchDigits.length > 0 && phoneDigits.includes(searchDigits)) ||
+    (instagramUsername && instagramSearch.length > 0
+      ? instagramUsername.includes(search) ||
+        instagramUsername.slice(1).includes(instagramSearch)
+      : false) ||
     trackingNumbers.some((trackingNumber) =>
       trackingNumber.toLowerCase().includes(search),
     )

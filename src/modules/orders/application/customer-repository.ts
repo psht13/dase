@@ -3,6 +3,7 @@ export type CustomerRecord = {
   email: string | null;
   fullName: string;
   id: string;
+  instagramUsername: string | null;
   phone: string;
   updatedAt: Date;
 };
@@ -10,6 +11,7 @@ export type CustomerRecord = {
 export type SaveCustomerInput = {
   email?: string | null;
   fullName: string;
+  instagramUsername?: string | null;
   phone: string;
 };
 

@@ -40,6 +40,8 @@ After the first owner is created, `/setup` becomes unavailable and owner access 
 
 Customers open `/o/[token]` to review selected products and continue to delivery while the order is waiting for confirmation.
 
+The delivery/contact form asks for full name, phone, and an optional Instagram nickname so the seller can match the order with chat history. Instagram nicknames are stored normalized without duplicate leading `@` characters, while owner UI displays them with one leading `@`.
+
 After a customer submits delivery/payment details, the same public link becomes a Ukrainian status page with `Замовлення #...`, current status, seller-chat instruction, selected products, and total. Reopening `/o/[token]/delivery` after confirmation shows the status page instead of the delivery form, so the customer cannot submit the same order twice.
 
 ## Shipping Demo Modes

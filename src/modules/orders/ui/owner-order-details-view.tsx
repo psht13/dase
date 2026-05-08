@@ -2,6 +2,7 @@ import { ArrowLeft, ChevronDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { OrderTagRecord } from "@/modules/orders/application/order-tag-repository";
+import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
 import {
   auditActorLabels,
   getAuditEventLabel,
@@ -113,6 +114,10 @@ export function OwnerOrderDetailsView({
             <dl className="grid min-w-0 gap-3 text-sm">
               <InfoRow label="Ім’я" value={order.customer?.fullName} />
               <InfoRow label="Телефон" value={order.customer?.phone} />
+              <InfoRow
+                label="Instagram нікнейм"
+                value={formatInstagramUsername(order.customer?.instagramUsername)}
+              />
               <InfoRow
                 label="Підтверджено"
                 value={formatDateTime(order.confirmedAt)}

@@ -278,6 +278,7 @@ function createFormData(input: { paymentMethod?: "CASH_ON_DELIVERY" | "MONOBANK"
     cityId: "city-1",
     cityName: "Київ",
     fullName: "Олена Петренко",
+    instagramUsername: "@olena.shop",
     paymentMethod: input.paymentMethod ?? "CASH_ON_DELIVERY",
     phone: "+380671234567",
     warehouseAddress: "вул. Хрещатик, 1",

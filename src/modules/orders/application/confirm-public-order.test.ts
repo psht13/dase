@@ -43,6 +43,11 @@ describe("confirmPublicOrderUseCase", () => {
       customerId: "customer-1",
       orderId: "order-1",
     });
+    expect(dependencies.customerRepository.save).toHaveBeenCalledWith({
+      fullName: "Олена Петренко",
+      instagramUsername: "olena.shop",
+      phone: "+380671234567",
+    });
     expect(dependencies.paymentRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         amountMinor: 2_400_00,
@@ -147,6 +152,7 @@ function createInput() {
     cityId: "city-1",
     cityName: "Київ",
     fullName: "Олена Петренко",
+    instagramUsername: " @@olena.shop ",
     paymentMethod: "CASH_ON_DELIVERY" as const,
     phone: "+380671234567",
     publicToken: validToken,
@@ -190,6 +196,7 @@ function createDependencies(order: PersistedOrder) {
         createdAt: now,
         email: null,
         id: "customer-1",
+        instagramUsername: input.instagramUsername ?? null,
         updatedAt: now,
       })),
     } satisfies CustomerRepository,

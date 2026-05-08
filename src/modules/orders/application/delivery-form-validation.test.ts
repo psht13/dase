@@ -7,6 +7,7 @@ describe("delivery form validation", () => {
       cityId: "city-1",
       cityName: " Київ ",
       fullName: " Олена Петренко ",
+      instagramUsername: " @@olena.shop_123 ",
       paymentMethod: "CASH_ON_DELIVERY",
       phone: "+380 (67) 123-45-67",
       warehouseAddress: " вул. Хрещатик, 1 ",
@@ -20,6 +21,7 @@ describe("delivery form validation", () => {
         cityId: "city-1",
         cityName: "Київ",
         fullName: "Олена Петренко",
+        instagramUsername: "olena.shop_123",
         paymentMethod: "CASH_ON_DELIVERY",
         phone: "+380671234567",
         warehouseAddress: "вул. Хрещатик, 1",
@@ -36,6 +38,7 @@ describe("delivery form validation", () => {
       cityId: "",
       cityName: "",
       fullName: "",
+      instagramUsername: "",
       paymentMethod: "",
       phone: "123",
       warehouseAddress: "",
@@ -62,6 +65,7 @@ describe("delivery form validation", () => {
       cityId: "city-1",
       cityName: "Київ",
       fullName: "Олена Петренко",
+      instagramUsername: "",
       paymentMethod: "CASH_ON_DELIVERY",
       phone: "+380671234567",
       warehouseAddress: "вул. Хрещатик, 1",
@@ -70,5 +74,58 @@ describe("delivery form validation", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it.each([
+    ["username", "username"],
+    ["@username", "username"],
+    ["user.name_123", "user.name_123"],
+  ])("accepts Instagram nickname %s", (value, expected) => {
+    const result = safeParseDeliveryFormValues({
+      carrier: "NOVA_POSHTA",
+      cityId: "city-1",
+      cityName: "Київ",
+      fullName: "Олена Петренко",
+      instagramUsername: value,
+      paymentMethod: "CASH_ON_DELIVERY",
+      phone: "+380671234567",
+      warehouseAddress: "вул. Хрещатик, 1",
+      warehouseId: "warehouse-1",
+      warehouseName: "Відділення №1",
+    });
+
+    expect(result).toMatchObject({
+      data: {
+        instagramUsername: expected,
+      },
+      success: true,
+    });
+  });
+
+  it.each([
+    "user name",
+    "this_username_is_more_than_thirty_characters",
+    "user-name!",
+  ])("rejects invalid Instagram nickname %s", (value) => {
+    const result = safeParseDeliveryFormValues({
+      carrier: "NOVA_POSHTA",
+      cityId: "city-1",
+      cityName: "Київ",
+      fullName: "Олена Петренко",
+      instagramUsername: value,
+      paymentMethod: "CASH_ON_DELIVERY",
+      phone: "+380671234567",
+      warehouseAddress: "вул. Хрещатик, 1",
+      warehouseId: "warehouse-1",
+      warehouseName: "Відділення №1",
+    });
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors.instagramUsername).toContain(
+        "Вкажіть Instagram нікнейм у форматі username або @username",
+      );
+    }
   });
 });

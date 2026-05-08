@@ -6,6 +6,7 @@ export const emptyDeliveryFormValues: DeliveryFormValues = {
   cityId: "",
   cityName: "",
   fullName: "",
+  instagramUsername: "",
   paymentMethod: "MONOBANK",
   phone: "+380",
   warehouseAddress: "",
@@ -21,6 +22,7 @@ export function deliveryFormValuesFromFormData(
     cityId: String(formData.get("cityId") ?? ""),
     cityName: String(formData.get("cityName") ?? ""),
     fullName: String(formData.get("fullName") ?? ""),
+    instagramUsername: String(formData.get("instagramUsername") ?? ""),
     paymentMethod: String(formData.get("paymentMethod") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     warehouseAddress: String(formData.get("warehouseAddress") ?? ""),
@@ -38,6 +40,7 @@ export function deliveryFormValuesToFormData(
   formData.set("cityId", values.cityId);
   formData.set("cityName", values.cityName);
   formData.set("fullName", values.fullName);
+  formData.set("instagramUsername", values.instagramUsername);
   formData.set("paymentMethod", values.paymentMethod);
   formData.set("phone", values.phone);
   formData.set("warehouseAddress", values.warehouseAddress);

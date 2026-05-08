@@ -17,6 +17,7 @@ import {
   deliveryFormSchema,
   type DeliveryFormValues,
 } from "@/modules/orders/application/delivery-form-validation";
+import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
 import type { DeliveryActionResult } from "@/modules/orders/ui/delivery-actions";
 import {
   deliveryFormValuesToFormData,
@@ -48,7 +49,7 @@ type LookupStatus = "idle" | "loading" | "loaded" | "error";
 const deliveryFormSteps = [
   {
     description: "Вкажіть ім’я та телефон отримувача.",
-    fields: ["fullName", "phone"],
+    fields: ["fullName", "phone", "instagramUsername"],
     id: "contacts",
     title: "Контакти",
   },
@@ -435,6 +436,40 @@ export function DeliveryForm({
                   message={form.formState.errors.phone?.message}
                 />
               </div>
+
+              <div className="grid min-w-0 gap-2">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="delivery-instagram"
+                >
+                  Instagram нікнейм
+                </label>
+                <input
+                  aria-describedby={
+                    form.formState.errors.instagramUsername
+                      ? "delivery-instagram-helper delivery-instagram-error"
+                      : "delivery-instagram-helper"
+                  }
+                  aria-invalid={Boolean(
+                    form.formState.errors.instagramUsername,
+                  )}
+                  autoComplete="off"
+                  className={inputClassName}
+                  id="delivery-instagram"
+                  placeholder="@username або username"
+                  {...form.register("instagramUsername")}
+                />
+                <p
+                  className="text-sm text-muted-foreground"
+                  id="delivery-instagram-helper"
+                >
+                  Допоможе продавцю швидше знайти вашу переписку.
+                </p>
+                <FieldError
+                  id="delivery-instagram-error"
+                  message={form.formState.errors.instagramUsername?.message}
+                />
+              </div>
             </section>
           ) : null}
 
@@ -681,6 +716,11 @@ export function DeliveryForm({
                     id: "phone",
                     label: "Телефон",
                     value: summaryText(formValues.phone),
+                  },
+                  {
+                    id: "instagram",
+                    label: "Instagram",
+                    value: summaryInstagramText(formValues.instagramUsername),
                   },
                 ]}
                 title="Контакти"
@@ -970,6 +1010,7 @@ function fieldPathFromServerField(
     field === "cityId" ||
     field === "cityName" ||
     field === "fullName" ||
+    field === "instagramUsername" ||
     field === "paymentMethod" ||
     field === "phone" ||
     field === "warehouseAddress" ||
@@ -980,6 +1021,12 @@ function fieldPathFromServerField(
   }
 
   return null;
+}
+
+function summaryInstagramText(value: string) {
+  const formatted = formatInstagramUsername(value);
+
+  return formatted ?? "Не вказано";
 }
 
 function stepIndexForField(field: string) {

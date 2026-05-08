@@ -99,6 +99,7 @@ describe("OrderDetailsPage", () => {
         email: null,
         fullName: "Олена Петренко",
         id: "customer-1",
+        instagramUsername: "olena.shop",
         phone: "+380671234567",
         updatedAt: now,
       })),

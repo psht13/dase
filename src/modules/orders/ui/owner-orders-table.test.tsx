@@ -61,7 +61,9 @@ describe("owner orders UI", () => {
     ).toBeNull();
     expect(screen.getByLabelText("Спосіб оплати")).toBeVisible();
     expect(screen.getByLabelText("Тег")).toBeVisible();
-    expect(screen.getByPlaceholderText("Телефон або ТТН")).toBeVisible();
+    expect(
+      screen.getByPlaceholderText("Телефон, Instagram або ТТН"),
+    ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Застосувати фільтри" }),
     ).toBeVisible();
@@ -89,6 +91,7 @@ describe("owner orders UI", () => {
     ).not.toBeInTheDocument();
     expect(table.getByText("Олена Петренко")).toBeVisible();
     expect(table.getByText("+380671234567")).toBeVisible();
+    expect(table.getByText("@olena.shop")).toBeVisible();
     expect(table.getByText("Готується відправлення")).toBeVisible();
     expect(table.getByText("Нова пошта · Післяплата")).toBeVisible();
     expect(table.getByText("Подарунок")).toBeVisible();
@@ -102,6 +105,7 @@ describe("owner orders UI", () => {
     expect(card.getByRole("heading", { name: /Замовлення #order-1/i })).toBeVisible();
     expect(card.getByText("Олена Петренко")).toBeVisible();
     expect(card.getByText("+380671234567")).toBeVisible();
+    expect(card.getByText("@olena.shop")).toBeVisible();
     expect(card.getByText("Готується відправлення")).toBeVisible();
     expect(card.getByText(/2\s?400,00/)).toBeVisible();
     expect(card.getByText("Нова пошта")).toBeVisible();
@@ -164,6 +168,7 @@ function createOrderSummary(): OwnerOrderSummary {
       email: null,
       fullName: "Олена Петренко",
       id: "customer-1",
+      instagramUsername: "olena.shop",
       phone: "+380671234567",
       updatedAt: now,
     },

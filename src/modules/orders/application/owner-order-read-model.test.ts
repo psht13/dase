@@ -52,6 +52,28 @@ describe("owner order read use cases", () => {
     });
   });
 
+  it("searches owner orders by Instagram nickname", async () => {
+    const order = createOrder({
+      customerId: "customer-1",
+      id: "order-1",
+      status: "SHIPMENT_PENDING",
+    });
+    const dependencies = createDependencies([order]);
+
+    const orders = await listOwnerOrdersUseCase(
+      {
+        filters: {
+          search: "@olena.shop",
+        },
+        ownerId: "owner-1",
+      },
+      dependencies,
+    );
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0]?.customer?.instagramUsername).toBe("olena.shop");
+  });
+
   it("searches owner orders by tracking number", async () => {
     const order = createOrder({
       customerId: "customer-1",
@@ -150,6 +172,7 @@ function createDependencies(
               email: null,
               fullName: "Олена Петренко",
               id: "customer-1",
+              instagramUsername: "olena.shop",
               phone: "+380671234567",
               updatedAt: now,
             }
@@ -158,6 +181,7 @@ function createDependencies(
               email: null,
               fullName: "Інший клієнт",
               id: "customer-2",
+              instagramUsername: null,
               phone: "+380501111111",
               updatedAt: now,
             },

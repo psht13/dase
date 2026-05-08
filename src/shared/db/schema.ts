@@ -206,6 +206,7 @@ export const customers = pgTable("customers", {
   email: text("email"),
   fullName: text("full_name").notNull(),
   id: uuid("id").defaultRandom().primaryKey(),
+  instagramUsername: text("instagram_username"),
   phone: text("phone").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

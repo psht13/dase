@@ -29,6 +29,7 @@ export class DrizzleCustomerRepository implements CustomerRepository {
       .values({
         email: input.email ?? null,
         fullName: input.fullName,
+        instagramUsername: input.instagramUsername ?? null,
         phone: input.phone,
       })
       .returning();
@@ -47,6 +48,7 @@ function mapCustomer(customer: DbCustomer): CustomerRecord {
     email: customer.email,
     fullName: customer.fullName,
     id: customer.id,
+    instagramUsername: customer.instagramUsername,
     phone: customer.phone,
     updatedAt: customer.updatedAt,
   };

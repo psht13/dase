@@ -1,5 +1,6 @@
 import type { CustomerRepository } from "@/modules/orders/application/customer-repository";
 import type { CustomerConfirmationUnitOfWork } from "@/modules/orders/application/customer-confirmation-unit-of-work";
+import { normalizeInstagramUsername } from "@/modules/orders/application/customer-instagram";
 import type { AuditEventRepository } from "@/modules/orders/application/audit-event-repository";
 import type {
   OrderRepository,
@@ -21,6 +22,7 @@ export type ConfirmPublicOrderInput = {
   cityId: string;
   cityName: string;
   fullName: string;
+  instagramUsername?: string | null;
   paymentMethod: PaymentProviderCode;
   phone: string;
   publicToken: string;
@@ -109,9 +111,17 @@ async function confirmPublicOrderWithoutUnitOfWork(
   }
 
   assertOrderStatusTransition(order.status, "CONFIRMED_BY_CUSTOMER");
+  const normalizedInstagramUsername = normalizeInstagramUsername(
+    input.instagramUsername,
+  );
+
+  if (!normalizedInstagramUsername.ok) {
+    throw new Error("Invalid Instagram username");
+  }
 
   const customer = await dependencies.customerRepository.save({
     fullName: input.fullName,
+    instagramUsername: normalizedInstagramUsername.value,
     phone: input.phone,
   });
 

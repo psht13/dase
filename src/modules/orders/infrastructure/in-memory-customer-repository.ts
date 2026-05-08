@@ -19,6 +19,7 @@ export class InMemoryCustomerRepository implements CustomerRepository {
       email: input.email ?? null,
       fullName: input.fullName,
       id: randomUUID(),
+      instagramUsername: input.instagramUsername ?? null,
       phone: input.phone,
       updatedAt: now,
     };

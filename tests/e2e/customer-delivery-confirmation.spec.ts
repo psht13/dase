@@ -54,6 +54,10 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
 
   await page.getByLabel("Повне ім’я").fill("Олена Петренко");
   await page.getByLabel("Телефон").fill("+380671234567");
+  await page.getByLabel("Instagram нікнейм").fill("@olena.delivery");
+  await expect(
+    page.getByText("Допоможе продавцю швидше знайти вашу переписку."),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Далі" }).click();
   await expect(
     page.getByRole("heading", { exact: true, name: "Доставка" }),
@@ -82,6 +86,7 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
     page.getByRole("heading", { exact: true, name: "Перевірка" }),
   ).toBeVisible();
   await expect(page.getByText("Олена Петренко")).toBeVisible();
+  await expect(page.getByText("@olena.delivery")).toBeVisible();
   await expect(page.getByText("Післяплата")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();

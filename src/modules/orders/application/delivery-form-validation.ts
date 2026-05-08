@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeInstagramUsername } from "@/modules/orders/application/customer-instagram";
 import type { PaymentProviderCode } from "@/modules/payments/application/payment-repository";
 import { isActiveShippingCarrier } from "@/modules/shipping/application/shipping-carrier-registry";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
@@ -16,6 +17,10 @@ export const deliveryFormSchema = z.object({
     .trim()
     .min(2, "Вкажіть ім’я та прізвище")
     .max(120, "Ім’я має бути до 120 символів"),
+  instagramUsername: z.string().refine(
+    (value) => normalizeInstagramUsername(value).ok,
+    "Вкажіть Instagram нікнейм у форматі username або @username",
+  ),
   paymentMethod: z
     .string()
     .refine((value) => isPaymentProviderValue(value), "Оберіть спосіб оплати"),
@@ -41,6 +46,7 @@ export type ValidatedDeliveryInput = {
   cityId: string;
   cityName: string;
   fullName: string;
+  instagramUsername: string | null;
   paymentMethod: PaymentProviderCode;
   phone: string;
   warehouseAddress: string | null;
@@ -77,12 +83,23 @@ function toValidatedDeliveryInput(
     cityId: values.cityId.trim(),
     cityName: values.cityName.trim(),
     fullName: values.fullName.trim(),
+    instagramUsername: normalizedInstagramUsername(values.instagramUsername),
     paymentMethod: values.paymentMethod as PaymentProviderCode,
     phone: normalizePhone(values.phone),
     warehouseAddress: values.warehouseAddress.trim() || null,
     warehouseId: values.warehouseId.trim(),
     warehouseName: values.warehouseName.trim(),
   };
+}
+
+function normalizedInstagramUsername(value: string): string | null {
+  const normalized = normalizeInstagramUsername(value);
+
+  if (!normalized.ok) {
+    throw new Error("Invalid Instagram username");
+  }
+
+  return normalized.value;
 }
 
 function normalizePhone(value: string): string {

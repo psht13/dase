@@ -59,6 +59,8 @@ describe("OwnerOrderDetailsView", () => {
     expect(screen.getByText("Каблучка")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Клієнт" })).toBeVisible();
     expect(screen.getByText("Олена Петренко")).toBeVisible();
+    expect(screen.getByText("Instagram нікнейм")).toBeVisible();
+    expect(screen.getByText("@olena.shop")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
     expect(screen.getAllByText("Нова пошта")[0]).toBeVisible();
     expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
@@ -389,6 +391,7 @@ function createOrderDetails(
       email: null,
       fullName: "Олена Петренко",
       id: "customer-1",
+      instagramUsername: "olena.shop",
       phone: "+380671234567",
       updatedAt: now,
     },

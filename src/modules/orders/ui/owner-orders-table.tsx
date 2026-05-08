@@ -1,5 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
 import {
   orderStatusLabels,
   paymentProviderLabels,
@@ -70,6 +71,11 @@ export function OwnerOrdersTable({
                   <p className="mt-1 truncate text-xs text-muted-foreground">
                     {order.customer?.phone ?? "Телефон не вказано"}
                   </p>
+                  {order.customer?.instagramUsername ? (
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {formatInstagramUsername(order.customer.instagramUsername)}
+                    </p>
+                  ) : null}
                 </td>
                 <td className="min-w-0 px-4 py-3">
                   <StatusBadge label={orderStatusLabels[order.status]} />
@@ -154,6 +160,11 @@ function OrderCard({ order }: { order: OwnerOrderSummary }) {
         <p className="break-words text-muted-foreground">
           {order.customer?.phone ?? "Телефон не вказано"}
         </p>
+        {order.customer?.instagramUsername ? (
+          <p className="break-words text-muted-foreground">
+            {formatInstagramUsername(order.customer.instagramUsername)}
+          </p>
+        ) : null}
       </div>
 
       <dl className="grid grid-cols-2 gap-3 text-sm">

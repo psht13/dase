@@ -30,6 +30,10 @@ describe("DeliveryForm", () => {
     expect(screen.getByText("Оплата")).toBeVisible();
     expect(screen.getByText("Перевірка")).toBeVisible();
     expect(screen.getByLabelText("Повне ім’я")).toBeVisible();
+    expect(screen.getByLabelText("Instagram нікнейм")).toBeVisible();
+    expect(
+      screen.getByText("Допоможе продавцю швидше знайти вашу переписку."),
+    ).toBeVisible();
     expect(screen.queryByLabelText("Служба доставки")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Далі" }));
@@ -121,6 +125,7 @@ describe("DeliveryForm", () => {
     expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
     expect(screen.getByText("Олена Петренко")).toBeVisible();
+    expect(screen.getByText("@olena.shop")).toBeVisible();
     expect(screen.getByText("Післяплата")).toBeVisible();
 
     await user.dblClick(
@@ -131,6 +136,7 @@ describe("DeliveryForm", () => {
     const formData = submittedForms[0];
 
     expect(formData?.get("cityId")).toBe("city-1");
+    expect(formData?.get("instagramUsername")).toBe("olena.shop");
     expect(formData?.get("warehouseId")).toBe("warehouse-1");
     expect(formData?.get("paymentMethod")).toBe("CASH_ON_DELIVERY");
     expect(
@@ -193,6 +199,7 @@ async function fillContacts(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Повне ім’я"), "Олена Петренко");
   await user.clear(screen.getByLabelText("Телефон"));
   await user.type(screen.getByLabelText("Телефон"), "+380671234567");
+  await user.type(screen.getByLabelText("Instagram нікнейм"), "olena.shop");
 }
 
 async function selectDelivery(user: ReturnType<typeof userEvent.setup>) {

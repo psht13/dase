@@ -7,6 +7,7 @@ describe("DrizzleCustomerRepository", () => {
     email: null,
     fullName: "Олена Петренко",
     id: "customer-1",
+    instagramUsername: "olena.shop",
     phone: "+380671234567",
     updatedAt: now,
   };
@@ -39,6 +40,7 @@ describe("DrizzleCustomerRepository", () => {
     await expect(
       repository.save({
         fullName: "Олена Петренко",
+        instagramUsername: "olena.shop",
         phone: "+380671234567",
       }),
     ).resolves.toMatchObject({
@@ -46,7 +48,10 @@ describe("DrizzleCustomerRepository", () => {
       fullName: "Олена Петренко",
     });
     expect(values).toHaveBeenCalledWith(
-      expect.objectContaining({ phone: "+380671234567" }),
+      expect.objectContaining({
+        instagramUsername: "olena.shop",
+        phone: "+380671234567",
+      }),
     );
   });
 });

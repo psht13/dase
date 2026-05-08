@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -280,25 +280,25 @@ Current active behavior:
 - Public order lookup distinguishes unavailable links, review state, and post-confirmation status state. `/o/[token]` renders the delivery CTA only while the order is `SENT_TO_CUSTOMER`; confirmed, payment, shipment, completed, returned, and failed-payment states render a Ukrainian status page.
 - `/o/[token]/delivery` renders the delivery form only for `SENT_TO_CUSTOMER`. After confirmation it renders the same public status state, so customers cannot resubmit delivery data or create duplicate customer, payment, or shipment rows through the UI. The submit use case still rejects duplicate confirmation because it only accepts `SENT_TO_CUSTOMER`.
 - The public status page shows a stable customer-facing display number using the first 8 characters of the order UUID, for example `#55e143f7`; it does not expose the full internal UUID. It also shows Ukrainian status labels, processing/payment guidance, seller-chat instruction, selected products, and total.
-- Customer contact data currently collects and persists only full name and phone. `customers.email` exists but the public form does not use it. There is no Instagram nickname field in `DeliveryFormValues`, `ConfirmPublicOrderInput`, `CustomerRecord`, or `customers`.
+- Customer contact data collects and persists full name, phone, and an optional Instagram nickname. `customers.email` exists but the public form does not use it.
 - Customer payment defaults to `MONOBANK`. The active payment choices are MonoPay and `Післяплата`; choosing MonoPay creates a Monobank invoice in `confirmDeliveryAction`, redirects to the provider page, and keeps public/owner retry actions active.
 - Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `MONOBANK` and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` are Monobank-specific but nullable.
 - MonoPay is still active in customer UI, public and owner retry UI, payment use cases, webhook route, tests, `.env.example`, `DEPLOYMENT.md`, and production verification checklists through `MONOBANK_*` variables and `/api/webhooks/monobank`.
-- Owner order search is URL-backed through `/dashboard/orders?search=...`. `matchesSearch(...)` currently matches customer phone digits and shipment tracking numbers only. Owner list/detail headings display `shortOrderId(order.id)`, but search does not match full UUIDs or short IDs.
+- Owner order search is URL-backed through `/dashboard/orders?search=...`. `matchesSearch(...)` matches customer phone digits, optional Instagram nickname, and shipment tracking numbers. Owner list/detail headings display `shortOrderId(order.id)`, but search does not match full UUIDs or short IDs yet.
 - Shipping enqueueing treats cash on delivery as shipment-ready immediately after confirmation, while MonoPay orders wait for a paid webhook before shipment creation. Manual card transfer must not accidentally enqueue shipment before the owner confirms payment.
 - Owner dashboard settings do not exist yet. There is no owner UI or table for public payment card/requisite records.
 
 Planned functional changes:
 - Replace the active customer MonoPay choice with `Оплата картою онлайн`. This should be a manual card transfer flow: after customer confirmation, show owner-configured visible card/requisite records and tell the customer in Ukrainian to send the receipt in the Instagram chat.
 - Keep Monobank adapter, webhook, and historical payment records readable for existing data, but remove MonoPay from the active customer flow and default form value. MonoPay retry should stop appearing for new manual-card customer flows.
-- Add Instagram nickname to the public contact step, server validation, confirmation use case input, customer persistence, owner order list/detail read models, and UI tests with Ukrainian labels.
+- Instagram nickname capture is complete for the public contact step, server validation, confirmation use case input, customer persistence, owner order list/detail read models, and UI tests with Ukrainian labels.
 - Extend the new public status page with owner-configured manual-card requisites once the manual-card payment provider and owner settings are implemented.
 - Add owner order search matching for full order UUID and the displayed short order ID in `matchesSearch(...)`; update the filter placeholder from `Телефон або ТТН` to include order number.
 - Add owner payment settings under the dashboard, with Ukrainian labels for creating, editing, ordering, enabling, and disabling visible card/requisite records.
 
 Migration plan:
 - Add a new payment provider enum value such as `MANUAL_CARD_TRANSFER` to `payment_provider`; update `src/shared/db/schema.ts`, `PaymentProviderCode`, validation, fixtures, labels, filters, tests, and Drizzle migration metadata.
-- Add nullable `instagram_username` to `customers`. Backfill is not needed for existing customers; owner UI should show `Не вказано` when absent.
+- Added nullable `instagram_username` to `customers` in `drizzle/0004_cute_veda.sql`. Backfill is not needed for existing customers; owner UI shows `Не вказано` when absent in details and omits the nickname from lists when absent.
 - Add an owner-scoped payment requisites table, for example `owner_payment_requisites`, with `owner_id`, Ukrainian display title, recipient name, card/account/requisite text, optional note, `is_active`, `sort_order`, and timestamps. Store only the owner-entered public requisites needed for the buyer-visible manual transfer flow; do not add object storage or receipt uploads.
 - Consider adding a dedicated customer-safe `orders.short_id` or `orders.display_number` if exposing `shortOrderId(order.id)` publicly is not acceptable. Owner search can match the current UUID prefix without a migration, but a stable display number needs one.
 
@@ -315,6 +315,13 @@ Public order status page update on 2026-05-08:
 - `/o/[token]/delivery` no longer renders the form after confirmation; it renders the same status state and leaves duplicate confirmation blocked in `confirmPublicOrderUseCase`.
 - Successful cash-on-delivery confirmation returns the customer to `/o/[token]`. MonoPay confirmation still redirects to the existing provider URL and returns to the same public status page.
 - Tests cover display-number formatting, public lookup review/status/unavailable states, duplicate-confirmation rejection without extra customer/payment/shipment writes, Ukrainian status UI copy, delivery-page status rendering, and the Playwright revisit contract.
+
+Customer Instagram nickname update on 2026-05-08:
+- `/o/[token]/delivery` contact step now asks for optional `Instagram нікнейм` with placeholder `@username або username` and helper text `Допоможе продавцю швидше знайти вашу переписку.`
+- Instagram usernames are normalized in the application layer before persistence: surrounding whitespace is trimmed, duplicate leading `@` characters are removed, internal spaces and unsafe symbols are rejected, and the stored value does not include a leading `@`.
+- Owner order list/cards show the formatted Instagram nickname when present, owner order details show `Instagram нікнейм` in the customer section, and owner search matches the nickname with or without a leading `@`.
+- `drizzle/0004_cute_veda.sql` adds nullable `customers.instagram_username` without destructive changes or backfill requirements.
+- Focused tests cover accepted usernames (`username`, `@username`, `user.name_123`), invalid usernames, normalized persistence, owner list/detail rendering, and the Playwright customer-to-owner flow with an Instagram nickname.
 
 Risks:
 - PostgreSQL enum migrations must be forward-compatible and tested against Railway PostgreSQL before production promotion.
