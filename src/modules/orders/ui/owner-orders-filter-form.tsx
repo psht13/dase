@@ -156,6 +156,9 @@ export function OwnerOrdersFilterForm({
             name="paymentMethod"
           >
             <option value="">Усі способи оплати</option>
+            <option value="MANUAL_CARD_TRANSFER">
+              {paymentProviderLabels.MANUAL_CARD_TRANSFER}
+            </option>
             <option value="MONOBANK">{paymentProviderLabels.MONOBANK}</option>
             <option value="CASH_ON_DELIVERY">
               {paymentProviderLabels.CASH_ON_DELIVERY}

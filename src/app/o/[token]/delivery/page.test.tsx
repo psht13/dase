@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import type { PersistedOrder } from "@/modules/orders/application/order-repository";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
+import { getPaymentRequisiteRepository } from "@/modules/payments/infrastructure/payment-requisite-repository-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import PublicDeliveryPage from "./page";
 
@@ -14,6 +15,13 @@ vi.mock("@/modules/payments/infrastructure/payment-repository-factory", () => ({
   getPaymentRepository: vi.fn(),
 }));
 
+vi.mock(
+  "@/modules/payments/infrastructure/payment-requisite-repository-factory",
+  () => ({
+    getPaymentRequisiteRepository: vi.fn(),
+  }),
+);
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     refresh: vi.fn(),
@@ -24,6 +32,18 @@ describe("PublicDeliveryPage", () => {
   beforeEach(() => {
     vi.mocked(getPaymentRepository).mockReturnValue({
       findByOrderId: vi.fn(async () => []),
+    } as never);
+    vi.mocked(getPaymentRequisiteRepository).mockReturnValue({
+      listActiveByOwnerId: vi.fn(async () => [
+        {
+          bankName: "monobank",
+          displayValue: "4441 1111 2222 3333",
+          id: "requisite-1",
+          label: "Основна картка",
+          note: null,
+          recipientName: "Олена Петренко",
+        },
+      ]),
     } as never);
   });
 

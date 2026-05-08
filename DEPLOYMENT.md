@@ -53,7 +53,7 @@ The production `worker` does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`
 Shared shipping mode:
 - `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Production defaults to `disabled` when omitted. Use `disabled` for production/demo deployments until Nova Post sender settings are complete. `mock` is rejected in production and is only for local/e2e.
 
-Required for MonoPay / Monobank production payment flow. These are not required for `web` startup when the live MonoPay flow is not being used:
+Required only for historical MonoPay / Monobank retry or webhook verification. These are not required for `web` startup or for the active manual online card transfer flow:
 - `MONOBANK_TOKEN`
 - `MONOBANK_API_URL`
 - `MONOBANK_PUBLIC_KEY`
@@ -122,6 +122,7 @@ Run migrations against development or staging PostgreSQL first. Do not run destr
 
 Current forward-only app migration:
 - `drizzle/0004_cute_veda.sql` adds nullable `customers.instagram_username` for optional customer Instagram nicknames. Existing customer rows remain valid and no secret or environment variable is involved.
+- `drizzle/0005_wonderful_preak.sql` adds `MANUAL_CARD_TRANSFER` to `payment_provider` and creates owner-scoped `payment_requisites` for active manual online card transfer details. No new environment variable is involved.
 
 If a migration fails during Railway pre-deploy, Railway should not promote that web deployment. Fix the migration locally, verify it against a safe database, then redeploy.
 
@@ -139,8 +140,9 @@ Do not call live external APIs in CI. After production variables are configured,
 - Open `/setup` before any owner exists, enter `OWNER_SETUP_TOKEN` into the Ukrainian setup-token field, create the first owner, then confirm `/setup` shows the Ukrainian unavailable state. Do not put `OWNER_SETUP_TOKEN` in the URL.
 - Confirm `/login` accepts the owner credentials, `/logout` ends the session, and a `user` role cannot access `/dashboard`.
 - With `SHIPPING_LABEL_CREATION_MODE=disabled`, confirm the owner order details page shows the Ukrainian disabled-shipping notice and no live Nova Post shipment is created.
-- MonoPay invoice creation redirects to the expected Monobank payment URL.
-- MonoPay retry shows `Повторити оплату` when a confirmed order is missing a provider invoice or when payment failed.
+- Owner payment settings allow creating active requisites under `/dashboard/settings/payment`, and the public customer payment step shows only active requisites for `Оплата картою онлайн`.
+- Historical MonoPay invoice creation redirects to the expected Monobank payment URL when the retry path is used.
+- Historical MonoPay retry shows `Повторити оплату` when a confirmed order is missing a provider invoice or when payment failed.
 - Monobank webhook signature verification accepts a signed provider callback.
 - Duplicate Monobank webhooks are idempotent.
 - Stale Monobank webhook events do not overwrite newer payment state.
@@ -183,7 +185,7 @@ Completed live setup:
 - Railway PostgreSQL connectivity and migrations were verified with a read-only table count check through the Railway public database proxy.
 
 Remaining manual production verification:
-- Configure real Monobank credentials in Railway variables.
+- Configure real Monobank credentials in Railway variables only if historical MonoPay retry/webhook verification is needed.
 - Nova Post stage directory lookup variables are configured on `web`, but live shipment creation still requires `SHIPPING_LABEL_CREATION_MODE=live` and complete Nova Post API, sender, payer, and parcel variables on `worker`.
 - Do not configure Ukrposhta for the active MVP; re-enable a future carrier only through the central carrier registry and updated deployment docs.
 - Run the external API checklist above with low-risk production test data.

@@ -33,6 +33,7 @@ export const orderStatus = pgEnum("order_status", [
 ]);
 export const paymentProvider = pgEnum("payment_provider", [
   "MONOBANK",
+  "MANUAL_CARD_TRANSFER",
   "CASH_ON_DELIVERY",
 ]);
 export const paymentStatus = pgEnum("payment_status", [
@@ -313,6 +314,54 @@ export const payments = pgTable(
     check("payments_amount_minor_nonnegative", sql`${table.amountMinor} >= 0`),
     index("payments_order_id_idx").on(table.orderId),
     index("payments_provider_invoice_id_idx").on(table.providerInvoiceId),
+  ],
+);
+
+export const paymentRequisites = pgTable(
+  "payment_requisites",
+  {
+    bankName: text("bank_name"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    displayValue: text("display_value").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    isActive: boolean("is_active").default(true).notNull(),
+    label: text("label").notNull(),
+    note: text("note"),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientName: text("recipient_name"),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check("payment_requisites_label_length", sql`char_length(${table.label}) <= 80`),
+    check(
+      "payment_requisites_recipient_name_length",
+      sql`${table.recipientName} IS NULL OR char_length(${table.recipientName}) <= 120`,
+    ),
+    check(
+      "payment_requisites_bank_name_length",
+      sql`${table.bankName} IS NULL OR char_length(${table.bankName}) <= 80`,
+    ),
+    check(
+      "payment_requisites_display_value_length",
+      sql`char_length(${table.displayValue}) <= 120`,
+    ),
+    check(
+      "payment_requisites_note_length",
+      sql`${table.note} IS NULL OR char_length(${table.note}) <= 240`,
+    ),
+    check(
+      "payment_requisites_sort_order_nonnegative",
+      sql`${table.sortOrder} >= 0`,
+    ),
+    index("payment_requisites_owner_id_idx").on(table.ownerId),
+    index("payment_requisites_owner_active_idx").on(table.ownerId, table.isActive),
   ],
 );
 

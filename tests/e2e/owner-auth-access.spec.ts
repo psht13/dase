@@ -32,6 +32,9 @@ test("owner can access dashboard and user cannot", async ({ page }) => {
       name: "Підтвердження замовлень для ювелірних продавців",
     }),
   ).toBeVisible();
+
+  await page.goto("/dashboard/settings/payment");
+  await expect(page).toHaveURL("/");
 });
 
 async function seedSession(page: Page, role: "owner" | "user") {

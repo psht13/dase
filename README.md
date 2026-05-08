@@ -26,7 +26,7 @@ Production `web` requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH
 
 Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`. It does not require login or setup secrets.
 
-MonoPay and Nova Post secrets should be set only for the live flows that use them. Keep Railway values in secure service variables or variable references.
+Nova Post secrets should be set only for the live flows that use them. MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option. Keep Railway values in secure service variables or variable references.
 
 ## First Owner Setup
 
@@ -43,6 +43,14 @@ Customers open `/o/[token]` to review selected products and continue to delivery
 The delivery/contact form asks for full name, phone, and an optional Instagram nickname so the seller can match the order with chat history. Instagram nicknames are stored normalized without duplicate leading `@` characters, while owner UI displays them with one leading `@`.
 
 After a customer submits delivery/payment details, the same public link becomes a Ukrainian status page with `Замовлення #...`, current status, seller-chat instruction, selected products, and total. Reopening `/o/[token]/delivery` after confirmation shows the status page instead of the delivery form, so the customer cannot submit the same order twice.
+
+## Manual Online Card Payment
+
+Owners manage public payment requisites under `/dashboard/settings/payment` in `Реквізити для оплати`.
+
+This is a manual transfer flow, not card processing. The app stores owner-provided public card/IBAN/payment details, shows only active requisites to customers, and never asks buyers for card number, expiry, CVV, or other customer card data.
+
+Customers choose `Оплата картою онлайн`, copy one of the active owner requisites, and send the receipt to the seller in Instagram chat.
 
 ## Shipping Demo Modes
 

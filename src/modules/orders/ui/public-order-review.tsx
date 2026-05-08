@@ -131,6 +131,7 @@ export function PublicOrderStatus({
       </section>
 
       <PaymentStatusNotice order={order} />
+      <ManualCardPaymentNotice order={order} />
 
       {order.canRetryMonobankPayment && paymentRetryAction ? (
         <div className="rounded-md border border-accent bg-card/95 p-4 shadow-sm">
@@ -202,6 +203,64 @@ function PaymentStatusNotice({
     >
       {message}
     </p>
+  );
+}
+
+function ManualCardPaymentNotice({ order }: { order: PublicOrderStatusData }) {
+  if (order.paymentProvider !== "MANUAL_CARD_TRANSFER") {
+    return null;
+  }
+
+  return (
+    <section
+      aria-labelledby="manual-card-payment-heading"
+      className="grid gap-4 rounded-md border border-accent bg-card/95 p-4 shadow-sm sm:p-5"
+    >
+      <div className="grid gap-1">
+        <h2 className="font-semibold" id="manual-card-payment-heading">
+          Оплата картою онлайн
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Переказ можна зробити на одну з карток нижче. Після оплати надішліть
+          квитанцію продавцю в Instagram чат.
+        </p>
+      </div>
+
+      {order.paymentRequisites.length ? (
+        <ul className="grid gap-3">
+          {order.paymentRequisites.map((requisite) => (
+            <li
+              className="grid min-w-0 gap-2 rounded-md border border-border/80 bg-background p-3"
+              key={requisite.id}
+            >
+              <p className="break-words font-semibold">{requisite.label}</p>
+              {requisite.bankName ? (
+                <p className="break-words text-sm text-muted-foreground">
+                  Банк: {requisite.bankName}
+                </p>
+              ) : null}
+              {requisite.recipientName ? (
+                <p className="break-words text-sm text-muted-foreground">
+                  Отримувач: {requisite.recipientName}
+                </p>
+              ) : null}
+              <p className="break-all rounded-md bg-muted px-3 py-2 text-sm font-semibold">
+                {requisite.displayValue}
+              </p>
+              {requisite.note ? (
+                <p className="break-words text-sm text-muted-foreground">
+                  {requisite.note}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          Активні реквізити зараз недоступні. Напишіть продавцю в Instagram чат.
+        </p>
+      )}
+    </section>
   );
 }
 

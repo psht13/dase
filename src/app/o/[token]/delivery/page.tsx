@@ -8,6 +8,7 @@ import {
   PublicOrderUnavailable,
 } from "@/modules/orders/ui/public-order-review";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
+import { getPaymentRequisiteRepository } from "@/modules/payments/infrastructure/payment-requisite-repository-factory";
 import { retryPublicMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
@@ -29,6 +30,7 @@ export default async function PublicDeliveryPage({
     },
     {
       orderRepository: getOrderRepository(),
+      paymentRequisiteRepository: getPaymentRequisiteRepository(),
       paymentRepository: getPaymentRepository(),
     },
   );
@@ -59,7 +61,10 @@ export default async function PublicDeliveryPage({
           />
         </div>
 
-        <DeliveryForm action={confirmDeliveryAction.bind(null, token)} />
+        <DeliveryForm
+          action={confirmDeliveryAction.bind(null, token)}
+          paymentRequisites={result.order.paymentRequisites}
+        />
 
         <div className="flex justify-start gap-3">
           <Button asChild variant="outline">

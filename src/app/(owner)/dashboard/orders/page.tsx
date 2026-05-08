@@ -132,7 +132,11 @@ function endOfDay(value: string | null): Date | null {
 }
 
 function isPaymentProvider(value: string | null): value is PaymentProviderCode {
-  return value === "MONOBANK" || value === "CASH_ON_DELIVERY";
+  return (
+    value === "MONOBANK" ||
+    value === "MANUAL_CARD_TRANSFER" ||
+    value === "CASH_ON_DELIVERY"
+  );
 }
 
 function hasActiveOrderFilters(filters: OwnerOrderFilters): boolean {

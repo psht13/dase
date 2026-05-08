@@ -119,6 +119,48 @@ describe("confirmPublicOrderUseCase", () => {
     );
   });
 
+  it("keeps manual card transfer orders in payment pending without shipment enqueue", async () => {
+    const dependencies = createDependencies(createOrder());
+
+    await expect(
+      confirmPublicOrderUseCase(
+        createInput({ paymentMethod: "MANUAL_CARD_TRANSFER" }),
+        {
+          ...dependencies,
+          now: () => now,
+        },
+      ),
+    ).resolves.toEqual({
+      confirmedAt: now,
+      orderId: "order-1",
+      status: "PAYMENT_PENDING",
+    });
+
+    expect(dependencies.paymentRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "MANUAL_CARD_TRANSFER",
+        status: "PENDING",
+      }),
+    );
+    expect(dependencies.orderRepository.updateStatus).toHaveBeenCalledWith(
+      "order-1",
+      "PAYMENT_PENDING",
+    );
+    expect(
+      dependencies.shipmentJobQueue.enqueueCreateShipment,
+    ).not.toHaveBeenCalled();
+    expect(dependencies.auditEventRepository.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "PAYMENT_UPDATED",
+        payload: expect.objectContaining({
+          paymentMethod: "MANUAL_CARD_TRANSFER",
+          status: "PAYMENT_PENDING",
+        }),
+      }),
+    );
+  });
+
+
   it("rejects expired public tokens", async () => {
     await expect(
       confirmPublicOrderUseCase(createInput(), {
@@ -146,14 +188,18 @@ describe("confirmPublicOrderUseCase", () => {
   });
 });
 
-function createInput() {
+function createInput(
+  input: Partial<{
+    paymentMethod: "CASH_ON_DELIVERY" | "MANUAL_CARD_TRANSFER";
+  }> = {},
+) {
   return {
     carrier: "NOVA_POSHTA" as const,
     cityId: "city-1",
     cityName: "Київ",
     fullName: "Олена Петренко",
     instagramUsername: " @@olena.shop ",
-    paymentMethod: "CASH_ON_DELIVERY" as const,
+    paymentMethod: input.paymentMethod ?? "CASH_ON_DELIVERY",
     phone: "+380671234567",
     publicToken: validToken,
     warehouseAddress: "вул. Хрещатик, 1",

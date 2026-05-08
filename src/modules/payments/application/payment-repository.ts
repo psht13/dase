@@ -1,4 +1,7 @@
-export type PaymentProviderCode = "MONOBANK" | "CASH_ON_DELIVERY";
+export type PaymentProviderCode =
+  | "MONOBANK"
+  | "MANUAL_CARD_TRANSFER"
+  | "CASH_ON_DELIVERY";
 export type PaymentStatus =
   | "PENDING"
   | "PAID"

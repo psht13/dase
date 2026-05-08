@@ -8,7 +8,7 @@ describe("delivery form validation", () => {
       cityName: " Київ ",
       fullName: " Олена Петренко ",
       instagramUsername: " @@olena.shop_123 ",
-      paymentMethod: "CASH_ON_DELIVERY",
+      paymentMethod: "MANUAL_CARD_TRANSFER",
       phone: "+380 (67) 123-45-67",
       warehouseAddress: " вул. Хрещатик, 1 ",
       warehouseId: "warehouse-1",
@@ -22,7 +22,7 @@ describe("delivery form validation", () => {
         cityName: "Київ",
         fullName: "Олена Петренко",
         instagramUsername: "olena.shop_123",
-        paymentMethod: "CASH_ON_DELIVERY",
+        paymentMethod: "MANUAL_CARD_TRANSFER",
         phone: "+380671234567",
         warehouseAddress: "вул. Хрещатик, 1",
         warehouseId: "warehouse-1",
@@ -67,6 +67,23 @@ describe("delivery form validation", () => {
       fullName: "Олена Петренко",
       instagramUsername: "",
       paymentMethod: "CASH_ON_DELIVERY",
+      phone: "+380671234567",
+      warehouseAddress: "вул. Хрещатик, 1",
+      warehouseId: "warehouse-1",
+      warehouseName: "Відділення №1",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects MonoPay from the active customer payment choices", () => {
+    const result = safeParseDeliveryFormValues({
+      carrier: "NOVA_POSHTA",
+      cityId: "city-1",
+      cityName: "Київ",
+      fullName: "Олена Петренко",
+      instagramUsername: "",
+      paymentMethod: "MONOBANK",
       phone: "+380671234567",
       warehouseAddress: "вул. Хрещатик, 1",
       warehouseId: "warehouse-1",

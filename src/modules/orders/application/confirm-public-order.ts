@@ -34,7 +34,7 @@ export type ConfirmPublicOrderInput = {
 export type ConfirmPublicOrderResult = {
   confirmedAt: Date;
   orderId: string;
-  status: "CONFIRMED_BY_CUSTOMER";
+  status: "CONFIRMED_BY_CUSTOMER" | "PAYMENT_PENDING";
 };
 
 type ConfirmPublicOrderDependencies = {
@@ -179,6 +179,22 @@ async function confirmPublicOrderWithoutUnitOfWork(
     },
   });
 
+  if (input.paymentMethod === "MANUAL_CARD_TRANSFER") {
+    assertOrderStatusTransition("CONFIRMED_BY_CUSTOMER", "PAYMENT_PENDING");
+    await dependencies.orderRepository.updateStatus(order.id, "PAYMENT_PENDING");
+    await dependencies.auditEventRepository.append({
+      actorCustomerId: customer.id,
+      actorType: "CUSTOMER",
+      actorUserId: null,
+      eventType: "PAYMENT_UPDATED",
+      orderId: order.id,
+      payload: {
+        paymentMethod: input.paymentMethod,
+        status: "PAYMENT_PENDING",
+      },
+    });
+  }
+
   if (input.paymentMethod === "CASH_ON_DELIVERY") {
     await enqueueShipmentCreationForReadyOrderUseCase(
       {
@@ -192,7 +208,10 @@ async function confirmPublicOrderWithoutUnitOfWork(
   return {
     confirmedAt: now,
     orderId: order.id,
-    status: "CONFIRMED_BY_CUSTOMER",
+    status:
+      input.paymentMethod === "MANUAL_CARD_TRANSFER"
+        ? "PAYMENT_PENDING"
+        : "CONFIRMED_BY_CUSTOMER",
   };
 }
 

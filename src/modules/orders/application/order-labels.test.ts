@@ -12,6 +12,9 @@ describe("owner order Ukrainian labels", () => {
     expect(shipmentCarrierLabels.NOVA_POSHTA).toBe("Нова пошта");
     expect(shipmentCarrierLabels.UKRPOSHTA).toBe("Укрпошта (вимкнено)");
     expect(paymentProviderLabels.CASH_ON_DELIVERY).toBe("Післяплата");
+    expect(paymentProviderLabels.MANUAL_CARD_TRANSFER).toBe(
+      "Оплата картою онлайн",
+    );
     expect(getAuditEventLabel("ORDER_STATUS_UPDATED")).toBe(
       "Статус змінено вручну",
     );

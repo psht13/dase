@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { z } from "zod";
 import {
   confirmPublicOrderUseCase,
@@ -14,19 +13,9 @@ import { getCustomerRepository } from "@/modules/orders/infrastructure/customer-
 import { getCustomerConfirmationUnitOfWork } from "@/modules/orders/infrastructure/customer-confirmation-unit-of-work-factory";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { deliveryFormValuesFromFormData } from "@/modules/orders/ui/delivery-form-data";
-import {
-  createPaymentInvoiceUseCase,
-  PaymentInvoiceCannotBeCreatedError,
-} from "@/modules/payments/application/create-payment-invoice";
-import {
-  PaymentProviderConfigurationError,
-  PaymentProviderRequestError,
-} from "@/modules/payments/application/payment-provider";
-import { getMonobankPaymentProvider } from "@/modules/payments/infrastructure/payment-provider-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
-import { getWebEnv } from "@/shared/config/env";
 
 export type DeliveryActionResult =
   | {
@@ -53,10 +42,8 @@ export async function confirmDeliveryAction(
     return validationErrorResult(parsed.error);
   }
 
-  let paymentRedirectUrl: string | undefined;
-
   try {
-    const confirmation = await confirmPublicOrderUseCase(
+    await confirmPublicOrderUseCase(
       {
         ...parsed.data,
         publicToken,
@@ -71,24 +58,6 @@ export async function confirmDeliveryAction(
         shipmentRepository: getShipmentRepository(),
       },
     );
-
-    if (parsed.data.paymentMethod === "MONOBANK") {
-      const baseUrl = await getPublicBaseUrl();
-      const invoice = await createPaymentInvoiceUseCase(
-        {
-          orderId: confirmation.orderId,
-          redirectUrl: `${baseUrl}/o/${publicToken}`,
-          webhookUrl: `${baseUrl}/api/webhooks/monobank`,
-        },
-        {
-          orderRepository: getOrderRepository(),
-          paymentProvider: getMonobankPaymentProvider(),
-          paymentRepository: getPaymentRepository(),
-        },
-      );
-
-      paymentRedirectUrl = invoice.paymentRedirectUrl;
-    }
   } catch (error) {
     return confirmationErrorResult(error);
   }
@@ -97,11 +66,11 @@ export async function confirmDeliveryAction(
   revalidatePath(`/o/${publicToken}/delivery`);
 
   return {
-    message: paymentRedirectUrl
-      ? "Замовлення підтверджено. Переходимо до оплати MonoPay."
-      : "Замовлення підтверджено. Оплата при отриманні.",
+    message:
+      parsed.data.paymentMethod === "MANUAL_CARD_TRANSFER"
+        ? "Замовлення підтверджено. Очікуємо оплату картою."
+        : "Замовлення підтверджено. Оплата при отриманні.",
     ok: true,
-    paymentRedirectUrl,
     statusPageUrl: `/o/${publicToken}`,
   };
 }
@@ -144,34 +113,5 @@ function confirmationErrorResult(
     };
   }
 
-  if (
-    error instanceof PaymentInvoiceCannotBeCreatedError ||
-    error instanceof PaymentProviderConfigurationError ||
-    error instanceof PaymentProviderRequestError
-  ) {
-    return {
-      message:
-        "Замовлення підтверджено, але посилання для оплати MonoPay не створено. Зв’яжіться з продавцем.",
-      ok: false,
-    };
-  }
-
   throw error;
-}
-
-async function getPublicBaseUrl(): Promise<string> {
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const env = getWebEnv();
-
-  if (!host) {
-    return env.BETTER_AUTH_URL ?? "http://localhost:3000";
-  }
-
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
-
-  return `${protocol}://${host}`;
 }

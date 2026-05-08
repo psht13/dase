@@ -1,22 +1,16 @@
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import type { PersistedOrder } from "@/modules/orders/application/order-repository";
 import { getAuditEventRepository } from "@/modules/orders/infrastructure/audit-event-repository-factory";
 import { getCustomerRepository } from "@/modules/orders/infrastructure/customer-repository-factory";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { confirmDeliveryAction } from "@/modules/orders/ui/delivery-actions";
 import { deliveryFormValuesToFormData } from "@/modules/orders/ui/delivery-form-data";
-import { getMonobankPaymentProvider } from "@/modules/payments/infrastructure/payment-provider-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
-}));
-
-vi.mock("next/headers", () => ({
-  headers: vi.fn(),
 }));
 
 vi.mock("@/modules/orders/infrastructure/audit-event-repository-factory", () => ({
@@ -33,10 +27,6 @@ vi.mock("@/modules/orders/infrastructure/order-repository-factory", () => ({
 
 vi.mock("@/modules/payments/infrastructure/payment-repository-factory", () => ({
   getPaymentRepository: vi.fn(),
-}));
-
-vi.mock("@/modules/payments/infrastructure/payment-provider-factory", () => ({
-  getMonobankPaymentProvider: vi.fn(),
 }));
 
 vi.mock("@/modules/shipping/infrastructure/shipment-repository-factory", () => ({
@@ -60,12 +50,6 @@ describe("confirmDeliveryAction", () => {
       ReturnType<ReturnType<typeof getShipmentRepository>["save"]>
     > | null = null;
 
-    vi.mocked(headers).mockResolvedValue(
-      new Headers({
-        host: "dase.test",
-        "x-forwarded-proto": "https",
-      }) as never,
-    );
     vi.mocked(getAuditEventRepository).mockReturnValue({
       append: vi.fn(async (event) => ({
         ...event,
@@ -121,11 +105,6 @@ describe("confirmDeliveryAction", () => {
       updateProviderInvoice: vi.fn(),
       updateStatus: vi.fn(),
     } as never);
-    vi.mocked(getMonobankPaymentProvider).mockReturnValue({
-      createInvoice: vi.fn(),
-      getInvoiceStatus: vi.fn(),
-      verifyWebhook: vi.fn(),
-    } as never);
     vi.mocked(getShipmentJobQueue).mockReturnValue({
       enqueueAutoCompleteDeliveredOrder: vi.fn(),
       enqueueCreateShipment: vi.fn(async () => "job-1"),
@@ -172,67 +151,19 @@ describe("confirmDeliveryAction", () => {
     });
     expect(revalidatePath).toHaveBeenCalledWith(`/o/${validToken}`);
     expect(revalidatePath).toHaveBeenCalledWith(`/o/${validToken}/delivery`);
-    expect(getMonobankPaymentProvider).not.toHaveBeenCalled();
   });
 
-  it("creates a MonoPay invoice and returns a payment redirect URL", async () => {
-    const savedPayment = {
-      amountMinor: 2_400_00,
-      createdAt: now,
-      currency: "UAH",
-      failureReason: null,
-      id: "payment-1",
-      orderId: "order-1",
-      paidAt: null,
-      provider: "MONOBANK" as const,
-      providerInvoiceId: null,
-      providerModifiedAt: null,
-      status: "PENDING" as const,
-      updatedAt: now,
-    };
-    const paymentRepository = {
-      findByOrderId: vi.fn(async () => [savedPayment]),
-      findByProviderInvoiceId: vi.fn(),
-      save: vi.fn(async () => savedPayment),
-      updateProviderInvoice: vi.fn(async (input) => ({
-        ...savedPayment,
-        providerInvoiceId: input.providerInvoiceId,
-        providerModifiedAt: input.providerModifiedAt,
-      })),
-      updateStatus: vi.fn(),
-    };
-    const paymentProvider = {
-      createInvoice: vi.fn(async () => ({
-        invoiceId: "invoice-1",
-        pageUrl: "https://pay.test/invoice-1",
-        providerModifiedAt: null,
-      })),
-      getInvoiceStatus: vi.fn(),
-      verifyWebhook: vi.fn(),
-    };
-
-    vi.mocked(getPaymentRepository).mockReturnValue(paymentRepository as never);
-    vi.mocked(getMonobankPaymentProvider).mockReturnValue(
-      paymentProvider as never,
-    );
-
+  it("confirms manual online card payment without a provider redirect", async () => {
     await expect(
       confirmDeliveryAction(
         validToken,
-        createFormData({ paymentMethod: "MONOBANK" }),
+        createFormData({ paymentMethod: "MANUAL_CARD_TRANSFER" }),
       ),
     ).resolves.toEqual({
-      message: "Замовлення підтверджено. Переходимо до оплати MonoPay.",
+      message: "Замовлення підтверджено. Очікуємо оплату картою.",
       ok: true,
-      paymentRedirectUrl: "https://pay.test/invoice-1",
       statusPageUrl: `/o/${validToken}`,
     });
-    expect(paymentProvider.createInvoice).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redirectUrl: `https://dase.test/o/${validToken}`,
-        webhookUrl: "https://dase.test/api/webhooks/monobank",
-      }),
-    );
   });
 
   it("returns Ukrainian feedback when the public link is unavailable", async () => {
@@ -272,7 +203,11 @@ describe("confirmDeliveryAction", () => {
   });
 });
 
-function createFormData(input: { paymentMethod?: "CASH_ON_DELIVERY" | "MONOBANK" } = {}) {
+function createFormData(
+  input: {
+    paymentMethod?: "CASH_ON_DELIVERY" | "MANUAL_CARD_TRANSFER";
+  } = {},
+) {
   return deliveryFormValuesToFormData({
     carrier: "NOVA_POSHTA",
     cityId: "city-1",

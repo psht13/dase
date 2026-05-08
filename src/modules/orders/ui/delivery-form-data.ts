@@ -7,7 +7,7 @@ export const emptyDeliveryFormValues: DeliveryFormValues = {
   cityName: "",
   fullName: "",
   instagramUsername: "",
-  paymentMethod: "MONOBANK",
+  paymentMethod: "MANUAL_CARD_TRANSFER",
   phone: "+380",
   warehouseAddress: "",
   warehouseId: "",

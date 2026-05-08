@@ -10,12 +10,20 @@ import type {
   PaymentStatus,
 } from "@/modules/payments/application/payment-repository";
 import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
+import {
+  listActivePaymentRequisitesForOwnerUseCase,
+} from "@/modules/payments/application/manage-payment-requisites";
+import type {
+  PaymentRequisiteRepository,
+  PublicPaymentRequisite,
+} from "@/modules/payments/application/payment-requisite-repository";
 
 type PublicOrderBase = {
   canRetryMonobankPayment: boolean;
   currency: string;
   items: PublicOrderReviewItem[];
   paymentProvider: PaymentProviderCode | null;
+  paymentRequisites: PublicPaymentRequisite[];
   paymentStatus: PaymentStatus | null;
   publicToken: string;
   publicTokenExpiresAt: Date;
@@ -61,6 +69,7 @@ export async function lookupPublicOrderUseCase(
   },
   dependencies: {
     orderRepository: OrderRepository;
+    paymentRequisiteRepository: PaymentRequisiteRepository;
     paymentRepository: PaymentRepository;
   },
 ): Promise<PublicOrderLookupResult> {
@@ -101,6 +110,19 @@ export async function lookupPublicOrderUseCase(
   const payments = await dependencies.paymentRepository.findByOrderId(order.id);
   const monobankPayment =
     payments.find((payment) => payment.provider === "MONOBANK") ?? null;
+  const currentPayment =
+    payments.find((payment) => payment.provider === "MANUAL_CARD_TRANSFER") ??
+    monobankPayment ??
+    payments.find((payment) => payment.provider === "CASH_ON_DELIVERY") ??
+    null;
+  const paymentRequisites = await listActivePaymentRequisitesForOwnerUseCase(
+    {
+      ownerId: order.ownerId,
+    },
+    {
+      paymentRequisiteRepository: dependencies.paymentRequisiteRepository,
+    },
+  );
 
   const publicOrderBase: PublicOrderBase = {
     canRetryMonobankPayment: monobankPayment
@@ -115,8 +137,9 @@ export async function lookupPublicOrderUseCase(
       quantity: item.quantity,
       unitPriceMinor: item.unitPriceMinor,
     })),
-    paymentProvider: monobankPayment?.provider ?? null,
-    paymentStatus: monobankPayment?.status ?? null,
+    paymentProvider: currentPayment?.provider ?? null,
+    paymentRequisites,
+    paymentStatus: currentPayment?.status ?? null,
     publicToken: order.publicToken,
     publicTokenExpiresAt: order.publicTokenExpiresAt,
     status: order.status,

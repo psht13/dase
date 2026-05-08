@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import type { PersistedOrder } from "@/modules/orders/application/order-repository";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
+import { getPaymentRequisiteRepository } from "@/modules/payments/infrastructure/payment-requisite-repository-factory";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import PublicOrderPage from "./page";
 
@@ -14,10 +15,20 @@ vi.mock("@/modules/payments/infrastructure/payment-repository-factory", () => ({
   getPaymentRepository: vi.fn(),
 }));
 
+vi.mock(
+  "@/modules/payments/infrastructure/payment-requisite-repository-factory",
+  () => ({
+    getPaymentRequisiteRepository: vi.fn(),
+  }),
+);
+
 describe("PublicOrderPage", () => {
   beforeEach(() => {
     vi.mocked(getPaymentRepository).mockReturnValue({
       findByOrderId: vi.fn(async () => []),
+    } as never);
+    vi.mocked(getPaymentRequisiteRepository).mockReturnValue({
+      listActiveByOwnerId: vi.fn(async () => []),
     } as never);
   });
 
@@ -70,6 +81,58 @@ describe("PublicOrderPage", () => {
     expect(
       screen.queryByRole("link", { name: "Перейти до доставки й оплати" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders active manual card payment requisites on the status page", async () => {
+    vi.mocked(getOrderRepository).mockReturnValue({
+      findByPublicToken: vi.fn(async () =>
+        createOrder({
+          confirmedAt: new Date("2026-04-30T11:00:00.000Z"),
+          customerId: "customer-1",
+          status: "PAYMENT_PENDING",
+        }),
+      ),
+    } as never);
+    vi.mocked(getPaymentRepository).mockReturnValue({
+      findByOrderId: vi.fn(async () => [
+        {
+          amountMinor: 2_400_00,
+          createdAt: new Date("2026-04-30T11:00:00.000Z"),
+          currency: "UAH",
+          failureReason: null,
+          id: "payment-1",
+          orderId: "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
+          paidAt: null,
+          provider: "MANUAL_CARD_TRANSFER",
+          providerInvoiceId: null,
+          providerModifiedAt: null,
+          status: "PENDING",
+          updatedAt: new Date("2026-04-30T11:00:00.000Z"),
+        },
+      ]),
+    } as never);
+    vi.mocked(getPaymentRequisiteRepository).mockReturnValue({
+      listActiveByOwnerId: vi.fn(async () => [
+        {
+          bankName: "monobank",
+          displayValue: "4441 1111 2222 3333",
+          id: "requisite-1",
+          label: "Основна картка",
+          note: "Надішліть квитанцію",
+          recipientName: "Олена Петренко",
+        },
+      ]),
+    } as never);
+
+    render(
+      await PublicOrderPage({
+        params: Promise.resolve({ token: validToken }),
+      }),
+    );
+
+    expect(screen.getByText("Оплата картою онлайн")).toBeVisible();
+    expect(screen.getByText("4441 1111 2222 3333")).toBeVisible();
+    expect(screen.getByText(/Олена Петренко/)).toBeVisible();
   });
 
   it("renders a safe unavailable page for expired links", async () => {

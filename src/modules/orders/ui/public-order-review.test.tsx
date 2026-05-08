@@ -76,6 +76,38 @@ describe("PublicOrderReview", () => {
     ).toBeVisible();
   });
 
+  it("renders active manual card payment requisites with customer instruction", () => {
+    render(
+      <PublicOrderStatus
+        order={createPublicOrderStatus({
+          paymentProvider: "MANUAL_CARD_TRANSFER",
+          paymentRequisites: [
+            {
+              bankName: "monobank",
+              displayValue: "4441 1111 2222 3333",
+              id: "requisite-1",
+              label: "Основна картка",
+              note: "Надішліть квитанцію",
+              recipientName: "Олена Петренко",
+            },
+          ],
+          paymentStatus: "PENDING",
+          status: "PAYMENT_PENDING",
+          statusLabel: "Очікує оплату",
+          statusMessage: "Очікуємо оплату картою.",
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Оплата картою онлайн")).toBeVisible();
+    expect(
+      screen.getByText(/Після оплати надішліть квитанцію продавцю/),
+    ).toBeVisible();
+    expect(screen.getByText("4441 1111 2222 3333")).toBeVisible();
+    expect(screen.getByText(/Олена Петренко/)).toBeVisible();
+  });
+
+
   it("renders a compact Ukrainian status page after confirmation", () => {
     render(<PublicOrderStatus order={createPublicOrderStatus()} />);
 
@@ -114,6 +146,7 @@ function createPublicOrder(
       },
     ],
     paymentProvider: null,
+    paymentRequisites: [],
     paymentStatus: null,
     publicToken: "public-token",
     publicTokenExpiresAt: new Date("2026-05-14T10:00:00.000Z"),
@@ -142,6 +175,7 @@ function createPublicOrderStatus(
       },
     ],
     paymentProvider: null,
+    paymentRequisites: [],
     paymentStatus: null,
     publicToken: "public-token",
     publicTokenExpiresAt: new Date("2026-05-14T10:00:00.000Z"),

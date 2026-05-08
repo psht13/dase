@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resetAuthForTests } from "@/modules/users/infrastructure/auth";
+import { resetPaymentRequisiteRepositoryForTests } from "@/modules/payments/infrastructure/payment-requisite-repository-factory";
 import { resetCredentialAuthServiceForTests } from "@/modules/users/infrastructure/credential-auth-service-factory";
 import {
   isE2eAuthMemoryEnabled,
@@ -17,6 +18,7 @@ export async function POST() {
   resetAuthForTests();
   resetCredentialAuthServiceForTests();
   resetOwnerSetupLockForTests();
+  resetPaymentRequisiteRepositoryForTests();
   resetUserRepositoryForTests();
 
   return NextResponse.json({ ok: true });

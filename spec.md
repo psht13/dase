@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, historical MonoPay / Monobank payment flow and retry support, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -281,25 +281,25 @@ Current active behavior:
 - `/o/[token]/delivery` renders the delivery form only for `SENT_TO_CUSTOMER`. After confirmation it renders the same public status state, so customers cannot resubmit delivery data or create duplicate customer, payment, or shipment rows through the UI. The submit use case still rejects duplicate confirmation because it only accepts `SENT_TO_CUSTOMER`.
 - The public status page shows a stable customer-facing display number using the first 8 characters of the order UUID, for example `#55e143f7`; it does not expose the full internal UUID. It also shows Ukrainian status labels, processing/payment guidance, seller-chat instruction, selected products, and total.
 - Customer contact data collects and persists full name, phone, and an optional Instagram nickname. `customers.email` exists but the public form does not use it.
-- Customer payment defaults to `MONOBANK`. The active payment choices are MonoPay and `Післяплата`; choosing MonoPay creates a Monobank invoice in `confirmDeliveryAction`, redirects to the provider page, and keeps public/owner retry actions active.
-- Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `MONOBANK` and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` are Monobank-specific but nullable.
-- MonoPay is still active in customer UI, public and owner retry UI, payment use cases, webhook route, tests, `.env.example`, `DEPLOYMENT.md`, and production verification checklists through `MONOBANK_*` variables and `/api/webhooks/monobank`.
+- Customer payment defaults to `MANUAL_CARD_TRANSFER` when the owner has active payment requisites, otherwise to `CASH_ON_DELIVERY`. The active customer choices are `Оплата картою онлайн` and `Післяплата`.
+- Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `MONOBANK`, `MANUAL_CARD_TRANSFER`, and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` remain Monobank-specific but nullable.
+- MonoPay is no longer active in the customer delivery/payment form. Monobank provider, webhook, and retry code remains for historical records and explicit retry paths through `MONOBANK_*` variables and `/api/webhooks/monobank`.
 - Owner order search is URL-backed through `/dashboard/orders?search=...`. `matchesSearch(...)` matches customer phone digits, optional Instagram nickname, and shipment tracking numbers. Owner list/detail headings display `shortOrderId(order.id)`, but search does not match full UUIDs or short IDs yet.
 - Shipping enqueueing treats cash on delivery as shipment-ready immediately after confirmation, while MonoPay orders wait for a paid webhook before shipment creation. Manual card transfer must not accidentally enqueue shipment before the owner confirms payment.
-- Owner dashboard settings do not exist yet. There is no owner UI or table for public payment card/requisite records.
+- Owner dashboard settings exist under `/dashboard/settings/payment` for public payment card/requisite records.
 
-Planned functional changes:
-- Replace the active customer MonoPay choice with `Оплата картою онлайн`. This should be a manual card transfer flow: after customer confirmation, show owner-configured visible card/requisite records and tell the customer in Ukrainian to send the receipt in the Instagram chat.
-- Keep Monobank adapter, webhook, and historical payment records readable for existing data, but remove MonoPay from the active customer flow and default form value. MonoPay retry should stop appearing for new manual-card customer flows.
+Completed functional changes from this audit:
+- Replaced the active customer MonoPay choice with `Оплата картою онлайн`. This is a manual card transfer flow: after customer confirmation, owner-configured active card/requisite records are visible and the customer is told in Ukrainian to send the receipt in the Instagram chat.
+- Kept Monobank adapter, webhook, and historical payment records readable for existing data, while removing MonoPay from the active customer flow and default form value. MonoPay retry no longer appears for new manual-card customer flows.
 - Instagram nickname capture is complete for the public contact step, server validation, confirmation use case input, customer persistence, owner order list/detail read models, and UI tests with Ukrainian labels.
-- Extend the new public status page with owner-configured manual-card requisites once the manual-card payment provider and owner settings are implemented.
+- Extended the public status page with owner-configured manual-card requisites.
 - Add owner order search matching for full order UUID and the displayed short order ID in `matchesSearch(...)`; update the filter placeholder from `Телефон або ТТН` to include order number.
-- Add owner payment settings under the dashboard, with Ukrainian labels for creating, editing, ordering, enabling, and disabling visible card/requisite records.
+- Added owner payment settings under the dashboard, with Ukrainian labels for creating, editing, ordering, enabling, and disabling visible card/requisite records.
 
 Migration plan:
-- Add a new payment provider enum value such as `MANUAL_CARD_TRANSFER` to `payment_provider`; update `src/shared/db/schema.ts`, `PaymentProviderCode`, validation, fixtures, labels, filters, tests, and Drizzle migration metadata.
+- Added `MANUAL_CARD_TRANSFER` to `payment_provider`; updated `src/shared/db/schema.ts`, `PaymentProviderCode`, validation, fixtures, labels, filters, tests, and Drizzle migration metadata.
 - Added nullable `instagram_username` to `customers` in `drizzle/0004_cute_veda.sql`. Backfill is not needed for existing customers; owner UI shows `Не вказано` when absent in details and omits the nickname from lists when absent.
-- Add an owner-scoped payment requisites table, for example `owner_payment_requisites`, with `owner_id`, Ukrainian display title, recipient name, card/account/requisite text, optional note, `is_active`, `sort_order`, and timestamps. Store only the owner-entered public requisites needed for the buyer-visible manual transfer flow; do not add object storage or receipt uploads.
+- Added owner-scoped `payment_requisites` with `owner_id`, display title, recipient name, card/account/requisite text, optional note, `is_active`, `sort_order`, and timestamps. It stores only owner-entered public requisites needed for the buyer-visible manual transfer flow; no object storage or receipt uploads were added.
 - Consider adding a dedicated customer-safe `orders.short_id` or `orders.display_number` if exposing `shortOrderId(order.id)` publicly is not acceptable. Owner search can match the current UUID prefix without a migration, but a stable display number needs one.
 
 UI refactor plan:
@@ -313,7 +313,7 @@ Public order status page update on 2026-05-08:
 - Public order lookup now returns `review` only for `SENT_TO_CUSTOMER` and `status` for valid post-confirmation/payment/shipment/completion states. Cancelled, expired, malformed, and missing links remain unavailable.
 - `/o/[token]` shows the pre-confirmation review CTA only before confirmation. After confirmation it shows `Замовлення #...`, the Ukrainian status label, status guidance such as `Ваше замовлення обробляється` or `Очікуємо оплату картою`, the seller-chat instruction, selected products, and total.
 - `/o/[token]/delivery` no longer renders the form after confirmation; it renders the same status state and leaves duplicate confirmation blocked in `confirmPublicOrderUseCase`.
-- Successful cash-on-delivery confirmation returns the customer to `/o/[token]`. MonoPay confirmation still redirects to the existing provider URL and returns to the same public status page.
+- Successful manual-card and cash-on-delivery confirmations return the customer to `/o/[token]`. Historical MonoPay retry still redirects to the existing provider URL and returns to the same public status page.
 - Tests cover display-number formatting, public lookup review/status/unavailable states, duplicate-confirmation rejection without extra customer/payment/shipment writes, Ukrainian status UI copy, delivery-page status rendering, and the Playwright revisit contract.
 
 Customer Instagram nickname update on 2026-05-08:
@@ -322,6 +322,17 @@ Customer Instagram nickname update on 2026-05-08:
 - Owner order list/cards show the formatted Instagram nickname when present, owner order details show `Instagram нікнейм` in the customer section, and owner search matches the nickname with or without a leading `@`.
 - `drizzle/0004_cute_veda.sql` adds nullable `customers.instagram_username` without destructive changes or backfill requirements.
 - Focused tests cover accepted usernames (`username`, `@username`, `user.name_123`), invalid usernames, normalized persistence, owner list/detail rendering, and the Playwright customer-to-owner flow with an Instagram nickname.
+
+Manual card payment requisite settings update on 2026-05-08:
+- Added owner dashboard navigation item `Налаштування` and route `/dashboard/settings/payment` with Ukrainian `Реквізити для оплати` copy.
+- Owners can create, edit, activate/deactivate, sort, view, and copy public payment requisites. Owner lists show masked card-like values such as `•••• 3333`; public customer views show the full owner-provided display value so the buyer can copy it.
+- Added `payment_requisites` with owner-scoped records: label, optional recipient and bank names, display value, optional note, active flag, sort order, and timestamps. Only active records are returned by the public read model.
+- Added active customer payment method `Оплата картою онлайн` backed by `MANUAL_CARD_TRANSFER`. This is a manual transfer flow only; the app does not collect customer card number, expiry, CVV, or process cards.
+- The public payment step and post-confirmation status page show the instruction `Переказ можна зробити на одну з карток нижче. Після оплати надішліть квитанцію продавцю в Instagram чат.` and only active owner requisites.
+- Manual card transfer confirmations move the order to `PAYMENT_PENDING`, keep payment status `PENDING`, and do not enqueue shipment creation before payment is handled by the owner workflow.
+- MonoPay/Monobank remains implemented for historical records, webhook handling, and retry support, but it is no longer an active option in the customer delivery/payment form.
+- Focused tests cover validation, repository save/list/update/toggle, owner access, user denial through E2E, public active-only read model behavior, Ukrainian UI labels, owner requisite creation, and public manual-card display.
+- Verification for this milestone passed with `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e`, and `pnpm build`. The E2E run used port 3100 because an unrelated local app was already listening on port 3000; the isolated run passed 19 tests with the production smoke skipped.
 
 Risks:
 - PostgreSQL enum migrations must be forward-compatible and tested against Railway PostgreSQL before production promotion.
@@ -460,10 +471,10 @@ Audit result:
 - The contact step validates full name and phone before exposing delivery fields.
 - The delivery step keeps carrier, city, and warehouse lookup through `/api/carriers/cities` and `/api/carriers/warehouses`; it does not call Nova Post directly from UI and still renders Nova Post as the only active MVP carrier.
 - City and warehouse results render as full-width mobile-friendly result cards with loading, empty, and error states in Ukrainian. Selected city and warehouse states are shown clearly with `Змінити місто` and `Змінити відділення` reset actions.
-- The payment step uses two explicit Ukrainian radio-card options: MonoPay with an online redirect explanation and `Післяплата` with a payment-on-receipt explanation.
+- The payment step uses explicit Ukrainian radio-card options: `Оплата картою онлайн` when the owner has active payment requisites, and `Післяплата` with a payment-on-receipt explanation.
 - The review step shows separate contact, delivery, and payment summaries before `confirmDeliveryAction` submits and returns the status page URL.
-- Final submit is guarded against accidental double submit. MonoPay still redirects when the existing action returns `paymentRedirectUrl`; cash on delivery now navigates back to `/o/[token]` to show the public status page.
-- Focused UI tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, MonoPay redirect wiring, cash-on-delivery status navigation, and Ukrainian labels. Playwright customer delivery E2E now follows the step flow, checks mobile overflow during the public delivery path, revisits the public link, and verifies the delivery form is no longer shown after confirmation.
+- Final submit is guarded against accidental double submit. Manual card transfer and cash on delivery both navigate back to `/o/[token]` to show the public status page.
+- Focused UI tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, manual-card and cash-on-delivery status navigation, and Ukrainian labels. Playwright customer delivery E2E now follows the step flow, checks mobile overflow during the public delivery path, revisits the public link, and verifies the delivery form is no longer shown after confirmation.
 
 ## Core flows
 
@@ -501,7 +512,7 @@ Audit result:
    - Нова пошта
 5. Customer selects city and branch/office from official carrier data.
 6. Customer opens the `Оплата` step and chooses payment:
-   - MonoPay
+   - online card transfer using owner requisites
    - cash on delivery
 7. Customer opens `Перевірка`, reviews contact, delivery, and payment summaries, and submits the form.
 8. App saves confirmation data, sets the order to `CONFIRMED_BY_CUSTOMER`, and prepares pending payment/shipment records.
@@ -509,7 +520,15 @@ Audit result:
 
 ### Payment
 
-For MonoPay:
+For online card transfer:
+
+1. Owner creates active public payment requisites under `/dashboard/settings/payment`.
+2. Customer chooses `Оплата картою онлайн`.
+3. Public UI shows only active owner requisites and the Instagram receipt instruction.
+4. App saves a pending `MANUAL_CARD_TRANSFER` payment and moves the order to `PAYMENT_PENDING`.
+5. App does not enqueue shipment creation until payment is handled by the owner workflow.
+
+For historical MonoPay:
 
 1. App creates payment invoice after customer confirmation.
 2. App stores the provider invoice id and marks the order `PAYMENT_PENDING`.
@@ -519,7 +538,7 @@ For MonoPay:
 6. App stores event idempotently.
 7. App ignores stale events by provider `modifiedDate`.
 8. App updates payment and order status.
-9. If the confirmed order has no provider invoice id or the previous MonoPay payment failed, the customer or owner can use `Повторити оплату` to create a new invoice and move the payment/order back to pending.
+9. If a historical confirmed order has no provider invoice id or the previous MonoPay payment failed, the customer or owner can use `Повторити оплату` to create a new invoice and move the payment/order back to pending.
 
 For cash on delivery:
 
@@ -583,6 +602,7 @@ Implemented foundation migrations:
 - order_items
 - customers
 - payments
+- payment_requisites
 - shipments
 - order_tags
 - order_tag_links
@@ -595,6 +615,8 @@ Migration files:
 - `drizzle/0001_secret_the_fallen.sql`
 - `drizzle/0002_romantic_sway.sql`
 - `drizzle/0003_kind_deathstrike.sql`
+- `drizzle/0004_cute_veda.sql`
+- `drizzle/0005_wonderful_preak.sql`
 
 Money values are stored in integer minor units. The historical product price column is `products.price_cents`; new order and payment amount columns use `_minor` naming.
 

@@ -18,6 +18,7 @@ import {
   type DeliveryFormValues,
 } from "@/modules/orders/application/delivery-form-validation";
 import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
+import type { PublicPaymentRequisite } from "@/modules/payments/application/payment-requisite-repository";
 import type { DeliveryActionResult } from "@/modules/orders/ui/delivery-actions";
 import {
   deliveryFormValuesToFormData,
@@ -42,6 +43,7 @@ import { cn } from "@/shared/utils/cn";
 type DeliveryFormProps = {
   action: (formData: FormData) => Promise<DeliveryActionResult>;
   navigateToPayment?: (url: string) => void;
+  paymentRequisites: PublicPaymentRequisite[];
 };
 
 type LookupStatus = "idle" | "loading" | "loaded" | "error";
@@ -80,20 +82,11 @@ const deliveryFormSteps = [
   },
 ] satisfies readonly MultiStepFormStep<DeliveryFormValues>[];
 
-const paymentMethodOptions = [
-  {
-    description:
-      "Онлайн-оплата карткою після підтвердження. Далі відкриється сторінка MonoPay.",
-    label: "MonoPay",
-    value: "MONOBANK",
-  },
-  {
-    description:
-      "Оплата готівкою або карткою при отриманні у відділенні.",
-    label: "Післяплата",
-    value: "CASH_ON_DELIVERY",
-  },
-] as const;
+type PaymentMethodOption = {
+  description: string;
+  label: string;
+  value: DeliveryFormValues["paymentMethod"];
+};
 
 const inputClassName =
   "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:text-sm";
@@ -101,6 +94,7 @@ const inputClassName =
 export function DeliveryForm({
   action,
   navigateToPayment,
+  paymentRequisites,
 }: DeliveryFormProps) {
   const router = useRouter();
   const submitLockRef = useRef(false);
@@ -114,8 +108,14 @@ export function DeliveryForm({
   const [warehouses, setWarehouses] = useState<ShippingWarehouse[]>([]);
   const [cityStatus, setCityStatus] = useState<LookupStatus>("idle");
   const [warehouseStatus, setWarehouseStatus] = useState<LookupStatus>("idle");
+  const paymentMethodOptions = buildPaymentMethodOptions(paymentRequisites);
   const form = useForm<DeliveryFormValues>({
-    defaultValues: emptyDeliveryFormValues,
+    defaultValues: {
+      ...emptyDeliveryFormValues,
+      paymentMethod: paymentRequisites.length
+        ? "MANUAL_CARD_TRANSFER"
+        : "CASH_ON_DELIVERY",
+    },
     resolver: zodResolver(deliveryFormSchema),
   });
   const formValues = form.watch();
@@ -692,6 +692,11 @@ export function DeliveryForm({
                       >
                         {option.description}
                       </span>
+                      {checked && option.value === "MANUAL_CARD_TRANSFER" ? (
+                        <PaymentRequisitesPreview
+                          requisites={paymentRequisites}
+                        />
+                      ) : null}
                     </span>
                   </label>
                 );
@@ -956,15 +961,81 @@ function DeliverySummary({ values }: { values: DeliveryFormValues }) {
 function PaymentIcon({
   value,
 }: {
-  value: (typeof paymentMethodOptions)[number]["value"];
+  value: PaymentMethodOption["value"];
 }) {
-  if (value === "MONOBANK") {
+  if (value === "MANUAL_CARD_TRANSFER") {
     return (
       <CreditCard aria-hidden="true" className="size-4 text-muted-foreground" />
     );
   }
 
   return <Banknote aria-hidden="true" className="size-4 text-muted-foreground" />;
+}
+
+function PaymentRequisitesPreview({
+  requisites,
+}: {
+  requisites: PublicPaymentRequisite[];
+}) {
+  return (
+    <span className="mt-3 grid min-w-0 gap-3 rounded-md border border-border/80 bg-card p-3">
+      <span className="text-sm font-medium">
+        Переказ можна зробити на одну з карток нижче. Після оплати надішліть
+        квитанцію продавцю в Instagram чат.
+      </span>
+      {requisites.map((requisite) => (
+        <span
+          className="grid min-w-0 gap-2 rounded-md border border-border/70 bg-background p-3"
+          key={requisite.id}
+        >
+          <span className="break-words text-sm font-semibold">
+            {requisite.label}
+          </span>
+          {requisite.bankName ? (
+            <span className="break-words text-sm text-muted-foreground">
+              Банк: {requisite.bankName}
+            </span>
+          ) : null}
+          {requisite.recipientName ? (
+            <span className="break-words text-sm text-muted-foreground">
+              Отримувач: {requisite.recipientName}
+            </span>
+          ) : null}
+          <span className="break-all rounded-md bg-muted px-3 py-2 text-sm font-semibold">
+            {requisite.displayValue}
+          </span>
+          {requisite.note ? (
+            <span className="break-words text-sm text-muted-foreground">
+              {requisite.note}
+            </span>
+          ) : null}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function buildPaymentMethodOptions(
+  paymentRequisites: PublicPaymentRequisite[],
+): PaymentMethodOption[] {
+  const options: PaymentMethodOption[] = [];
+
+  if (paymentRequisites.length) {
+    options.push({
+      description:
+        "Переказ на картку або реквізити продавця після підтвердження.",
+      label: "Оплата картою онлайн",
+      value: "MANUAL_CARD_TRANSFER",
+    });
+  }
+
+  options.push({
+    description: "Оплата готівкою або карткою при отриманні у відділенні.",
+    label: "Післяплата",
+    value: "CASH_ON_DELIVERY",
+  });
+
+  return options;
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {

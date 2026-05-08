@@ -31,9 +31,12 @@ describe("DashboardLayout", () => {
     expect(
       screen.getAllByRole("link", { name: /Створити замовлення/i })[0],
     ).toBeVisible();
+    expect(
+      screen.getAllByRole("link", { name: /Налаштування/i })[0],
+    ).toBeVisible();
     expect(screen.getByText("Роль: власник")).toBeVisible();
     expect(screen.getByTestId("mobile-dashboard-nav")).toHaveClass(
-      "grid-cols-4",
+      "grid-cols-5",
     );
     expect(screen.getByText("Поточний розділ")).toBeVisible();
     expect(screen.getAllByText("Каталог товарів")[0]).toBeVisible();

@@ -7,6 +7,7 @@ import type {
   PaymentRecord,
   PaymentRepository,
 } from "@/modules/payments/application/payment-repository";
+import type { PaymentRequisiteRepository } from "@/modules/payments/application/payment-requisite-repository";
 
 const validToken = "secure_public_token_123456789012345";
 
@@ -19,6 +20,7 @@ describe("lookupPublicOrderUseCase", () => {
       },
       {
         orderRepository: createOrderRepository(createOrder()),
+        paymentRequisiteRepository: createPaymentRequisiteRepository(),
         paymentRepository: createPaymentRepository(),
       },
     );
@@ -57,6 +59,7 @@ describe("lookupPublicOrderUseCase", () => {
         orderRepository: createOrderRepository(
           createOrder({ status: "CONFIRMED_BY_CUSTOMER" }),
         ),
+        paymentRequisiteRepository: createPaymentRequisiteRepository(),
         paymentRepository: createPaymentRepository({
           providerInvoiceId: null,
           status: "PENDING",
@@ -86,7 +89,9 @@ describe("lookupPublicOrderUseCase", () => {
         orderRepository: createOrderRepository(
           createOrder({ status: "PAYMENT_PENDING" }),
         ),
+        paymentRequisiteRepository: createPaymentRequisiteRepository(),
         paymentRepository: createPaymentRepository({
+          provider: "MANUAL_CARD_TRANSFER",
           providerInvoiceId: "invoice-1",
           status: "PENDING",
         }),
@@ -114,6 +119,7 @@ describe("lookupPublicOrderUseCase", () => {
         },
         {
           orderRepository: createOrderRepository(createOrder()),
+          paymentRequisiteRepository: createPaymentRequisiteRepository(),
           paymentRepository: createPaymentRepository(),
         },
       ),
@@ -133,6 +139,7 @@ describe("lookupPublicOrderUseCase", () => {
         orderRepository: createOrderRepository(
           createOrder({ status: "CONFIRMED_BY_CUSTOMER" }),
         ),
+        paymentRequisiteRepository: createPaymentRequisiteRepository(),
         paymentRepository: createPaymentRepository({
           providerInvoiceId: null,
           status: "PENDING",
@@ -159,6 +166,7 @@ describe("lookupPublicOrderUseCase", () => {
           orderRepository: createOrderRepository(
             createOrder({ status: "CANCELLED" }),
           ),
+          paymentRequisiteRepository: createPaymentRequisiteRepository(),
           paymentRepository: createPaymentRepository(),
         },
       ),
@@ -178,6 +186,7 @@ describe("lookupPublicOrderUseCase", () => {
         },
         {
           orderRepository,
+          paymentRequisiteRepository: createPaymentRequisiteRepository(),
           paymentRepository: createPaymentRepository(),
         },
       ),
@@ -241,10 +250,11 @@ function createOrderRepository(order: PersistedOrder | null): OrderRepository {
 }
 
 function createPaymentRepository(
-  input: Partial<Pick<PaymentRecord, "providerInvoiceId" | "status">> = {},
+  input: Partial<Pick<PaymentRecord, "provider" | "providerInvoiceId" | "status">> = {},
 ): PaymentRepository {
   const providerInvoiceId: string | null =
     "providerInvoiceId" in input ? input.providerInvoiceId ?? null : "invoice-1";
+  const provider = input.provider ?? "MONOBANK";
   const status = input.status ?? "PAID";
 
   return {
@@ -257,7 +267,7 @@ function createPaymentRepository(
         id: "payment-1",
         orderId: "order-1",
         paidAt: new Date("2026-04-30T12:00:00.000Z"),
-        provider: "MONOBANK" as const,
+        provider,
         providerInvoiceId,
         providerModifiedAt: new Date("2026-04-30T12:00:00.000Z"),
         status,
@@ -268,5 +278,24 @@ function createPaymentRepository(
     save: vi.fn(),
     updateProviderInvoice: vi.fn(),
     updateStatus: vi.fn(),
+  };
+}
+
+function createPaymentRequisiteRepository(): PaymentRequisiteRepository {
+  return {
+    listActiveByOwnerId: vi.fn(async () => [
+      {
+        bankName: "monobank",
+        displayValue: "4441 1111 2222 3333",
+        id: "requisite-1",
+        label: "Основна картка",
+        note: "Надішліть квитанцію",
+        recipientName: "Олена Петренко",
+      },
+    ]),
+    listByOwnerId: vi.fn(),
+    save: vi.fn(),
+    setActive: vi.fn(),
+    update: vi.fn(),
   };
 }

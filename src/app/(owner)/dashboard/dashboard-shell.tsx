@@ -5,6 +5,7 @@ import {
   LogOut,
   type LucideIcon,
   Package,
+  Settings,
   ShoppingBag,
   ShoppingCart,
 } from "lucide-react";
@@ -45,6 +46,12 @@ const navigationItems: NavigationItem[] = [
     icon: ShoppingCart,
     label: "Створити замовлення",
     shortLabel: "Створити",
+  },
+  {
+    href: "/dashboard/settings/payment",
+    icon: Settings,
+    label: "Налаштування",
+    shortLabel: "Налашт.",
   },
 ];
 
@@ -157,7 +164,7 @@ function MobileDashboardHeader({
 
       <nav
         aria-label="Розділи кабінету"
-        className="mt-3 grid grid-cols-4 gap-1"
+        className="mt-3 grid grid-cols-5 gap-1"
         data-testid="mobile-dashboard-nav"
       >
         {navigationItems.map((item) => (

@@ -8,6 +8,17 @@ const router = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 
+const activePaymentRequisites = [
+  {
+    bankName: "monobank",
+    displayValue: "4441 1111 2222 3333",
+    id: "requisite-1",
+    label: "Основна картка",
+    note: "Після оплати надішліть квитанцію",
+    recipientName: "Олена Петренко",
+  },
+];
+
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
 }));
@@ -22,7 +33,9 @@ describe("DeliveryForm", () => {
     const user = userEvent.setup();
     const action = vi.fn();
 
-    render(<DeliveryForm action={action} />);
+    render(
+      <DeliveryForm action={action} paymentRequisites={activePaymentRequisites} />,
+    );
 
     expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
     expect(screen.getAllByText("Крок 1 з 4")[0]).toBeVisible();
@@ -49,7 +62,12 @@ describe("DeliveryForm", () => {
   it("navigates between contact and delivery steps", async () => {
     const user = userEvent.setup();
 
-    render(<DeliveryForm action={vi.fn()} />);
+    render(
+      <DeliveryForm
+        action={vi.fn()}
+        paymentRequisites={activePaymentRequisites}
+      />,
+    );
 
     await fillContacts(user);
     await user.click(screen.getByRole("button", { name: "Далі" }));
@@ -71,7 +89,12 @@ describe("DeliveryForm", () => {
     const user = userEvent.setup();
     stubCarrierLookup();
 
-    render(<DeliveryForm action={vi.fn()} />);
+    render(
+      <DeliveryForm
+        action={vi.fn()}
+        paymentRequisites={activePaymentRequisites}
+      />,
+    );
 
     await fillContacts(user);
     await user.click(screen.getByRole("button", { name: "Далі" }));
@@ -108,14 +131,21 @@ describe("DeliveryForm", () => {
     );
     stubCarrierLookup();
 
-    render(<DeliveryForm action={action} />);
+    render(
+      <DeliveryForm action={action} paymentRequisites={activePaymentRequisites} />,
+    );
 
     await completeDeliveryStep(user);
     await user.click(screen.getByRole("button", { name: "Далі" }));
 
     expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
-    expect(screen.getByRole("radio", { name: /MonoPay/ })).toBeChecked();
-    expect(screen.getByText(/Далі відкриється сторінка MonoPay/)).toBeVisible();
+    expect(
+      screen.getByRole("radio", { name: /Оплата картою онлайн/ }),
+    ).toBeChecked();
+    expect(
+      screen.getByText(/Переказ можна зробити на одну з карток нижче/),
+    ).toBeVisible();
+    expect(screen.getByText("4441 1111 2222 3333")).toBeVisible();
 
     await user.click(screen.getByRole("radio", { name: /Післяплата/ }));
     await user.click(screen.getByRole("button", { name: "Далі" }));
@@ -145,44 +175,40 @@ describe("DeliveryForm", () => {
     expect(router.push).toHaveBeenCalledWith("/o/public-token");
   });
 
-  it("redirects to MonoPay when the existing action returns a payment URL", async () => {
+  it("uses cash on delivery as the fallback when no active requisites exist", async () => {
     const user = userEvent.setup();
-    const navigateToPayment = vi.fn();
     const submittedForms: FormData[] = [];
     const action = vi.fn(
       async (formData: FormData): Promise<DeliveryActionResult> => {
         submittedForms.push(formData);
 
         return {
-          message: "Замовлення підтверджено. Переходимо до оплати MonoPay.",
+          message: "Замовлення підтверджено. Оплата при отриманні.",
           ok: true,
-          paymentRedirectUrl: "https://pay.example.test/invoice-1",
           statusPageUrl: "/o/public-token",
         };
       },
     );
     stubCarrierLookup();
 
-    render(
-      <DeliveryForm action={action} navigateToPayment={navigateToPayment} />,
-    );
+    render(<DeliveryForm action={action} paymentRequisites={[]} />);
 
     await completeDeliveryStep(user);
     await user.click(screen.getByRole("button", { name: "Далі" }));
+    expect(screen.queryByRole("radio", { name: /MonoPay/ })).toBeNull();
+    expect(
+      screen.queryByRole("radio", { name: /Оплата картою онлайн/ }),
+    ).toBeNull();
+    expect(screen.getByRole("radio", { name: /Післяплата/ })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Далі" }));
     await user.click(
       screen.getByRole("button", { name: "Підтвердити замовлення" }),
     );
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
-    expect(submittedForms[0]?.get("paymentMethod")).toBe("MONOBANK");
-    expect(navigateToPayment).toHaveBeenCalledWith(
-      "https://pay.example.test/invoice-1",
-    );
+    expect(submittedForms[0]?.get("paymentMethod")).toBe("CASH_ON_DELIVERY");
     expect(
-      await screen.findByText(
-        "Замовлення підтверджено. Переходимо до оплати MonoPay.",
-      ),
+      await screen.findByText("Замовлення підтверджено. Оплата при отриманні."),
     ).toBeVisible();
   });
 });

@@ -44,6 +44,7 @@ export const shipmentStatusLabels: Record<ShipmentStatus, string> = {
 
 export const paymentProviderLabels: Record<PaymentProviderCode, string> = {
   CASH_ON_DELIVERY: "Післяплата",
+  MANUAL_CARD_TRANSFER: "Оплата картою онлайн",
   MONOBANK: "MonoPay",
 };
 
