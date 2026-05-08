@@ -1,454 +1,163 @@
-# Dase audit and Codex repair prompts - v3
+# Dase UI/mobile refactor prompts v1
 
-Цей файл містить аудитні висновки та набір промптів для Codex після перевірки репозиторію `psht13/dase`.
+Цей файл містить набір промптів для Codex, щоб привести UI застосунку Dase до mobile-first стану, спростити форми через step-by-step flow, зробити таблиці менш перевантаженими та покрити все тестами.
 
 ## Як використовувати
 
 1. Почни з **PROMPT 00**.
-2. Далі виконуй промпти по порядку.
-3. Після кожного промпта Codex має:
-   - оновити `spec.md`, `AGENTS.md`, `DEPLOYMENT.md`, якщо поведінка або env vars змінилися;
-   - додати або оновити тести;
-   - запустити релевантні перевірки;
-   - зробити коміт тільки після green checks.
-4. Якщо будь-яка перевірка падає, не переходь до наступного промпта. Використай **PROMPT 07 - recovery prompt**.
-5. Назви комітів мають бути англійською, imperative sentence case, без Conventional Commits prefix.
-   - Добре: `Fix owner authentication navigation`
-   - Погано: `fix: owner navigation`
+2. Після кожного успішного етапу переходь до наступного промпта.
+3. Якщо падає lint, typecheck, coverage, e2e або build - не переходь далі, використовуй **PROMPT 10 - recovery prompt**.
+4. Не змінюй бізнес-логіку без явної потреби. Це UI/refactor milestone, не product logic rewrite.
+5. Усі user-facing тексти мають бути українською.
+6. Коміти мають бути англійською в imperative sentence case без Conventional Commits prefixes. Приклад: `Improve mobile dashboard layout`.
 
-## Короткий аудит
+## Головна мета
 
-Підтверджені проблеми:
+Поточний застосунок працює функціонально, але UI потребує серйозного покращення:
 
-- Початкова CTA-кнопка `Перейти до налаштування` на home page є просто `<Button>`, без `Link` або `onClick`, тому вона нікуди не веде.
-- `/setup` зараз очікує setup token у query параметрі `?token=...` і не показує форму, якщо token відсутній. Це поганий UX і небажано з точки зору безпеки, бо secret потрапляє в URL/history/logs.
-- Після auth update треба окремо перевірити session cookie persistence: login -> dashboard -> navigation between dashboard pages -> hard reload. Не можна покладатися тільки на Playwright fallback cookies.
-- Nova Poshta adapter зараз використовує legacy `https://api.novaposhta.ua/v2.0/json/`.
-- Потрібно перейти на новий Nova Post API `v.1.0` з API key -> JWT flow.
-- Ukrposhta треба повністю прибрати з активного MVP, але залишити `ShippingCarrier` port і carrier registry так, щоб її можна було повернути пізніше.
-- Поточний delivery UI, validation, schema, env docs і factory все ще містять `UKRPOSHTA`.
-- Поточні shipment adapters не мають достатньо sender/counterparty configuration для безпечного production label creation.
-- Потрібен README або короткий operations guide для запуску, owner setup, Railway env vars і demo flow.
-- Варто розділити env validation за runtime: `web`, `worker`, `test`, бо зараз production worker може бути змушений мати web-only secrets.
+- сторінки не адаптовані під мобільні екрани;
+- dashboard layout, таблиці й форми мають бути mobile-first;
+- великі форми треба розбити на кілька кроків;
+- таблиці перевантажені інформацією й незручні для читання;
+- на мобільних таблиці треба заміняти на card/list views;
+- desktop tables мають бути компактнішими, з меншою кількістю колонок і кращою ієрархією;
+- critical flows треба перевірити через Playwright desktop + mobile.
 
 ---
 
 ================================================================================
-PROMPT 00 - audit current repo and create repair checklist
+PROMPT 00 - UI audit and mobile refactor plan
 ================================================================================
 
-```text
-You are working in the existing GitHub repository `psht13/dase`.
-
-Read these files first:
-- AGENTS.md
-- spec.md
-- DEPLOYMENT.md
-- docs/adr/0001-architecture.md
-- package.json
-- .env.example
-- src/app/page.tsx
-- src/app/login/page.tsx
-- src/app/setup/page.tsx
-- src/modules/users/**
-- src/modules/shipping/**
-- src/modules/orders/application/delivery-form-validation.ts
-- src/modules/orders/ui/delivery-form.tsx
-- src/shared/config/env.ts
-- src/shared/db/schema.ts
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, README.md if present, and docs/adr/0001-architecture.md first.
 
 Goal:
-Create a precise repair checklist for the current issues before changing large areas of code.
-
-Confirmed issues to account for:
-1. Home page CTA button "Перейти до налаштування" does not navigate anywhere.
-2. `/setup` currently relies on a setup token in the URL query. Replace this with a safer form-based setup token flow.
-3. Dashboard navigation after authentication appears unstable and can redirect to `/login` during normal navigation.
-4. Nova Poshta adapter uses legacy `api.novaposhta.ua/v2.0/json/`.
-5. Active Ukrposhta integration should be removed from MVP, but future reintroduction should remain easy through ports/interfaces.
-6. Shipping label creation needs clearer production configuration and failure handling.
-7. Documentation should be updated after each behavior/env change.
-
-Constraints:
-- Allowed roles remain only `owner` and `user`.
-- Do not add an `admin` role.
-- All user-facing UI text must be Ukrainian.
-- Product images remain external URL-only.
-- Do not create S3/R2/Railway Storage Bucket.
-- Do not commit secrets.
-- Do not call live external APIs in CI.
-- Use MSW/fixtures for external API tests.
-- Use Playwright MCP or Playwright tests for UI/navigation verification.
-- Commit messages must be English imperative sentence case without prefixes.
-
-Tasks:
-1. Inspect the code and produce a short checklist in `spec.md` under a new section `Repair audit on <today date>`.
-2. Document the intended order of repairs:
-   - auth/setup/navigation;
-   - Nova Post API replacement;
-   - Ukrposhta removal from active MVP;
-   - shipping production configuration;
-   - regression tests and docs.
-3. Do not implement functional changes in this prompt except tiny documentation corrections if necessary.
-4. Run:
-   - pnpm lint
-   - pnpm typecheck
-5. Commit with:
-   `Document repair audit`
-```
-
----
-
-================================================================================
-PROMPT 01 - fix owner setup, login, and dashboard navigation
-================================================================================
-
-```text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
-
-Goal:
-Fix production owner setup, login persistence, and dashboard navigation.
-
-Current problems:
-- The home page CTA button "Перейти до налаштування" is not a link and does nothing.
-- `/setup` requires `?token=...` before showing the form. This is poor UX and puts the setup token into URLs.
-- After login, normal navigation between dashboard pages can redirect the owner back to `/login`.
-
-Required behavior:
-1. Home page CTA must be a real link.
-2. If no owner exists:
-   - CTA should lead to `/setup`.
-   - `/setup` should show the first-owner setup form.
-3. If an owner already exists:
-   - CTA should lead to `/login` or show a clear Ukrainian login action.
-4. `/setup` must not require token in the URL.
-5. In production, `/setup` must include a Ukrainian setup token input field in the form.
-6. The setup token must be validated only in the server action.
-7. Do not put `OWNER_SETUP_TOKEN` in URLs, redirects, logs, client state, or query strings.
-8. In non-production, allow setup without token unless the existing tests require another behavior.
-9. After first owner creation, redirect to `/login?setup=created`.
-10. After login, the owner must remain authenticated across:
-    - `/dashboard`;
-    - `/dashboard/products`;
-    - `/dashboard/orders`;
-    - `/dashboard/orders/new`;
-    - hard reload;
-    - client-side navigation;
-    - browser back/forward.
-11. `user` role must still be denied dashboard access.
-12. Unauthenticated users must be redirected to `/login`.
-
-Implementation guidance:
-- Investigate the real cause of session loss instead of adding superficial redirects.
-- Inspect `LoginForm`, Better Auth route handler, `getSessionUserFromHeaders`, `requireOwnerSession`, and Better Auth configuration.
-- Prefer a robust Better Auth client or server action approach for sign-in that reliably stores the session cookie.
-- If using direct fetch to `/api/auth/sign-in/email`, verify cookies are actually set and available to server components after navigation.
-- Preserve Ukrainian UI copy.
-- Keep business logic in application/domain layers where possible.
-
-Tests to add or update:
-1. Unit/application tests:
-   - setup available when no owner exists;
-   - setup blocked when owner exists;
-   - production setup requires token;
-   - token is not accepted from URL as the main flow;
-   - owner role is assigned after setup.
-2. UI/component tests:
-   - home CTA is a link and points to the right destination based on setup state;
-   - setup form shows a Ukrainian token field in production;
-   - login form has Ukrainian labels.
-3. Playwright e2e using real auth flow, not only fallback cookies:
-   - open `/setup`;
-   - create first owner;
-   - log in;
-   - navigate through dashboard pages;
-   - hard reload on `/dashboard/orders`;
-   - verify still authenticated;
-   - log out;
-   - verify dashboard redirects to login.
-4. Existing fallback-cookie e2e tests can remain, but add at least one real setup/login persistence e2e path.
-
-Docs:
-- Update `spec.md` with final owner setup/login behavior.
-- Update `DEPLOYMENT.md` with secure `OWNER_SETUP_TOKEN` instructions.
-- Update `.env.example` if needed.
-- If `README.md` does not exist, create a minimal one with local setup and first-owner setup instructions.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Commit with:
-`Fix owner authentication navigation`
-```
-
----
-
-================================================================================
-PROMPT 02 - replace legacy Nova Poshta API with new Nova Post API
-================================================================================
-
-```text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
-
-Goal:
-Replace the legacy Nova Poshta `v2.0/json` implementation with the newer Nova Post API `v.1.0` and JWT-based authorization.
-
-Current problem:
-`src/modules/shipping/infrastructure/nova-poshta-shipping-carrier.ts` uses the legacy JSON API:
-- default URL: `https://api.novaposhta.ua/v2.0/json/`
-- request shape with `apiKey`, `modelName`, `calledMethod`, `methodProperties`
-
-New target:
-Use Nova Post API v.1.0 with:
-- API key used to generate a temporary JWT token;
-- JWT token cached and reused until near expiration;
-- production endpoint documented by Nova Post;
-- stage/test endpoint documented by Nova Post;
-- no live calls in CI.
-
-Important:
-Before implementation, inspect official Nova Post API documentation and/or official Postman collection for exact endpoint paths, auth header format, request/response fields, and shipment creation requirements. Do not guess field names for shipment creation.
-
-Expected env changes:
-1. Prefer new env names:
-   - `NOVA_POST_API_KEY`
-   - `NOVA_POST_API_URL`
-   - `NOVA_POST_AUTH_URL` if the auth endpoint cannot be derived safely from `NOVA_POST_API_URL`
-2. Remove or deprecate old env names:
-   - `NOVA_POSHTA_API_KEY`
-   - `NOVA_POSHTA_API_URL`
-3. If backward compatibility is temporarily kept, document it as deprecated in `spec.md` and `DEPLOYMENT.md`.
-
-Architecture requirements:
-1. Keep the `ShippingCarrier` application port.
-2. Rename infrastructure implementation to something like:
-   - `NovaPostShippingCarrier`
-   - `NovaPostJwtProvider`
-3. Keep internal carrier code stable unless a safe migration is implemented.
-   - It is acceptable to keep DB/internal code `NOVA_POSHTA` for compatibility while the implementation uses Nova Post v.1.0.
-   - User-facing UI should say `Нова пошта`.
-4. Do not expose provider-specific DTOs to UI.
-5. Keep route handlers thin.
-
-Implementation tasks:
-1. Replace the legacy adapter with a new Nova Post v.1.0 adapter.
-2. Implement JWT generation:
-   - call the documented authorization endpoint with API key;
-   - parse JWT response;
-   - cache JWT for less than 1 hour;
-   - refresh before expiration;
-   - never log the API key or JWT.
-3. Implement or update:
-   - search cities/localities;
-   - search warehouses/branches;
-   - create shipment;
-   - get shipment status.
-4. If exact production shipment creation requires sender/counterparty fields not currently available, implement explicit configuration validation:
-   - fail with a clear application error;
-   - append safe Ukrainian audit message;
-   - do not call the live create-shipment endpoint with incomplete data.
-5. Add safe error mapping so the public delivery form does not show raw provider errors.
-6. Update factory wiring to use the new adapter.
-7. Update `.env.example`, `spec.md`, and `DEPLOYMENT.md`.
-8. Remove references to the legacy `v2.0/json` URL from production code and docs.
-
-Tests:
-1. MSW contract tests:
-   - JWT is generated from API key;
-   - JWT is cached;
-   - JWT refreshes after expiration;
-   - city search maps provider response to internal `ShippingCity`;
-   - warehouse search maps provider response to internal `ShippingWarehouse`;
-   - create shipment maps tracking number/document id/label;
-   - status mapping works;
-   - provider error maps to safe app error.
-2. Unit tests:
-   - no token/API key is logged;
-   - missing sender config blocks shipment creation safely.
-3. Playwright:
-   - customer delivery form can search/select Nova Post city and warehouse through mocked API;
-   - order confirmation works with Nova Post as the only active carrier.
-4. CI must not call live Nova Post APIs.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Commit with:
-`Replace Nova Poshta legacy API`
-```
-
----
-
-================================================================================
-PROMPT 03 - remove Ukrposhta from active MVP while preserving carrier architecture
-================================================================================
-
-```text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
-
-Goal:
-Remove Ukrposhta from the active MVP because test/production API access is not currently practical, but keep the shipping architecture extensible so Ukrposhta can be reintroduced later.
-
-Current problem:
-Ukrposhta is still active in several places:
-- delivery form select option;
-- delivery form validation;
-- shipping carrier factory;
-- env validation and `.env.example`;
-- schema enums;
-- shipment carrier types;
-- docs/spec/deployment;
-- tests and fixtures.
-
-Required product behavior:
-1. Customer delivery form must show only:
-   - `Нова пошта`
-2. Customer cannot submit `UKRPOSHTA`.
-3. `/api/carriers/cities` and `/api/carriers/warehouses` must reject disabled carriers with a Ukrainian 400 response.
-4. Worker must not try to create Ukrposhta shipments.
-5. Owner UI should not offer Ukrposhta filters unless there are historical records.
-6. If historical Ukrposhta records exist, show them as disabled/legacy:
-   - `Укрпошта (вимкнено)`
-   - no retry/live shipment action for them.
-7. Keep `ShippingCarrier` port and a carrier registry so another carrier can be added later without rewriting order/payment logic.
-
-Implementation guidance:
-- Prefer an `activeShippingCarriers` registry or config object instead of hardcoded arrays in many files.
-- It is acceptable to keep old PostgreSQL enum values if removing enum values is risky. Do not expose disabled carriers in UI.
-- If you change DB enum values, write a safe migration and verify it against a test DB first.
-- Remove live Ukrposhta adapter code from production wiring.
-- You may keep a future placeholder interface or README note, but do not leave an active factory path that calls Ukrposhta.
-- Remove `UKRPOSHTA_*` env vars from required/active production docs.
-- Do not delete the generic `ShippingCarrier` interface.
-
-Tasks:
-1. Add a central shipping carrier registry:
-   - active carrier code;
-   - Ukrainian label;
-   - whether search is enabled;
-   - whether shipment creation is enabled;
-   - whether the carrier is legacy/disabled.
-2. Update delivery validation to accept only active carriers.
-3. Update delivery form to render active carriers from the registry.
-4. Update API carrier routes to reject disabled/unknown carriers.
-5. Update shipment worker and retry logic to avoid disabled carriers.
-6. Update owner order filters/details to handle legacy disabled carrier records safely.
-7. Remove Ukrposhta env vars from `.env.example`, `spec.md`, and `DEPLOYMENT.md`.
-8. Update tests that previously expected Ukrposhta as active.
-9. Keep architecture notes explaining how Ukrposhta can be added back later through the same port.
-
-Tests:
-1. Unit tests:
-   - active carrier registry contains Nova Post only;
-   - delivery validation rejects `UKRPOSHTA`;
-   - carrier API routes reject disabled carrier;
-   - worker refuses disabled carrier safely.
-2. UI tests:
-   - delivery form does not show `Укрпошта`;
-   - owner filter does not show Ukrposhta unless a legacy record exists.
-3. Playwright:
-   - customer delivery flow works with only Nova Post;
-   - no Ukrposhta option is visible.
-4. Docs tests or snapshot-like checks if they already exist.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Commit with:
-`Remove Ukrposhta active integration`
-```
-
----
-
-================================================================================
-PROMPT 04 - harden shipping production settings and demo safety
-================================================================================
-
-```text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
-
-Goal:
-Make shipping safe for demo and production by preventing accidental incomplete or live shipment creation.
+Audit the current UI and create a concrete mobile-first refactor plan before changing components.
 
 Context:
-The app should support real Nova Post shipment creation eventually, but demo/staging should not accidentally create real labels with incomplete sender/counterparty data.
+The app works functionally, but the UI is not adapted well for mobile. Forms are too large, tables are overloaded, and row layouts feel visually heavy.
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Roles remain only `owner` and `user`.
+- Do not introduce `admin` wording.
+- Do not change core business logic.
+- Do not change database schema unless a UI requirement makes it truly necessary.
+- Keep feature-oriented onion architecture.
+- Do not put business rules into UI components.
+- Use existing Tailwind/shadcn/Radix-compatible patterns.
+- No new heavy UI framework.
+- Do not add object storage or image uploads.
+- Keep all required checks passing.
+
+Pages to audit:
+- `/`
+- `/login`
+- `/setup`
+- `/dashboard`
+- `/dashboard/products`
+- `/dashboard/products/new`
+- `/dashboard/products/[productId]/edit`
+- `/dashboard/orders/new`
+- `/dashboard/orders`
+- `/dashboard/orders/[orderId]`
+- `/o/[token]`
+- `/o/[token]/delivery`
 
 Tasks:
-1. Define explicit shipping modes:
-   - `mock` for local/e2e only;
-   - `disabled` for production without full credentials/sender config;
-   - `live` for real label creation.
-2. Add env var:
-   - `SHIPPING_LABEL_CREATION_MODE=disabled|mock|live`
-3. In production, default to `disabled` unless explicitly set to `live`.
-4. In `mock` mode, do not call live Nova Post APIs for shipment creation.
-5. In `disabled` mode:
-   - do not call live create-shipment endpoint;
-   - append a safe Ukrainian audit event;
-   - show owner-facing message that shipment creation is disabled until production shipping settings are completed;
-   - do not pretend a real tracking number exists.
-6. In `live` mode:
-   - validate every required Nova Post setting before creating shipment;
-   - fail safely if any setting is missing;
-   - never log API key/JWT/sensitive sender data.
-7. Add sender/counterparty configuration model for Nova Post.
-   You may start with env vars if no settings UI exists yet, but document it.
-8. Do not add Ukrposhta back.
-9. Keep all user-facing messages Ukrainian.
+1. Inspect the current UI components, layouts, tables, forms, and responsive classes.
+2. Use Playwright MCP where available to inspect critical pages at these viewport widths:
+   - 360x740
+   - 390x844
+   - 430x932
+   - 768x1024
+   - 1440x900
+3. Identify horizontal scrolling, cramped layouts, overflowing tables, too-wide forms, tiny tap targets, missing sticky/mobile nav, and weak visual hierarchy.
+4. Create `docs/ui/mobile-form-table-guidelines.md` with:
+   - mobile-first layout principles;
+   - form stepper principles;
+   - table-to-card responsive rules;
+   - dashboard navigation behavior;
+   - spacing and typography rules;
+   - accessibility requirements;
+   - exact pages to refactor;
+   - testing checklist.
+5. Update `spec.md` with the new UI refactor milestone and known issues.
+6. Do not implement UI changes yet except tiny documentation-safe fixes if absolutely needed.
+7. Run existing checks if feasible.
+8. Commit documentation and audit notes.
 
-Suggested env vars to evaluate and adjust after checking the official Nova Post API shape:
-- `NOVA_POST_API_KEY`
-- `NOVA_POST_API_URL`
-- `NOVA_POST_SENDER_ID`
-- `NOVA_POST_SENDER_CONTACT_ID`
-- `NOVA_POST_SENDER_WAREHOUSE_ID`
-- `NOVA_POST_PAYER_TYPE`
-- `NOVA_POST_PAYMENT_METHOD`
-- `NOVA_POST_DEFAULT_WEIGHT_KG`
-- `SHIPPING_LABEL_CREATION_MODE`
+Acceptance criteria:
+- `docs/ui/mobile-form-table-guidelines.md` exists.
+- `spec.md` contains a UI/mobile refactor milestone.
+- The plan lists concrete changes page-by-page.
+- No business logic is changed.
 
-Do not blindly add all env vars if the official Nova Post v.1.0 API requires different names. Use exact provider fields in infrastructure only, and keep app-level names stable.
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm build
+```
 
-Tests:
-1. Unit/application tests:
-   - disabled mode does not call provider;
-   - live mode missing config fails before provider call;
-   - mock mode stays deterministic;
-   - audit event is written for disabled/missing-config cases.
-2. Worker tests:
-   - create-shipment job handles disabled mode safely;
-   - retry does not bypass disabled mode.
-3. Playwright:
-   - owner sees a clear Ukrainian message when shipment creation is disabled.
-4. Env tests:
-   - production env validation accepts disabled mode without full shipping credentials;
-   - live mode requires all required Nova Post settings.
+Commit message:
+`Document mobile UI refactor plan`
+````
 
-Docs:
-- Update `.env.example`.
-- Update `spec.md`.
-- Update `DEPLOYMENT.md`.
-- Add a short README section:
-  - how to demo with shipping disabled/mock;
-  - how to enable live Nova Post later.
+---
+
+================================================================================
+PROMPT 01 - mobile-first shell, navigation, and page containers
+================================================================================
+
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+
+Goal:
+Make the global shell and owner dashboard layout mobile-first.
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Do not change auth/business logic.
+- Do not break production auth redirects.
+- Do not use Next Link for logout if the current fix intentionally uses a plain anchor or form.
+- Keep owner/user roles only.
+
+Tasks:
+1. Refactor the owner dashboard layout to work well at 360px width.
+2. Replace the fixed desktop sidebar experience on mobile with a mobile-friendly navigation pattern:
+   - top header or compact mobile nav;
+   - visible current section label;
+   - no horizontal overflow;
+   - tap targets at least 44px high where practical;
+   - logout remains reliable.
+3. Keep desktop sidebar if it works well on larger screens, but improve spacing and active/current states.
+4. Create shared layout primitives if useful:
+   - `PageShell`
+   - `PageHeader`
+   - `ResponsiveStack`
+   - `MobileSectionNav`
+   - `ActionBar`
+   Keep these in shared UI only if they are truly reusable.
+5. Ensure public pages `/`, `/login`, `/setup`, `/o/[token]`, `/o/[token]/delivery` have mobile-safe containers and typography.
+6. Ensure no page uses fixed widths that overflow mobile screens.
+7. Add or update tests for:
+   - Ukrainian dashboard navigation labels;
+   - mobile nav renders at small viewport;
+   - logout UI still points to the correct route and does not use problematic client-side RSC navigation;
+   - public pages have no horizontal overflow at mobile width.
+8. Add Playwright mobile checks for dashboard shell and public pages.
+9. Use Playwright MCP to inspect `/dashboard`, `/dashboard/products`, and `/o/[token]` at mobile viewport if available.
+10. Update `spec.md` and `docs/ui/mobile-form-table-guidelines.md` with implemented shell changes.
+
+Acceptance criteria:
+- `/dashboard` is usable at 360px without horizontal scrolling.
+- Mobile nav is clear and Ukrainian.
+- Desktop dashboard remains usable.
+- Logout remains reliable.
+- No business logic changed.
 
 Required checks:
 ```bash
@@ -459,58 +168,147 @@ pnpm test:e2e
 pnpm build
 ```
 
-Commit with:
-`Harden shipping production settings`
-```
+Commit message:
+`Improve mobile dashboard shell`
+````
 
 ---
 
 ================================================================================
-PROMPT 05 - split runtime env validation and clean deployment docs
+PROMPT 02 - reusable multi-step form foundation
 ================================================================================
 
-```text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
 
 Goal:
-Clean up environment validation so each runtime validates only the secrets/settings it actually needs.
+Create a reusable, accessible multi-step form foundation for large forms.
 
 Current issue:
-`getServerEnv()` validates one broad schema for all production runtimes. This can force the worker to require web-only values like owner setup/login settings, and can force web to carry worker-only settings.
+Large forms are too long and overwhelming. They should be split into clear steps with progress, back/next controls, and per-step validation.
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Do not submit partial data to the server unless the existing business flow explicitly supports it.
+- Keep final submit behavior compatible with existing server actions.
+- Do not move domain/business rules into UI components.
+- Keep React Hook Form + Zod where currently used.
 
 Tasks:
-1. Refactor env validation into runtime-aware functions:
-   - `getWebEnv()`
-   - `getWorkerEnv()`
-   - `getTestEnv()` if useful
-   - keep `getServerEnv()` only if it remains safe and documented.
-2. Web runtime should require:
-   - `DATABASE_URL`
-   - `BETTER_AUTH_SECRET`
-   - `BETTER_AUTH_URL`
-   - `OWNER_SETUP_TOKEN` only if first-owner setup is enabled in production
-   - payment/shipping settings only when the corresponding live mode is enabled.
-3. Worker runtime should require:
-   - `DATABASE_URL`
-   - `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`
-   - shipping mode/settings needed by worker.
-4. Worker should not require login/setup-only secrets unless truly needed.
-5. Test/dev should allow fixture/mocked behavior safely.
-6. Make missing env errors explicit and non-secret.
-7. Update all imports to use the correct env getter.
-8. Update `.env.example`, `spec.md`, `DEPLOYMENT.md`, and README.
-9. Keep Railway variables secure.
-10. Do not weaken production checks.
+1. Create reusable UI primitives for multi-step forms, for example:
+   - `Stepper`
+   - `StepIndicator`
+   - `StepActions`
+   - `StepCard`
+   - `FormSummaryCard`
+2. Add a small form-step utility that supports:
+   - current step index;
+   - next/back;
+   - validating only fields for the current step;
+   - preventing final submit until all required fields are valid;
+   - preserving form state when navigating between steps.
+3. Keep these utilities generic and UI-focused.
+4. Do not introduce new global state libraries.
+5. Add accessibility behavior:
+   - current step announced through `aria-current` or similar;
+   - errors announced through live regions;
+   - focus moves to step heading or first invalid field after next/submit;
+   - buttons have clear Ukrainian labels.
+6. Add unit/component tests for the stepper behavior.
+7. Add example test-only/demo usage if useful, but do not leave unused production code.
+8. Update docs with how feature forms should adopt the stepper.
 
-Tests:
-1. Env validation tests for:
-   - web production;
-   - worker production;
-   - live shipping mode;
-   - disabled shipping mode;
-   - test/dev fallback.
-2. Worker start test or lightweight config test proving worker does not require owner setup token.
-3. Build must still pass.
+Suggested Ukrainian copy:
+- `Крок {current} з {total}`
+- `Назад`
+- `Далі`
+- `Перевірити`
+- `Завершити`
+- `Заповніть обов’язкові поля цього кроку`
+
+Acceptance criteria:
+- A reusable multi-step foundation exists.
+- It is accessible and tested.
+- No current forms are broken.
+- No business logic changed.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm build
+```
+
+Commit message:
+`Add multi step form foundation`
+````
+
+---
+
+================================================================================
+PROMPT 03 - split product forms into mobile-friendly steps
+================================================================================
+
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+
+Goal:
+Refactor product create/edit forms into a mobile-friendly multi-step flow.
+
+Pages:
+- `/dashboard/products/new`
+- `/dashboard/products/[productId]/edit`
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Product images remain external URLs only.
+- Do not add file uploads or object storage.
+- Keep existing product validation and server actions.
+- Do not change product business logic.
+
+Suggested steps:
+1. `Основне`
+   - product name;
+   - SKU;
+   - description;
+   - active status if already present.
+2. `Ціна та залишок`
+   - price;
+   - stock quantity;
+   - currency if exposed.
+3. `Зображення`
+   - one or more image URLs;
+   - image preview;
+   - URL validation copy.
+4. `Перевірка`
+   - compact summary of all entered values;
+   - final submit button.
+
+Tasks:
+1. Refactor product form UI to use the reusable stepper.
+2. Validate only relevant fields when clicking `Далі`.
+3. Preserve entered values when moving between steps.
+4. Keep final submit wired to the existing server action.
+5. On desktop, use a nicer layout but still keep step structure.
+6. Improve mobile spacing, labels, error messages, and tap targets.
+7. Ensure image preview does not overflow mobile screens.
+8. Add tests for:
+   - step navigation;
+   - per-step validation;
+   - final summary;
+   - create flow still calls the expected action;
+   - edit flow preloads existing values;
+   - Ukrainian labels.
+9. Update Playwright e2e for product creation to use the new multi-step flow.
+10. Use Playwright MCP to inspect product create/edit pages at mobile viewport if available.
+11. Update `spec.md` and UI docs.
+
+Acceptance criteria:
+- Product forms are usable on 360px screens.
+- Long product form is split into clear steps.
+- Existing product create/edit behavior still works.
+- Tests updated and passing.
 
 Required checks:
 ```bash
@@ -521,62 +319,79 @@ pnpm test:e2e
 pnpm build
 ```
 
-Commit with:
-`Split runtime environment validation`
-```
+Commit message:
+`Split product forms into steps`
+````
 
 ---
 
 ================================================================================
-PROMPT 06 - final code audit and production readiness hardening
+PROMPT 04 - split owner order builder into steps
 ================================================================================
 
-```text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and README.md first.
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
 
 Goal:
-Perform a final production-readiness audit after the auth, Nova Post, Ukrposhta removal, and shipping settings changes.
+Refactor the owner order builder into a clear multi-step flow.
 
-Audit areas:
-1. Auth:
-   - no redirect loops;
-   - owner setup works;
-   - login persists across navigation and reload;
-   - logout clears session;
-   - `user` role cannot access dashboard.
-2. Shipping:
-   - only Nova Post is active;
-   - no live Ukrposhta calls exist;
-   - no legacy Nova Poshta `v2.0/json` production code remains;
-   - shipping mode prevents accidental live labels;
-   - Nova Post JWT/API key is never logged.
-3. Payments:
-   - MonoPay retry works;
-   - stale webhook events are ignored;
-   - duplicate webhook events are idempotent;
-   - no card data is stored.
-4. DB:
-   - migrations are safe;
-   - no production destructive scripts;
-   - order confirmation writes remain transactional.
-5. UI:
-   - all user-facing copy is Ukrainian;
-   - home CTA works;
-   - public pages work on mobile;
-   - dashboard navigation works.
-6. Docs:
-   - README exists;
-   - `.env.example` matches code;
-   - `spec.md` current status is accurate;
-   - `DEPLOYMENT.md` matches Railway services and env vars.
-7. Tests:
-   - coverage remains 80%+;
-   - Playwright e2e covers repaired flows;
-   - CI does not call live external APIs.
+Page:
+- `/dashboard/orders/new`
 
-Fix any issues found.
+Current issue:
+The order builder can become visually dense when selecting multiple products and quantities, especially on mobile.
 
-Required final checks:
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Do not change order creation business logic.
+- Do not expose internal order ids in public URLs.
+- Keep product snapshots and secure public token behavior unchanged.
+
+Suggested steps:
+1. `Вибір товарів`
+   - searchable/selectable product list;
+   - mobile-friendly product cards;
+   - active products only.
+2. `Кількість`
+   - selected products only;
+   - quantity controls;
+   - line totals.
+3. `Перевірка`
+   - compact order summary;
+   - total amount;
+   - create link button.
+4. `Посилання`
+   - generated public link;
+   - copy action;
+   - quick open action if appropriate.
+
+Tasks:
+1. Refactor order builder UI into steps.
+2. Use mobile cards for product selection.
+3. Avoid giant tables on mobile.
+4. Keep desktop layout efficient but less visually overloaded.
+5. Improve quantity controls for touch devices:
+   - clear input;
+   - optional plus/minus buttons if simple;
+   - validation messages.
+6. Keep server action and use case unchanged unless wiring requires minor adaptation.
+7. Add tests for:
+   - product selection step;
+   - quantity validation;
+   - summary step;
+   - public link generation display;
+   - Ukrainian labels.
+8. Update Playwright e2e for owner order link creation.
+9. Use Playwright MCP at 390px mobile and desktop if available.
+10. Update `spec.md` and UI docs.
+
+Acceptance criteria:
+- Order builder is usable on mobile.
+- Owner can create an order link with multiple products without horizontal scroll.
+- Generated link flow remains intact.
+- Existing order creation tests still pass.
+
+Required checks:
 ```bash
 pnpm lint
 pnpm typecheck
@@ -585,63 +400,509 @@ pnpm test:e2e
 pnpm build
 ```
 
-Also run, if available:
-```bash
-pnpm db:generate
-pnpm db:migrate
-```
-
-If `pnpm db:generate` creates a migration, inspect it carefully and commit it only if expected.
-
-Update docs:
-- spec.md
-- DEPLOYMENT.md
-- README.md
-- AGENTS.md only if future agents need a new permanent rule.
-
-Commit with:
-`Prepare shipping and auth release`
-```
+Commit message:
+`Split order builder into steps`
+````
 
 ---
 
 ================================================================================
-PROMPT 07 - recovery prompt
+PROMPT 05 - split customer delivery and payment form into steps
 ================================================================================
 
-```text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and the latest failing command output.
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
 
 Goal:
-Recover from failing checks without weakening quality gates.
+Refactor the public customer delivery/payment form into a mobile-first multi-step checkout-like flow.
 
-Rules:
-1. Do not skip failing tests.
-2. Do not delete meaningful tests to make the suite pass.
-3. Do not reduce coverage thresholds.
-4. Do not bypass auth or shipping safety checks.
-5. Do not re-enable Ukrposhta as an active carrier.
-6. Do not restore legacy Nova Poshta `v2.0/json` production code.
-7. Do not commit secrets.
-8. Keep UI copy Ukrainian.
-9. Keep roles limited to `owner` and `user`.
+Page:
+- `/o/[token]/delivery`
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Public customer does not need to log in.
+- Do not change payment/shipment business logic unless required by UI wiring.
+- Do not reintroduce Ukrposhta if it was removed from active MVP.
+- Active MVP shipping carrier should be Nova Post / Nova Poshta only unless the current code still intentionally supports more.
+- Keep final submit wired to existing confirmation/payment action.
+
+Suggested steps:
+1. `Контакти`
+   - full name;
+   - phone.
+2. `Доставка`
+   - active carrier selection;
+   - city search;
+   - warehouse/branch search;
+   - selected delivery summary.
+3. `Оплата`
+   - MonoPay;
+   - cash on delivery;
+   - clear short explanation for each method.
+4. `Перевірка`
+   - customer info summary;
+   - delivery summary;
+   - payment summary;
+   - final confirm button.
 
 Tasks:
-1. Identify the root cause of the failure.
-2. Fix the smallest safe area of code.
-3. Add or update tests if the failure exposed missing coverage.
-4. Run the failing command again.
-5. Then run the full required suite:
-   ```bash
-   pnpm lint
-   pnpm typecheck
-   pnpm test:coverage
-   pnpm test:e2e
-   pnpm build
-   ```
-6. Update `spec.md` if behavior changed.
-7. Commit only after checks pass.
+1. Refactor `DeliveryForm` into steps using the reusable stepper.
+2. Keep carrier/city/warehouse lookup behavior stable.
+3. Make city and warehouse search results mobile-friendly:
+   - no cramped dropdowns;
+   - clear selected state;
+   - easy reset/change action.
+4. Add loading/empty/error states per step in Ukrainian.
+5. After final submit:
+   - if MonoPay redirect URL exists, redirect as before;
+   - if cash on delivery, show confirmation as before.
+6. Avoid accidental double submit.
+7. Add tests for:
+   - step navigation;
+   - contact validation;
+   - city/warehouse selection;
+   - payment method step;
+   - final review;
+   - MonoPay redirect still works;
+   - cash on delivery confirmation still works;
+   - mobile no horizontal overflow.
+8. Update Playwright customer delivery e2e to use the step flow.
+9. Use Playwright MCP to inspect public delivery flow at 360/390px if available.
+10. Update `spec.md` and UI docs.
 
-Use a commit message that describes the actual recovery, for example:
-`Fix owner session persistence`
+Acceptance criteria:
+- Public customer delivery/payment form is comfortable on mobile.
+- Long form is split into understandable steps.
+- Existing confirmation/payment behavior remains intact.
+- No public auth requirement introduced.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
 ```
+
+Commit message:
+`Split delivery form into steps`
+````
+
+---
+
+================================================================================
+PROMPT 06 - simplify product and order tables with responsive card views
+================================================================================
+
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+
+Goal:
+Make product and order lists less cluttered and mobile-friendly.
+
+Pages:
+- `/dashboard/products`
+- `/dashboard/orders`
+
+Current issue:
+Table rows are visually clumsy and overloaded with too much information. On mobile, tables are hard to use.
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Do not remove important functionality.
+- Do not change business logic or filters.
+- Keep owner-only access.
+
+Tasks for desktop tables:
+1. Reduce visible columns to the most important data.
+2. Use visual hierarchy:
+   - primary title;
+   - secondary metadata;
+   - compact badges;
+   - actions grouped at the end.
+3. Avoid repeating too much information in every cell.
+4. Use truncation and tooltips/details only if accessible.
+5. Prefer status badges over long text blocks.
+6. Move secondary actions into a compact action area or dropdown if existing UI supports it.
+
+Tasks for mobile:
+1. Replace tables with responsive cards/list rows below an appropriate breakpoint.
+2. Each mobile card should show:
+   - main title;
+   - status badge;
+   - key amount/date/customer info;
+   - one primary action;
+   - optional secondary details collapsed or in metadata rows.
+3. No horizontal scroll.
+4. Tap targets should be comfortable.
+
+Product list card content:
+- name;
+- SKU;
+- price;
+- stock;
+- active/inactive badge;
+- edit action;
+- active toggle action if present.
+
+Order list card content:
+- order short id or display id;
+- customer name/phone if available;
+- status badge;
+- total amount;
+- date;
+- key tags;
+- details action.
+
+Tests:
+1. Component tests for desktop table visible hierarchy.
+2. Component tests for mobile card rendering.
+3. Playwright tests for `/dashboard/products` and `/dashboard/orders` at 390px and desktop.
+4. Tests should assert important Ukrainian labels and no horizontal overflow.
+5. Existing filters and actions must still work.
+
+Update:
+- `spec.md`
+- `docs/ui/mobile-form-table-guidelines.md`
+
+Acceptance criteria:
+- Product and order lists look clean on desktop.
+- Product and order lists become cards on mobile.
+- No table overflows at 360px.
+- Existing owner actions still work.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+```
+
+Commit message:
+`Simplify responsive data tables`
+````
+
+---
+
+================================================================================
+PROMPT 07 - simplify order details with sections and collapsible mobile layout
+================================================================================
+
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+
+Goal:
+Make the owner order details page easier to scan on mobile and desktop.
+
+Page:
+- `/dashboard/orders/[orderId]`
+
+Current issue:
+Order details can become overloaded with products, customer info, delivery info, payment info, shipment info, tags, status history, audit events, manual status controls, payment retry, and shipment retry.
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Do not change order/payment/shipment business logic.
+- Do not hide critical owner actions completely.
+- Keep audit information accessible.
+
+Tasks:
+1. Split order details into clear sections:
+   - `Огляд`
+   - `Товари`
+   - `Клієнт`
+   - `Доставка`
+   - `Оплата`
+   - `Теги`
+   - `Історія статусів`
+   - `Аудит`
+2. On mobile, use collapsible sections or stacked cards.
+3. On desktop, use a two-column layout if it improves readability:
+   - main content: products and timeline;
+   - side panel: customer, delivery, payment, actions.
+4. Make primary actions easy to find:
+   - retry MonoPay payment if available;
+   - retry shipment if available;
+   - manual status update;
+   - tag assignment/removal.
+5. Make audit events compact and readable.
+6. Avoid huge dense tables inside the details page.
+7. Add tests for:
+   - sections render with Ukrainian headings;
+   - mobile layout renders collapsible/stacked sections;
+   - payment retry action remains available when eligible;
+   - shipment retry action remains available when eligible;
+   - manual status update still works;
+   - audit events are still visible.
+8. Add Playwright mobile test for order details page.
+9. Use Playwright MCP to inspect details page at 390px and desktop if available.
+10. Update `spec.md` and UI docs.
+
+Acceptance criteria:
+- Order details page is readable at 360px.
+- Important actions remain accessible.
+- Audit/status history remains available but not visually overwhelming.
+- Existing tests still pass.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+```
+
+Commit message:
+`Simplify order details layout`
+````
+
+---
+
+================================================================================
+PROMPT 08 - improve filters, empty states, and action feedback
+================================================================================
+
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+
+Goal:
+Improve filtering UI, empty states, loading states, and action feedback across dashboard pages.
+
+Pages:
+- `/dashboard/products`
+- `/dashboard/orders`
+- `/dashboard/orders/[orderId]`
+- `/dashboard/orders/new`
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Do not change business logic.
+- Keep filters functional.
+- Keep mobile-first behavior.
+
+Tasks:
+1. Refactor dense filter forms into mobile-friendly filter panels:
+   - collapsed by default on mobile;
+   - visible summary of active filters;
+   - clear filters action;
+   - accessible labels.
+2. Improve empty states:
+   - no products;
+   - no orders;
+   - no filtered results;
+   - no tags;
+   - no audit events;
+   - no shipments/payments yet.
+3. Improve action feedback:
+   - successful tag update;
+   - failed tag update;
+   - successful manual status update;
+   - failed status update;
+   - retry payment/shipment feedback.
+4. Ensure feedback uses live regions where appropriate.
+5. Add or improve skeleton/loading states only if they fit the app. Do not add unnecessary complexity.
+6. Add tests for:
+   - filter panel mobile behavior;
+   - active filter summary;
+   - clear filters;
+   - Ukrainian empty states;
+   - action feedback messages.
+7. Update Playwright e2e for owner order filters if UI changed.
+8. Update `spec.md` and UI docs.
+
+Acceptance criteria:
+- Filters are not visually overwhelming on mobile.
+- Empty states are useful and Ukrainian.
+- Owner actions give clear feedback.
+- Existing filters remain functional.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+```
+
+Commit message:
+`Improve dashboard filters and feedback`
+````
+
+---
+
+================================================================================
+PROMPT 09 - final responsive QA and UI polish
+================================================================================
+
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+
+Goal:
+Perform final responsive QA and polish after the mobile/form/table refactor.
+
+Important constraints:
+- User-facing UI text must be Ukrainian.
+- Do not add new features.
+- Do not change business logic.
+- Fix UI regressions found during QA.
+
+Pages to verify:
+- `/`
+- `/login`
+- `/setup`
+- `/dashboard`
+- `/dashboard/products`
+- `/dashboard/products/new`
+- `/dashboard/products/[productId]/edit`
+- `/dashboard/orders/new`
+- `/dashboard/orders`
+- `/dashboard/orders/[orderId]`
+- `/o/[token]`
+- `/o/[token]/delivery`
+
+Viewport matrix:
+- 360x740
+- 390x844
+- 430x932
+- 768x1024
+- 1024x768
+- 1440x900
+
+Tasks:
+1. Use Playwright MCP to inspect critical flows if available.
+2. Add or update Playwright tests to cover:
+   - mobile public order review;
+   - mobile customer delivery steps;
+   - mobile product creation steps;
+   - mobile owner order builder steps;
+   - mobile product list card view;
+   - mobile order list card view;
+   - mobile order details sections;
+   - desktop dashboard still works.
+3. Add a no-horizontal-overflow assertion helper and apply it to critical pages.
+4. Verify keyboard navigation:
+   - skip link;
+   - mobile nav;
+   - stepper controls;
+   - filter panels;
+   - action buttons.
+5. Verify focus states and aria labels.
+6. Verify loading, empty, error, and success states.
+7. Review visual density:
+   - spacing;
+   - typography;
+   - badge usage;
+   - table/card hierarchy;
+   - action placement.
+8. Update `spec.md` with final UI QA status.
+9. Update `docs/ui/mobile-form-table-guidelines.md` with final implemented patterns.
+10. Run all required checks.
+11. Commit after checks pass.
+
+Acceptance criteria:
+- Critical pages have no horizontal overflow at 360px.
+- Forms are step-based where appropriate.
+- Tables become cards on mobile.
+- Desktop layouts remain readable.
+- Keyboard and screen reader basics are preserved.
+- All checks pass.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+```
+
+Commit message:
+`Polish responsive user interface`
+````
+
+---
+
+================================================================================
+PROMPT 10 - recovery prompt
+================================================================================
+
+````text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+
+Goal:
+Recover from a failed UI/mobile refactor step without weakening quality gates.
+
+Use this prompt when:
+- lint fails;
+- typecheck fails;
+- coverage falls below 80%;
+- e2e fails;
+- build fails;
+- mobile UI regresses;
+- auth/navigation breaks after UI changes;
+- forms stop submitting correctly;
+- tables/cards lose functionality.
+
+Rules:
+- Do not skip failing tests.
+- Do not reduce coverage thresholds.
+- Do not delete meaningful tests to pass checks.
+- Do not hide UI bugs by weakening assertions.
+- Do not change business logic unless the failure proves a real integration bug.
+- Keep all user-facing copy Ukrainian.
+- Keep roles only `owner` and `user`.
+
+Tasks:
+1. Identify the exact failing command and failure reason.
+2. Inspect recent changes related to the failure.
+3. Fix the smallest possible area.
+4. If a Playwright test fails, inspect the trace or use Playwright MCP to reproduce the page state.
+5. If a mobile overflow test fails, find the element causing overflow and fix layout/classes/components.
+6. If a form step test fails, verify field registration, step validation, final submit, and server action wiring.
+7. If auth/navigation breaks, verify logout/login fixes were not reverted and Next Link is not used for route-handler logout.
+8. Update tests only when behavior intentionally changed and the new assertion is stronger or equally strong.
+9. Run the failed command again.
+10. Then run the full required check suite.
+11. Update `spec.md` if the recovery changed behavior.
+12. Commit only after checks pass.
+
+Required checks:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+```
+
+Commit message examples:
+- `Fix mobile form step validation`
+- `Fix responsive order card overflow`
+- `Fix dashboard mobile navigation`
+- `Fix table card test regression`
+````
+
+---
+
+## Рекомендований порядок запуску
+
+```txt
+1. PROMPT 00 - audit and plan
+2. PROMPT 01 - dashboard shell and navigation
+3. PROMPT 02 - stepper foundation
+4. PROMPT 03 - product forms
+5. PROMPT 04 - order builder
+6. PROMPT 05 - customer delivery/payment form
+7. PROMPT 06 - product/order tables and mobile cards
+8. PROMPT 07 - order details page
+9. PROMPT 08 - filters, empty states, feedback
+10. PROMPT 09 - final responsive QA
+11. PROMPT 10 - only when something fails
+```
+
