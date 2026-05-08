@@ -1,830 +1,951 @@
-# Dase UI/mobile refactor prompts v1
+# Dase prompts - functional order/payment updates and desktop UI polish v1
 
-Цей файл містить набір промптів для Codex, щоб привести UI застосунку Dase до mobile-first стану, спростити форми через step-by-step flow, зробити таблиці менш перевантаженими та покрити все тестами.
+Цей файл містить набір промптів для Codex, щоб виправити поточні функціональні та UI-проблеми після mobile-first рефакторингу.
 
-## Як використовувати
+## Основні цілі
 
-1. Почни з **PROMPT 00**.
-2. Після кожного успішного етапу переходь до наступного промпта.
-3. Якщо падає lint, typecheck, coverage, e2e або build - не переходь далі, використовуй **PROMPT 10 - recovery prompt**.
-4. Не змінюй бізнес-логіку без явної потреби. Це UI/refactor milestone, не product logic rewrite.
-5. Усі user-facing тексти мають бути українською.
-6. Коміти мають бути англійською в imperative sentence case без Conventional Commits prefixes. Приклад: `Improve mobile dashboard layout`.
+Функціонально:
+- Після підтвердження замовлення покупець не повинен повторно вводити дані по тому самому посиланню.
+- Публічна сторінка замовлення після підтвердження має показувати номер замовлення, поточний статус і зрозуміле повідомлення, що замовлення обробляється або очікує оплату.
+- У формі покупця потрібно додати Instagram нікнейм.
+- Owner має бачити Instagram нікнейм у замовленні.
+- Owner має мати пошук замовлення за ID / коротким номером.
+- MonoPay / Monobank прибрати з активного customer flow.
+- Замість MonoPay додати варіант `Оплата картою онлайн`, який показує покупцю картки / реквізити власника і просить надіслати квитанцію в Instagram чат.
+- Owner має мати налаштування карток / реквізитів, які показуються покупцю.
 
-## Головна мета
+UI:
+- Зберегти хороший mobile UX, але відновити якісний desktop layout.
+- Виправити дивне розташування кнопок у формах, деталях замовлення, таблицях і публічних сторінках.
+- Кнопки в межах одного екрану мають мати стабільну висоту, зрозумілу ширину і гарне вирівнювання.
+- Таблиці та списки не мають бути перевантажені інформацією.
+- Step forms мають виглядати добре і на мобільному, і на desktop.
 
-Поточний застосунок працює функціонально, але UI потребує серйозного покращення:
+## Постійні правила для всіх промптів
 
-- сторінки не адаптовані під мобільні екрани;
-- dashboard layout, таблиці й форми мають бути mobile-first;
-- великі форми треба розбити на кілька кроків;
-- таблиці перевантажені інформацією й незручні для читання;
-- на мобільних таблиці треба заміняти на card/list views;
-- desktop tables мають бути компактнішими, з меншою кількістю колонок і кращою ієрархією;
-- critical flows треба перевірити через Playwright desktop + mobile.
+- Read `AGENTS.md`, `spec.md`, `DEPLOYMENT.md`, and `docs/adr/0001-architecture.md` before changing code.
+- Keep all user-facing UI copy Ukrainian.
+- Do not create or use `admin` role.
+- Allowed roles remain only `owner` and `user`.
+- Do not add S3/object storage.
+- Do not call live external APIs in automated tests.
+- Do not commit secrets.
+- Keep architecture feature-oriented and onion-like.
+- Domain/application layers must not import React, Next.js UI, Drizzle, or external API clients.
+- Route handlers and server actions should stay thin.
+- Every feature must have tests.
+- Keep 80%+ coverage.
+- Do not weaken tests or coverage thresholds.
+- Commit messages must be English imperative sentence case, for example `Add manual card payment settings`.
+- Before final response for each prompt, run the required checks listed inside that prompt.
 
 ---
 
 ================================================================================
-PROMPT 00 - UI audit and mobile refactor plan
+PROMPT 00 - audit current order, payment, and responsive UI state
 ================================================================================
 
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, README.md if present, and docs/adr/0001-architecture.md first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
 Goal:
-Audit the current UI and create a concrete mobile-first refactor plan before changing components.
+Audit the current code before implementing the next round of functional and UI changes.
 
 Context:
-The app works functionally, but the UI is not adapted well for mobile. Forms are too large, tables are overloaded, and row layouts feel visually heavy.
-
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Roles remain only `owner` and `user`.
-- Do not introduce `admin` wording.
-- Do not change core business logic.
-- Do not change database schema unless a UI requirement makes it truly necessary.
-- Keep feature-oriented onion architecture.
-- Do not put business rules into UI components.
-- Use existing Tailwind/shadcn/Radix-compatible patterns.
-- No new heavy UI framework.
-- Do not add object storage or image uploads.
-- Keep all required checks passing.
-
-Pages to audit:
-- `/`
-- `/login`
-- `/setup`
-- `/dashboard`
-- `/dashboard/products`
-- `/dashboard/products/new`
-- `/dashboard/products/[productId]/edit`
-- `/dashboard/orders/new`
-- `/dashboard/orders`
-- `/dashboard/orders/[orderId]`
-- `/o/[token]`
-- `/o/[token]/delivery`
+The current app works, but there are remaining issues:
+- After a customer confirms an order, reopening the same public order link should not allow submitting delivery/customer data again.
+- The public order link should show a clear Ukrainian status page after confirmation: order number, current status, and contact seller guidance.
+- Customer delivery form needs an Instagram nickname field.
+- Owners need to search orders by id / short id.
+- MonoPay / Monobank should be removed from the active customer payment flow for now.
+- Instead of MonoPay, customer payment option should be `Оплата картою онлайн`.
+- `Оплата картою онлайн` is a manual card transfer flow: show owner-configured card/requisite list and tell the customer to send the receipt in Instagram chat.
+- Owner should configure visible payment cards/requisites in dashboard settings.
+- Mobile got better, but desktop layout now looks too sparse and unbalanced.
+- Buttons are inconsistently placed and sized.
+- Tables/cards are still too cluttered in some places.
 
 Tasks:
-1. Inspect the current UI components, layouts, tables, forms, and responsive classes.
-2. Use Playwright MCP where available to inspect critical pages at these viewport widths:
-   - 360x740
-   - 390x844
-   - 430x932
-   - 768x1024
-   - 1440x900
-3. Identify horizontal scrolling, cramped layouts, overflowing tables, too-wide forms, tiny tap targets, missing sticky/mobile nav, and weak visual hierarchy.
-4. Create `docs/ui/mobile-form-table-guidelines.md` with:
-   - mobile-first layout principles;
-   - form stepper principles;
-   - table-to-card responsive rules;
-   - dashboard navigation behavior;
-   - spacing and typography rules;
-   - accessibility requirements;
-   - exact pages to refactor;
-   - testing checklist.
-5. Update `spec.md` with the new UI refactor milestone and known issues.
-6. Do not implement UI changes yet except tiny documentation-safe fixes if absolutely needed.
-7. Run existing checks if feasible.
-8. Commit documentation and audit notes.
+1. Inspect:
+   - public order pages under `/o/[token]`;
+   - customer delivery/payment form;
+   - owner product form;
+   - owner order builder;
+   - owner orders list;
+   - owner order details;
+   - dashboard layout;
+   - payment modules and payment provider enum;
+   - existing Monobank code;
+   - shipping/job flow;
+   - current migrations.
+2. Identify where MonoPay is still active in customer UI, use cases, tests, docs, and env vars.
+3. Identify where payment method values are persisted and what migration is needed to add a manual card transfer provider.
+4. Identify where customer data is persisted and what migration is needed to add Instagram username.
+5. Identify where owner order search currently matches phone/tracking and where to add order id / short id matching.
+6. Inspect UI components used for:
+   - wizard/step forms;
+   - buttons;
+   - tables;
+   - card lists;
+   - page headers;
+   - sidebars.
+7. Create or update a short audit section in `spec.md`:
+   - what is currently active;
+   - what must change;
+   - migration plan;
+   - UI refactor plan;
+   - risks.
+8. Do not implement the feature changes yet, except very small documentation-only clarifications.
+9. Run:
+   - pnpm lint
+   - pnpm typecheck
+10. Commit documentation-only changes if any.
 
 Acceptance criteria:
-- `docs/ui/mobile-form-table-guidelines.md` exists.
-- `spec.md` contains a UI/mobile refactor milestone.
-- The plan lists concrete changes page-by-page.
-- No business logic is changed.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm build
-```
+- `spec.md` clearly lists the planned change from MonoPay to manual card transfer.
+- `spec.md` clearly lists the planned public post-confirmation order status behavior.
+- `spec.md` clearly lists the desktop UI/layout issues and planned fixes.
+- No production behavior changes yet unless absolutely necessary.
 
 Commit message:
-`Document mobile UI refactor plan`
-````
+Audit payment and responsive UI issues
+```
 
 ---
 
 ================================================================================
-PROMPT 01 - mobile-first shell, navigation, and page containers
+PROMPT 01 - public order status after customer confirmation
 ================================================================================
 
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
 Goal:
-Make the global shell and owner dashboard layout mobile-first.
+Prevent duplicate customer submission and show a proper public order status page after a customer has already confirmed the order.
 
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Do not change auth/business logic.
-- Do not break production auth redirects.
-- Do not use Next Link for logout if the current fix intentionally uses a plain anchor or form.
-- Keep owner/user roles only.
+Current desired behavior:
+1. Customer receives public order link.
+2. Before confirmation, `/o/[token]` shows the order review and the button to continue to delivery/payment.
+3. Customer opens `/o/[token]/delivery`, fills data, and submits.
+4. After successful submit, customer should be sent back to `/o/[token]` or see a final status screen.
+5. Reopening `/o/[token]` after submit should show:
+   - `Замовлення #<shortOrderId>`;
+   - a Ukrainian status label;
+   - message like `Ваше замовлення обробляється`;
+   - if manual card payment is pending, message like `Очікуємо оплату картою`;
+   - instruction: `Якщо маєте питання, зверніться до продавця в чаті`;
+   - selected products and total in a compact summary;
+   - no ability to submit the delivery form again.
+6. Opening `/o/[token]/delivery` after submit should not render the form again. It should redirect to `/o/[token]` or render the same status state.
 
-Tasks:
-1. Refactor the owner dashboard layout to work well at 360px width.
-2. Replace the fixed desktop sidebar experience on mobile with a mobile-friendly navigation pattern:
-   - top header or compact mobile nav;
-   - visible current section label;
-   - no horizontal overflow;
-   - tap targets at least 44px high where practical;
-   - logout remains reliable.
-3. Keep desktop sidebar if it works well on larger screens, but improve spacing and active/current states.
-4. Create shared layout primitives if useful:
-   - `PageShell`
-   - `PageHeader`
-   - `ResponsiveStack`
-   - `MobileSectionNav`
-   - `ActionBar`
-   Keep these in shared UI only if they are truly reusable.
-5. Ensure public pages `/`, `/login`, `/setup`, `/o/[token]`, `/o/[token]/delivery` have mobile-safe containers and typography.
-6. Ensure no page uses fixed widths that overflow mobile screens.
-7. Add or update tests for:
-   - Ukrainian dashboard navigation labels;
-   - mobile nav renders at small viewport;
-   - logout UI still points to the correct route and does not use problematic client-side RSC navigation;
-   - public pages have no horizontal overflow at mobile width.
-8. Add Playwright mobile checks for dashboard shell and public pages.
-9. Use Playwright MCP to inspect `/dashboard`, `/dashboard/products`, and `/o/[token]` at mobile viewport if available.
-10. Update `spec.md` and `docs/ui/mobile-form-table-guidelines.md` with implemented shell changes.
-
-Acceptance criteria:
-- `/dashboard` is usable at 360px without horizontal scrolling.
-- Mobile nav is clear and Ukrainian.
-- Desktop dashboard remains usable.
-- Logout remains reliable.
-- No business logic changed.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Commit message:
-`Improve mobile dashboard shell`
-````
-
----
-
-================================================================================
-PROMPT 02 - reusable multi-step form foundation
-================================================================================
-
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
-
-Goal:
-Create a reusable, accessible multi-step form foundation for large forms.
-
-Current issue:
-Large forms are too long and overwhelming. They should be split into clear steps with progress, back/next controls, and per-step validation.
-
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Do not submit partial data to the server unless the existing business flow explicitly supports it.
-- Keep final submit behavior compatible with existing server actions.
-- Do not move domain/business rules into UI components.
-- Keep React Hook Form + Zod where currently used.
-
-Tasks:
-1. Create reusable UI primitives for multi-step forms, for example:
-   - `Stepper`
-   - `StepIndicator`
-   - `StepActions`
-   - `StepCard`
-   - `FormSummaryCard`
-2. Add a small form-step utility that supports:
-   - current step index;
-   - next/back;
-   - validating only fields for the current step;
-   - preventing final submit until all required fields are valid;
-   - preserving form state when navigating between steps.
-3. Keep these utilities generic and UI-focused.
-4. Do not introduce new global state libraries.
-5. Add accessibility behavior:
-   - current step announced through `aria-current` or similar;
-   - errors announced through live regions;
-   - focus moves to step heading or first invalid field after next/submit;
-   - buttons have clear Ukrainian labels.
-6. Add unit/component tests for the stepper behavior.
-7. Add example test-only/demo usage if useful, but do not leave unused production code.
-8. Update docs with how feature forms should adopt the stepper.
-
-Suggested Ukrainian copy:
-- `Крок {current} з {total}`
-- `Назад`
-- `Далі`
-- `Перевірити`
-- `Завершити`
-- `Заповніть обов’язкові поля цього кроку`
-
-Acceptance criteria:
-- A reusable multi-step foundation exists.
-- It is accessible and tested.
-- No current forms are broken.
-- No business logic changed.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm build
-```
-
-Commit message:
-`Add multi step form foundation`
-````
-
----
-
-================================================================================
-PROMPT 03 - split product forms into mobile-friendly steps
-================================================================================
-
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
-
-Goal:
-Refactor product create/edit forms into a mobile-friendly multi-step flow.
-
-Pages:
-- `/dashboard/products/new`
-- `/dashboard/products/[productId]/edit`
-
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Product images remain external URLs only.
-- Do not add file uploads or object storage.
-- Keep existing product validation and server actions.
-- Do not change product business logic.
-
-Suggested steps:
-1. `Основне`
-   - product name;
-   - SKU;
-   - description;
-   - active status if already present.
-2. `Ціна та залишок`
-   - price;
-   - stock quantity;
-   - currency if exposed.
-3. `Зображення`
-   - one or more image URLs;
-   - image preview;
-   - URL validation copy.
-4. `Перевірка`
-   - compact summary of all entered values;
-   - final submit button.
-
-Tasks:
-1. Refactor product form UI to use the reusable stepper.
-2. Validate only relevant fields when clicking `Далі`.
-3. Preserve entered values when moving between steps.
-4. Keep final submit wired to the existing server action.
-5. On desktop, use a nicer layout but still keep step structure.
-6. Improve mobile spacing, labels, error messages, and tap targets.
-7. Ensure image preview does not overflow mobile screens.
-8. Add tests for:
-   - step navigation;
-   - per-step validation;
-   - final summary;
-   - create flow still calls the expected action;
-   - edit flow preloads existing values;
-   - Ukrainian labels.
-9. Update Playwright e2e for product creation to use the new multi-step flow.
-10. Use Playwright MCP to inspect product create/edit pages at mobile viewport if available.
-11. Update `spec.md` and UI docs.
-
-Acceptance criteria:
-- Product forms are usable on 360px screens.
-- Long product form is split into clear steps.
-- Existing product create/edit behavior still works.
-- Tests updated and passing.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Commit message:
-`Split product forms into steps`
-````
-
----
-
-================================================================================
-PROMPT 04 - split owner order builder into steps
-================================================================================
-
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
-
-Goal:
-Refactor the owner order builder into a clear multi-step flow.
-
-Page:
-- `/dashboard/orders/new`
-
-Current issue:
-The order builder can become visually dense when selecting multiple products and quantities, especially on mobile.
-
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Do not change order creation business logic.
-- Do not expose internal order ids in public URLs.
-- Keep product snapshots and secure public token behavior unchanged.
-
-Suggested steps:
-1. `Вибір товарів`
-   - searchable/selectable product list;
-   - mobile-friendly product cards;
-   - active products only.
-2. `Кількість`
-   - selected products only;
-   - quantity controls;
-   - line totals.
-3. `Перевірка`
-   - compact order summary;
-   - total amount;
-   - create link button.
-4. `Посилання`
-   - generated public link;
-   - copy action;
-   - quick open action if appropriate.
-
-Tasks:
-1. Refactor order builder UI into steps.
-2. Use mobile cards for product selection.
-3. Avoid giant tables on mobile.
-4. Keep desktop layout efficient but less visually overloaded.
-5. Improve quantity controls for touch devices:
-   - clear input;
-   - optional plus/minus buttons if simple;
-   - validation messages.
-6. Keep server action and use case unchanged unless wiring requires minor adaptation.
-7. Add tests for:
-   - product selection step;
-   - quantity validation;
-   - summary step;
-   - public link generation display;
-   - Ukrainian labels.
-8. Update Playwright e2e for owner order link creation.
-9. Use Playwright MCP at 390px mobile and desktop if available.
-10. Update `spec.md` and UI docs.
-
-Acceptance criteria:
-- Order builder is usable on mobile.
-- Owner can create an order link with multiple products without horizontal scroll.
-- Generated link flow remains intact.
-- Existing order creation tests still pass.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Commit message:
-`Split order builder into steps`
-````
-
----
-
-================================================================================
-PROMPT 05 - split customer delivery and payment form into steps
-================================================================================
-
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
-
-Goal:
-Refactor the public customer delivery/payment form into a mobile-first multi-step checkout-like flow.
-
-Page:
-- `/o/[token]/delivery`
-
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Public customer does not need to log in.
-- Do not change payment/shipment business logic unless required by UI wiring.
-- Do not reintroduce Ukrposhta if it was removed from active MVP.
-- Active MVP shipping carrier should be Nova Post / Nova Poshta only unless the current code still intentionally supports more.
-- Keep final submit wired to existing confirmation/payment action.
-
-Suggested steps:
-1. `Контакти`
-   - full name;
-   - phone.
-2. `Доставка`
-   - active carrier selection;
-   - city search;
-   - warehouse/branch search;
-   - selected delivery summary.
-3. `Оплата`
-   - MonoPay;
-   - cash on delivery;
-   - clear short explanation for each method.
-4. `Перевірка`
-   - customer info summary;
-   - delivery summary;
-   - payment summary;
-   - final confirm button.
-
-Tasks:
-1. Refactor `DeliveryForm` into steps using the reusable stepper.
-2. Keep carrier/city/warehouse lookup behavior stable.
-3. Make city and warehouse search results mobile-friendly:
-   - no cramped dropdowns;
-   - clear selected state;
-   - easy reset/change action.
-4. Add loading/empty/error states per step in Ukrainian.
-5. After final submit:
-   - if MonoPay redirect URL exists, redirect as before;
-   - if cash on delivery, show confirmation as before.
-6. Avoid accidental double submit.
-7. Add tests for:
-   - step navigation;
-   - contact validation;
-   - city/warehouse selection;
-   - payment method step;
-   - final review;
-   - MonoPay redirect still works;
-   - cash on delivery confirmation still works;
-   - mobile no horizontal overflow.
-8. Update Playwright customer delivery e2e to use the step flow.
-9. Use Playwright MCP to inspect public delivery flow at 360/390px if available.
-10. Update `spec.md` and UI docs.
-
-Acceptance criteria:
-- Public customer delivery/payment form is comfortable on mobile.
-- Long form is split into understandable steps.
-- Existing confirmation/payment behavior remains intact.
-- No public auth requirement introduced.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
-
-Commit message:
-`Split delivery form into steps`
-````
-
----
-
-================================================================================
-PROMPT 06 - simplify product and order tables with responsive card views
-================================================================================
-
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
-
-Goal:
-Make product and order lists less cluttered and mobile-friendly.
-
-Pages:
-- `/dashboard/products`
-- `/dashboard/orders`
-
-Current issue:
-Table rows are visually clumsy and overloaded with too much information. On mobile, tables are hard to use.
-
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Do not remove important functionality.
-- Do not change business logic or filters.
-- Keep owner-only access.
-
-Tasks for desktop tables:
-1. Reduce visible columns to the most important data.
-2. Use visual hierarchy:
-   - primary title;
-   - secondary metadata;
-   - compact badges;
-   - actions grouped at the end.
-3. Avoid repeating too much information in every cell.
-4. Use truncation and tooltips/details only if accessible.
-5. Prefer status badges over long text blocks.
-6. Move secondary actions into a compact action area or dropdown if existing UI supports it.
-
-Tasks for mobile:
-1. Replace tables with responsive cards/list rows below an appropriate breakpoint.
-2. Each mobile card should show:
-   - main title;
-   - status badge;
-   - key amount/date/customer info;
-   - one primary action;
-   - optional secondary details collapsed or in metadata rows.
-3. No horizontal scroll.
-4. Tap targets should be comfortable.
-
-Product list card content:
-- name;
-- SKU;
-- price;
-- stock;
-- active/inactive badge;
-- edit action;
-- active toggle action if present.
-
-Order list card content:
-- order short id or display id;
-- customer name/phone if available;
-- status badge;
-- total amount;
-- date;
-- key tags;
-- details action.
+Implementation details:
+1. Add a small display helper:
+   - `formatOrderDisplayNumber(orderId: string): string`
+   - It can use the first 8 chars of the UUID for now.
+   - Show it as `#55e143f7` style.
+   - Keep it stable and covered by tests.
+2. Update public order lookup/read model to distinguish:
+   - unavailable: not found / expired / cancelled;
+   - awaiting customer confirmation;
+   - already confirmed / payment pending / shipment statuses / completed.
+3. Public page variants:
+   - `PublicOrderReview` for `SENT_TO_CUSTOMER`;
+   - `PublicOrderStatus` for every valid status after customer confirmation.
+4. Public delivery page:
+   - If order is not `SENT_TO_CUSTOMER`, do not render the form.
+   - Redirect or show status page.
+   - Do not allow duplicate customer/payment/shipment rows.
+5. Ensure `confirmPublicOrderUseCase` still rejects duplicate confirmation.
+6. Make customer submit action redirect or return a result that moves the UI to the status page after successful submission.
+7. Add Ukrainian status messages for:
+   - `CONFIRMED_BY_CUSTOMER`;
+   - `PAYMENT_PENDING`;
+   - `PAID`;
+   - `SHIPMENT_PENDING`;
+   - `SHIPMENT_CREATED`;
+   - `IN_TRANSIT`;
+   - `DELIVERED`;
+   - `COMPLETED`;
+   - `PAYMENT_FAILED`;
+   - `RETURN_REQUESTED`;
+   - `RETURNED`;
+   - `CANCELLED`.
+8. Use a compact public summary layout:
+   - product list;
+   - total;
+   - order number;
+   - current status;
+   - contact seller instruction.
+9. Keep mobile good, but make desktop centered and visually balanced with a sensible max width.
 
 Tests:
-1. Component tests for desktop table visible hierarchy.
-2. Component tests for mobile card rendering.
-3. Playwright tests for `/dashboard/products` and `/dashboard/orders` at 390px and desktop.
-4. Tests should assert important Ukrainian labels and no horizontal overflow.
-5. Existing filters and actions must still work.
+- Unit tests for `formatOrderDisplayNumber`.
+- Public order lookup tests:
+  - `SENT_TO_CUSTOMER` returns review state;
+  - `CONFIRMED_BY_CUSTOMER` returns status state;
+  - `PAYMENT_PENDING` returns status state;
+  - cancelled/expired remain unavailable.
+- UI tests for Ukrainian post-confirmation copy.
+- E2E:
+  - create order link;
+  - customer submits details;
+  - revisit same public link;
+  - assert no delivery form is shown;
+  - assert order number and processing/status message are shown.
+
+Run:
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
 
 Update:
-- `spec.md`
-- `docs/ui/mobile-form-table-guidelines.md`
-
-Acceptance criteria:
-- Product and order lists look clean on desktop.
-- Product and order lists become cards on mobile.
-- No table overflows at 360px.
-- Existing owner actions still work.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
+- spec.md
+- README.md if it exists or create it if still missing
 
 Commit message:
-`Simplify responsive data tables`
-````
+Add public order status page
+```
 
 ---
 
 ================================================================================
-PROMPT 07 - simplify order details with sections and collapsible mobile layout
+PROMPT 02 - add customer Instagram nickname
 ================================================================================
 
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
 Goal:
-Make the owner order details page easier to scan on mobile and desktop.
+Add Instagram nickname to customer/order data so sellers can connect an order with Instagram chat history.
 
-Page:
-- `/dashboard/orders/[orderId]`
+Behavior:
+- Customer delivery/contact form asks for Instagram nickname.
+- Label: `Instagram нікнейм`
+- Placeholder examples:
+  - `@username`
+  - or `username`
+- Helper text:
+  - `Допоможе продавцю швидше знайти вашу переписку.`
+- Make it optional for now, but visible and encouraged.
+- Normalize stored value:
+  - trim whitespace;
+  - remove duplicate leading @;
+  - store without spaces;
+  - allow only a safe Instagram-like username pattern if provided;
+  - preserve one leading `@` in UI display if you choose to display it with @.
+- Owner order details should show Instagram nickname in the customer section.
+- Owner orders list/cards should show Instagram nickname when present.
+- Owner search should also match Instagram nickname, but order id search will be handled in the next prompt if not done yet.
 
-Current issue:
-Order details can become overloaded with products, customer info, delivery info, payment info, shipment info, tags, status history, audit events, manual status controls, payment retry, and shipment retry.
+Data model:
+1. Add a nullable column to `customers`:
+   - `instagram_username`
+2. Add a forward-only Drizzle migration.
+3. Do not make the migration destructive.
+4. Keep existing customers valid.
 
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Do not change order/payment/shipment business logic.
-- Do not hide critical owner actions completely.
-- Keep audit information accessible.
+Code changes:
+- Update customer domain/application DTOs.
+- Update customer repository interface and implementations.
+- Update in-memory test repositories.
+- Update customer confirmation use case.
+- Update delivery form validation.
+- Update delivery form UI.
+- Update owner order read model and UI.
+- Update public order status page if it displays contact summary.
 
-Tasks:
-1. Split order details into clear sections:
-   - `Огляд`
-   - `Товари`
-   - `Клієнт`
-   - `Доставка`
-   - `Оплата`
-   - `Теги`
-   - `Історія статусів`
-   - `Аудит`
-2. On mobile, use collapsible sections or stacked cards.
-3. On desktop, use a two-column layout if it improves readability:
-   - main content: products and timeline;
-   - side panel: customer, delivery, payment, actions.
-4. Make primary actions easy to find:
-   - retry MonoPay payment if available;
-   - retry shipment if available;
-   - manual status update;
-   - tag assignment/removal.
-5. Make audit events compact and readable.
-6. Avoid huge dense tables inside the details page.
-7. Add tests for:
-   - sections render with Ukrainian headings;
-   - mobile layout renders collapsible/stacked sections;
-   - payment retry action remains available when eligible;
-   - shipment retry action remains available when eligible;
-   - manual status update still works;
-   - audit events are still visible.
-8. Add Playwright mobile test for order details page.
-9. Use Playwright MCP to inspect details page at 390px and desktop if available.
-10. Update `spec.md` and UI docs.
+Tests:
+- Validation accepts:
+  - `username`
+  - `@username`
+  - `user.name_123`
+- Validation rejects:
+  - spaces inside username;
+  - overly long username;
+  - invalid symbols.
+- Confirmation use case persists normalized Instagram username.
+- Owner details UI shows Instagram nickname.
+- Owner list/card UI shows Instagram nickname.
+- E2E customer flow includes Instagram nickname and owner can see it.
 
-Acceptance criteria:
-- Order details page is readable at 360px.
-- Important actions remain accessible.
-- Audit/status history remains available but not visually overwhelming.
-- Existing tests still pass.
-
-Required checks:
-```bash
+Run:
+pnpm db:generate
 pnpm lint
 pnpm typecheck
 pnpm test:coverage
 pnpm test:e2e
 pnpm build
-```
+
+Update:
+- spec.md
+- README.md / DEPLOYMENT.md if env/migration notes are relevant
 
 Commit message:
-`Simplify order details layout`
-````
+Add customer Instagram nickname
+```
 
 ---
 
 ================================================================================
-PROMPT 08 - improve filters, empty states, and action feedback
+PROMPT 03 - owner payment requisites settings
 ================================================================================
 
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
 Goal:
-Improve filtering UI, empty states, loading states, and action feedback across dashboard pages.
+Allow owners to configure card/payment requisites shown to customers for manual online card transfer.
 
-Pages:
-- `/dashboard/products`
-- `/dashboard/orders`
-- `/dashboard/orders/[orderId]`
-- `/dashboard/orders/new`
+Important:
+This is not card processing.
+Do not collect customer card data.
+Do not ask for CVV, expiry, or any customer payment card information.
+The owner is configuring public payment requisites that customers can transfer money to.
+Do not log payment requisite values.
+Do not expose inactive requisites publicly.
 
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Do not change business logic.
-- Keep filters functional.
-- Keep mobile-first behavior.
+Recommended wording:
+- Dashboard nav: `Налаштування`
+- Settings page: `Реквізити для оплати`
+- Customer payment option: `Оплата картою онлайн`
+- Customer instruction:
+  `Переказ можна зробити на одну з карток нижче. Після оплати надішліть квитанцію продавцю в Instagram чат.`
 
-Tasks:
-1. Refactor dense filter forms into mobile-friendly filter panels:
-   - collapsed by default on mobile;
-   - visible summary of active filters;
-   - clear filters action;
-   - accessible labels.
-2. Improve empty states:
-   - no products;
-   - no orders;
-   - no filtered results;
-   - no tags;
-   - no audit events;
-   - no shipments/payments yet.
-3. Improve action feedback:
-   - successful tag update;
-   - failed tag update;
-   - successful manual status update;
-   - failed status update;
-   - retry payment/shipment feedback.
-4. Ensure feedback uses live regions where appropriate.
-5. Add or improve skeleton/loading states only if they fit the app. Do not add unnecessary complexity.
-6. Add tests for:
-   - filter panel mobile behavior;
-   - active filter summary;
-   - clear filters;
-   - Ukrainian empty states;
-   - action feedback messages.
-7. Update Playwright e2e for owner order filters if UI changed.
-8. Update `spec.md` and UI docs.
+Data model:
+Create a table such as `payment_requisites`:
+- id uuid primary key
+- owner_id uuid references users(id)
+- label text not null
+- recipient_name text nullable
+- bank_name text nullable
+- display_value text not null
+  - can contain a card number, IBAN, or other owner-provided payment details
+- note text nullable
+- is_active boolean default true not null
+- sort_order integer default 0 not null
+- created_at timestamp
+- updated_at timestamp
 
-Acceptance criteria:
-- Filters are not visually overwhelming on mobile.
-- Empty states are useful and Ukrainian.
-- Owner actions give clear feedback.
-- Existing filters remain functional.
+Validation:
+- `label` required, max 80 chars.
+- `display_value` required, max 120 chars.
+- `recipient_name`, `bank_name`, `note` optional with reasonable max lengths.
+- Do not require strict card-number validation because owners may use IBAN or formatted payment details.
+- Add a helper to create a masked display for owner lists:
+  - e.g. show last 4 chars if card-like;
+  - but public customer view should show the full owner-provided display value because the customer must copy it.
 
-Required checks:
-```bash
+Architecture:
+- Add module under `src/modules/payments` or `src/modules/settings`.
+- Use repository port in application layer.
+- Drizzle repository only in infrastructure.
+- UI under dashboard settings.
+- Keep Ukrainian UI.
+
+Owner UI:
+1. Add dashboard nav item `Налаштування`.
+2. Add route `/dashboard/settings/payment`.
+3. Owner can:
+   - view active and inactive requisites;
+   - create new requisite;
+   - edit existing requisite;
+   - activate/deactivate;
+   - reorder if simple, otherwise sort by created date / sort_order.
+4. Add copy-to-clipboard for display value if simple.
+5. Empty state:
+   - `Додайте картку або реквізити, які покупці бачитимуть під час оплати.`
+6. Desktop and mobile layouts must both be clean:
+   - mobile cards;
+   - desktop compact table or cards;
+   - consistent action buttons.
+
+Public read model:
+- Add use case to list active payment requisites for an owner.
+- Public order/payment UI must only show active requisites.
+- Do not expose owner email or internal user id.
+
+Tests:
+- Payment requisite validation.
+- Repository save/list/update/toggle.
+- Owner access required.
+- User role cannot access settings.
+- Public read model returns only active requisites for the order owner.
+- UI shows Ukrainian labels.
+- E2E:
+  - owner creates a payment requisite;
+  - public customer payment step can display it when choosing online card payment.
+
+Run:
+pnpm db:generate
 pnpm lint
 pnpm typecheck
 pnpm test:coverage
 pnpm test:e2e
 pnpm build
-```
+
+Update:
+- spec.md
+- README.md
+- DEPLOYMENT.md if needed
 
 Commit message:
-`Improve dashboard filters and feedback`
-````
+Add payment requisite settings
+```
 
 ---
 
 ================================================================================
-PROMPT 09 - final responsive QA and UI polish
+PROMPT 04 - replace active MonoPay flow with manual card transfer
 ================================================================================
 
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
 Goal:
-Perform final responsive QA and polish after the mobile/form/table refactor.
+Remove MonoPay / Monobank from the active customer payment flow for now and replace it with manual online card transfer.
 
-Important constraints:
-- User-facing UI text must be Ukrainian.
-- Do not add new features.
-- Do not change business logic.
-- Fix UI regressions found during QA.
+Business requirement:
+- Payment option shown to customers:
+  - `Оплата картою онлайн`
+  - `Оплата при отриманні`
+- Do not show `MonoPay`, `Monobank`, or `Оплата MonoPay` in active customer UI.
+- Do not create Monobank invoices in the customer flow.
+- Do not redirect customers to Monobank.
+- Do not require Monobank variables for normal production operation.
+- Keep Monobank code only as inactive/future integration if removing it entirely would be too risky.
+- Existing Monobank tests can either be moved to inactive integration tests or updated to not drive active customer flow.
 
-Pages to verify:
-- `/`
-- `/login`
-- `/setup`
-- `/dashboard`
-- `/dashboard/products`
-- `/dashboard/products/new`
-- `/dashboard/products/[productId]/edit`
-- `/dashboard/orders/new`
-- `/dashboard/orders`
-- `/dashboard/orders/[orderId]`
-- `/o/[token]`
-- `/o/[token]/delivery`
+Recommended internal provider:
+- Add `MANUAL_CARD_TRANSFER` as the active online-card payment provider.
+- Keep `CASH_ON_DELIVERY`.
+- Existing `MONOBANK` enum value can remain for backwards compatibility, but active UI/use cases must not create new Monobank payments.
+- If PostgreSQL enum migration is needed, create a forward-only migration:
+  - `ALTER TYPE payment_provider ADD VALUE IF NOT EXISTS 'MANUAL_CARD_TRANSFER';`
+- Do not attempt to drop `MONOBANK` enum value in PostgreSQL.
 
-Viewport matrix:
-- 360x740
-- 390x844
-- 430x932
-- 768x1024
-- 1024x768
-- 1440x900
+Customer flow:
+1. Customer selects `Оплата картою онлайн`.
+2. Payment step shows owner-configured active payment requisites.
+3. Customer sees instruction:
+   `Після переказу надішліть квитанцію продавцю в Instagram чат.`
+4. On submit:
+   - create payment record with provider `MANUAL_CARD_TRANSFER`;
+   - payment status `PENDING`;
+   - order status should become `PAYMENT_PENDING`;
+   - do not enqueue shipment yet.
+5. Public order status page after submit:
+   - order number;
+   - status `Очікуємо оплату`;
+   - active payment requisites;
+   - instruction to send receipt in Instagram.
+6. If no active requisites exist:
+   - owner dashboard should show a warning;
+   - public customer should not be able to choose online card payment, or should see a clear unavailable message and choose cash on delivery.
+7. Cash on delivery behavior remains:
+   - payment provider `CASH_ON_DELIVERY`;
+   - shipment can be prepared according to existing logic.
 
-Tasks:
-1. Use Playwright MCP to inspect critical flows if available.
-2. Add or update Playwright tests to cover:
-   - mobile public order review;
-   - mobile customer delivery steps;
-   - mobile product creation steps;
-   - mobile owner order builder steps;
-   - mobile product list card view;
-   - mobile order list card view;
-   - mobile order details sections;
-   - desktop dashboard still works.
-3. Add a no-horizontal-overflow assertion helper and apply it to critical pages.
-4. Verify keyboard navigation:
-   - skip link;
-   - mobile nav;
-   - stepper controls;
-   - filter panels;
-   - action buttons.
-5. Verify focus states and aria labels.
-6. Verify loading, empty, error, and success states.
-7. Review visual density:
-   - spacing;
-   - typography;
-   - badge usage;
-   - table/card hierarchy;
-   - action placement.
-8. Update `spec.md` with final UI QA status.
-9. Update `docs/ui/mobile-form-table-guidelines.md` with final implemented patterns.
-10. Run all required checks.
-11. Commit after checks pass.
+Owner flow:
+1. Owner order details should show:
+   - payment method `Оплата картою онлайн`;
+   - payment status `Очікує підтвердження`;
+   - Instagram nickname if present.
+2. Add owner action:
+   - `Позначити оплату отриманою`
+3. When owner marks manual card transfer as paid:
+   - payment status becomes `PAID`;
+   - order status transitions through valid path to `PAID`;
+   - enqueue shipment creation if shipment exists and shipping mode allows it;
+   - append audit event `MANUAL_PAYMENT_MARKED_PAID` or similar.
+4. Add owner action for payment failed/cancelled only if simple and useful. Otherwise leave for later.
 
-Acceptance criteria:
-- Critical pages have no horizontal overflow at 360px.
-- Forms are step-based where appropriate.
-- Tables become cards on mobile.
-- Desktop layouts remain readable.
-- Keyboard and screen reader basics are preserved.
-- All checks pass.
+Code changes:
+- Update payment provider domain types.
+- Update delivery form payment options.
+- Update delivery form review step.
+- Update public order status page.
+- Update customer confirmation use case.
+- Update payment status labels.
+- Update owner order details.
+- Update owner order filters if payment method filter exists.
+- Update tests and fixtures.
+- Remove active Monobank env dependency from customer flow.
+- Keep `/api/webhooks/monobank` if you do not delete Monobank integration, but it should not be part of current active flow.
+- Update docs to say Monobank is inactive/future.
 
-Required checks:
-```bash
+Tests:
+- Customer can choose online card payment and sees requisites.
+- Customer submit with online card creates manual payment and no Monobank invoice.
+- Public link after submit shows `Очікуємо оплату` and no duplicate form.
+- Owner marks manual card payment as paid.
+- Marking manual card payment paid writes audit event.
+- Shipment is enqueued only after manual payment is marked paid.
+- Cash on delivery still works.
+- No active customer UI contains `MonoPay` or `Monobank`.
+- E2E covers online card flow with configured requisite.
+- E2E covers no duplicate customer submission after submit.
+
+Run:
+pnpm db:generate
 pnpm lint
 pnpm typecheck
 pnpm test:coverage
 pnpm test:e2e
 pnpm build
-```
+
+Update:
+- spec.md
+- README.md
+- DEPLOYMENT.md
+- .env.example
+Remove Monobank from required active production env docs, but keep a clearly marked future/inactive section if the integration remains in code.
 
 Commit message:
-`Polish responsive user interface`
-````
+Replace MonoPay with manual card transfer
+```
+
+---
+
+================================================================================
+PROMPT 05 - owner order search by id and better owner summaries
+================================================================================
+
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
+
+Goal:
+Improve owner order search and summaries.
+
+Functional requirements:
+- Owner can search orders by:
+  - full order UUID;
+  - short order id / display number, e.g. first 8 chars;
+  - customer phone;
+  - tracking number;
+  - Instagram nickname;
+  - customer full name if already available.
+- Search input placeholder:
+  `ID, Instagram, телефон або ТТН`
+- Owner list/cards and order details should show the same display order number as the public page.
+- Order details header should show:
+  - `Замовлення #55e143f7`
+  - status label;
+  - customer name or `Клієнт ще не вказаний`;
+  - Instagram nickname if present.
+
+Implementation:
+1. Reuse `formatOrderDisplayNumber`.
+2. Update owner order read model search matcher.
+3. Include customer full name and instagram in search.
+4. Ensure search is case-insensitive and ignores leading @ for Instagram.
+5. Add tests:
+   - search by full id;
+   - search by short id;
+   - search by Instagram with and without @;
+   - search by phone;
+   - search by tracking.
+6. Update owner orders filter form.
+7. Update empty state:
+   - `За цим пошуком замовлень не знайдено`
+8. Keep tables/cards visually lighter:
+   - primary line: order number, status, total;
+   - secondary line: customer, Instagram, date;
+   - tertiary/action area: compact actions.
+
+UI:
+- Desktop:
+  - search/filter bar should be one balanced row or clean two-row layout.
+  - Do not overfill table rows.
+- Mobile:
+  - use cards with compact metadata.
+- All actions should use consistent button sizes.
+
+Run:
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+
+Update:
+- spec.md
+
+Commit message:
+Improve owner order search
+```
+
+---
+
+================================================================================
+PROMPT 06 - restore high-quality desktop layouts for wizard forms
+================================================================================
+
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
+
+Goal:
+Keep the improved mobile UX, but fix desktop layout regressions in multi-step forms.
+
+Problems to address:
+- Product form desktop layout is too sparse and unbalanced.
+- Customer delivery form step cards are too large on mobile and awkward on desktop.
+- Stepper/sidebar consumes too much space or creates odd empty areas.
+- Buttons are placed inconsistently.
+- Desktop should look intentional, not like stretched mobile UI.
+
+Create or refactor reusable layout components:
+- `WizardPageLayout`
+- `WizardStepper`
+- `WizardStepCard`
+- `WizardActions`
+- or similarly named components under shared UI.
+
+Responsive behavior:
+Mobile:
+- one column;
+- compact vertical stepper;
+- full-width primary action button;
+- secondary action below or beside it depending on space.
+
+Tablet:
+- one or two columns depending on form complexity;
+- compact stepper above form.
+
+Desktop:
+- max content width should be intentional, e.g. 960-1180px depending on page.
+- product form:
+  - either 2-column form layout inside the active step;
+  - or left stepper + right card, but widths must be balanced.
+- delivery form:
+  - stepper can be horizontal/compact at top or left rail only if it does not dominate.
+- order builder:
+  - selection list and summary can use a balanced grid.
+- large empty white space should be avoided.
+
+Specific UI requirements:
+1. Stepper labels should use `Крок 1 із 4`, not `Крок 1 з 4` if you want grammatical consistency. Pick one and use it everywhere.
+2. Stepper cards on mobile should be smaller than current screenshot:
+   - avoid huge vertical padding;
+   - reduce icon circle size where appropriate.
+3. Desktop stepper should not look like four oversized cards unless the page has enough space.
+4. Current active step should be clear but not visually heavy.
+5. `Назад`, `Далі`, `Скасувати`, `Зберегти`, `Створити` buttons should be in a consistent actions footer.
+6. On desktop, action footer should usually align to the right inside the form container.
+7. On mobile, action buttons should be full-width and stacked in logical order:
+   - primary first or bottom sticky if implemented;
+   - secondary below.
+8. Do not introduce fixed pixel widths that break 320px mobile screens.
+9. Avoid horizontal overflow.
+
+Apply to:
+- product create/edit form;
+- owner order builder;
+- public customer delivery/payment form;
+- any other multi-step form introduced recently.
+
+Tests:
+- Component tests for stepper current state and buttons.
+- E2E responsive screenshots or viewport checks:
+  - 390x844 mobile;
+  - 768x1024 tablet;
+  - 1440x900 desktop.
+- Assert no horizontal overflow on public delivery, product form, order builder.
+- Assert important Ukrainian labels are visible in each viewport.
+
+Run:
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+
+Update:
+- spec.md with UI verification notes.
+
+Commit message:
+Improve desktop wizard layouts
+```
+
+---
+
+================================================================================
+PROMPT 07 - standardize button placement and sizing
+================================================================================
+
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
+
+Goal:
+Standardize button placement, sizing, and alignment across the app.
+
+Current issues:
+- Buttons sometimes appear in strange places.
+- Button sizes depend too much on text content.
+- Buttons on the same screen can have inconsistent widths/heights.
+- Desktop and mobile action placement is inconsistent.
+
+Create shared UI patterns:
+1. `ActionBar` or `FormActions`
+   - handles primary/secondary/destructive actions.
+   - desktop: right-aligned row by default.
+   - mobile: full-width stacked buttons.
+   - supports `sticky` only if it improves UX and does not hide content.
+2. Button size rules:
+   - same height for buttons in the same action group;
+   - sensible min-width on desktop;
+   - full-width on mobile where appropriate;
+   - icon + text spacing consistent.
+3. Do not make every button globally full-width.
+4. Do not force table row action buttons to huge widths.
+5. Ensure disabled buttons look disabled but still readable.
+6. Ensure loading states do not change button width drastically.
+   - For example, reserve width or use same label length strategy.
+7. Ensure destructive actions are visually distinct but not overbearing.
+
+Apply to:
+- home page CTA;
+- setup/login forms;
+- product create/edit wizard;
+- order builder wizard;
+- customer delivery/payment wizard;
+- owner order details:
+  - status update;
+  - payment mark paid;
+  - shipment retry;
+  - public page link;
+  - back buttons;
+- owner payment settings;
+- owner list filters/actions;
+- public order status/review page.
+
+Important home page fix:
+- The CTA `Перейти до налаштування` must be a real link/button action.
+- If no owner exists, it should lead to `/setup`.
+- If owner exists, it can lead to `/login` or `/dashboard` depending on session if easy to determine.
+- Do not leave non-functional CTA buttons.
+
+Tests:
+- Unit/component tests for ActionBar/FormActions responsive class behavior if practical.
+- UI tests ensuring home CTA has a link target.
+- E2E checks:
+  - product form buttons aligned on desktop;
+  - delivery form buttons full-width and ordered on mobile;
+  - order details action group does not overflow.
+- Visual/DOM assertions for no duplicate awkward back buttons on the same public screen.
+
+Run:
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+
+Update:
+- spec.md
+- README.md if UX docs are useful
+
+Commit message:
+Standardize action buttons
+```
+
+---
+
+================================================================================
+PROMPT 08 - declutter tables, cards, and owner order details
+================================================================================
+
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
+
+Goal:
+Make owner tables, cards, and order details cleaner and easier to scan.
+
+Problems:
+- Table rows look cluttered.
+- Too much metadata is visible at once.
+- Desktop order details can feel overly spread out.
+- Mobile details need sections, but desktop needs compact, balanced panels.
+
+Requirements for owner order list:
+1. Desktop:
+   - Use a compact table or card-table hybrid.
+   - Each row should have:
+     - order number;
+     - status badge;
+     - customer/Instagram;
+     - payment method/status;
+     - delivery status/tracking if available;
+     - total;
+     - date;
+     - one primary action.
+   - Hide secondary details behind details page, tooltip, or secondary text.
+2. Mobile:
+   - Use cards.
+   - Show only:
+     - order number;
+     - status;
+     - customer/Instagram;
+     - total;
+     - payment/delivery summary;
+     - action button.
+3. Use consistent status badges.
+4. Use consistent empty states and loading/skeletons if already present.
+5. Avoid rows with multiple competing buttons.
+6. Search/filter controls should not visually dominate the page.
+
+Requirements for product list:
+1. Desktop table:
+   - product name + sku;
+   - price;
+   - stock;
+   - active status;
+   - compact actions.
+2. Mobile cards:
+   - name, sku, price, stock, active badge;
+   - edit/toggle action.
+3. Do not over-show image URLs in table rows.
+
+Requirements for order details:
+1. Header:
+   - order number;
+   - status;
+   - customer/Instagram if available;
+   - primary action area.
+2. Main content:
+   - products;
+   - payment;
+   - delivery;
+   - customer;
+   - audit/status history.
+3. Desktop:
+   - balanced 2-column layout;
+   - primary content wider than side panels.
+4. Mobile:
+   - collapsible/accordion sections or stacked cards;
+   - important status/payment info first.
+5. Payment manual card transfer action should be easy to find:
+   - `Позначити оплату отриманою`.
+6. Do not show huge empty panels.
+
+Tests:
+- UI tests for owner order list simplified labels.
+- UI tests for order details with and without customer data.
+- E2E:
+  - owner can search by short id;
+  - owner opens order details;
+  - order details has no horizontal overflow on mobile;
+  - desktop viewport shows primary panels correctly.
+
+Run:
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm test:e2e
+pnpm build
+
+Update:
+- spec.md with UI polish status.
+
+Commit message:
+Declutter owner order views
+```
+
+---
+
+================================================================================
+PROMPT 09 - final QA, production smoke, and docs
+================================================================================
+
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
+
+Goal:
+Final verification after functional payment/order changes and responsive UI cleanup.
+
+Functional checklist:
+1. Public order before confirmation:
+   - shows products and total;
+   - allows going to delivery/payment.
+2. Public delivery/payment:
+   - asks for full name, phone, Instagram nickname, Nova Post delivery, payment method.
+3. Online card payment:
+   - shows active owner payment requisites;
+   - no MonoPay or Monobank text appears in active customer UI;
+   - tells customer to send receipt in Instagram chat.
+4. Submit:
+   - saves customer data and Instagram nickname;
+   - creates manual card payment if selected;
+   - shows public status page;
+   - does not allow duplicate submit.
+5. Reopen public link:
+   - shows order number and status;
+   - no duplicate form.
+6. Owner:
+   - searches by short order id;
+   - sees Instagram nickname;
+   - sees manual card payment status;
+   - can mark payment as received;
+   - sees audit event.
+7. Cash on delivery still works.
+8. No live external API calls in tests.
+9. Monobank/MonoPay is inactive in active customer flow.
+
+UI checklist:
+1. Mobile 390x844:
+   - no horizontal overflow;
+   - forms readable;
+   - buttons full-width where appropriate;
+   - no duplicate weird back buttons.
+2. Tablet 768x1024:
+   - layouts balanced.
+3. Desktop 1440x900:
+   - forms not overly stretched or sparse;
+   - stepper proportional;
+   - buttons aligned consistently;
+   - tables/cards readable.
+4. Owner order details desktop:
+   - primary content and side panels balanced.
+5. Public order pages:
+   - clear, centered, polished.
+
+Tasks:
+1. Run full local checks:
+   - pnpm lint
+   - pnpm typecheck
+   - pnpm test:coverage
+   - pnpm test:e2e
+   - pnpm build
+2. Run Playwright against key viewports:
+   - 390x844
+   - 768x1024
+   - 1440x900
+3. Use Playwright MCP if available to inspect:
+   - product create form;
+   - order builder;
+   - public delivery/payment;
+   - public post-confirmation status;
+   - owner order list;
+   - owner order details;
+   - payment settings.
+4. Update docs:
+   - spec.md current status;
+   - README.md user/testing instructions;
+   - DEPLOYMENT.md if env or production behavior changed;
+   - .env.example.
+5. Confirm no required production env vars remain for Monobank unless clearly marked inactive/future.
+6. Confirm no active customer UI contains:
+   - MonoPay
+   - Monobank
+7. Confirm active customer UI contains:
+   - `Оплата картою онлайн`
+   - `Після оплати надішліть квитанцію продавцю в Instagram чат`
+8. Commit after all checks pass.
+
+Commit message:
+Polish order payment experience
+```
 
 ---
 
@@ -832,77 +953,58 @@ Commit message:
 PROMPT 10 - recovery prompt
 ================================================================================
 
-````text
-Read AGENTS.md, spec.md, DEPLOYMENT.md, docs/adr/0001-architecture.md, and docs/ui/mobile-form-table-guidelines.md first.
+```text
+Read AGENTS.md, spec.md, DEPLOYMENT.md, and docs/adr/0001-architecture.md first.
 
-Goal:
-Recover from a failed UI/mobile refactor step without weakening quality gates.
-
-Use this prompt when:
-- lint fails;
-- typecheck fails;
-- coverage falls below 80%;
-- e2e fails;
-- build fails;
-- mobile UI regresses;
-- auth/navigation breaks after UI changes;
-- forms stop submitting correctly;
-- tables/cards lose functionality.
+You are recovering from a failed implementation or failed checks.
 
 Rules:
-- Do not skip failing tests.
+- Do not start new features.
+- Do not weaken tests.
 - Do not reduce coverage thresholds.
-- Do not delete meaningful tests to pass checks.
-- Do not hide UI bugs by weakening assertions.
-- Do not change business logic unless the failure proves a real integration bug.
-- Keep all user-facing copy Ukrainian.
+- Do not delete important tests just to pass.
+- Do not commit secrets.
+- Keep all user-facing UI Ukrainian.
 - Keep roles only `owner` and `user`.
 
 Tasks:
-1. Identify the exact failing command and failure reason.
-2. Inspect recent changes related to the failure.
-3. Fix the smallest possible area.
-4. If a Playwright test fails, inspect the trace or use Playwright MCP to reproduce the page state.
-5. If a mobile overflow test fails, find the element causing overflow and fix layout/classes/components.
-6. If a form step test fails, verify field registration, step validation, final submit, and server action wiring.
-7. If auth/navigation breaks, verify logout/login fixes were not reverted and Next Link is not used for route-handler logout.
-8. Update tests only when behavior intentionally changed and the new assertion is stronger or equally strong.
-9. Run the failed command again.
-10. Then run the full required check suite.
-11. Update `spec.md` if the recovery changed behavior.
-12. Commit only after checks pass.
-
-Required checks:
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
-pnpm build
-```
+1. Run or inspect the failed command:
+   - pnpm lint
+   - pnpm typecheck
+   - pnpm test:coverage
+   - pnpm test:e2e
+   - pnpm build
+2. Identify the smallest set of code changes needed to fix the failure.
+3. If a migration failed:
+   - inspect Drizzle migration output;
+   - ensure it is forward-only;
+   - avoid destructive schema changes.
+4. If payment provider enum migration failed:
+   - do not drop PostgreSQL enum values;
+   - use safe `ALTER TYPE ... ADD VALUE IF NOT EXISTS`;
+   - preserve old `MONOBANK` values for historical compatibility even if active flow is disabled.
+5. If UI tests fail:
+   - keep the intended Ukrainian copy;
+   - update tests only if the new copy is correct and intentional.
+6. If Playwright fails due to timing:
+   - prefer stable locators and deterministic waits;
+   - do not use arbitrary long sleeps unless there is no alternative.
+7. If production smoke fails:
+   - inspect Railway variables and deployed commit;
+   - do not expose credentials or secret values.
+8. Update spec.md with the resolved blocker if relevant.
+9. Rerun the failed checks.
+10. Then run:
+    - pnpm lint
+    - pnpm typecheck
+    - pnpm test:coverage
+    - pnpm test:e2e
+    - pnpm build
+11. Commit with an imperative sentence case message describing the fix.
 
 Commit message examples:
-- `Fix mobile form step validation`
-- `Fix responsive order card overflow`
-- `Fix dashboard mobile navigation`
-- `Fix table card test regression`
-````
-
----
-
-## Рекомендований порядок запуску
-
-```txt
-1. PROMPT 00 - audit and plan
-2. PROMPT 01 - dashboard shell and navigation
-3. PROMPT 02 - stepper foundation
-4. PROMPT 03 - product forms
-5. PROMPT 04 - order builder
-6. PROMPT 05 - customer delivery/payment form
-7. PROMPT 06 - product/order tables and mobile cards
-8. PROMPT 07 - order details page
-9. PROMPT 08 - filters, empty states, feedback
-10. PROMPT 09 - final responsive QA
-11. PROMPT 10 - only when something fails
+- Fix manual payment migration
+- Fix public order status routing
+- Fix responsive form actions
+- Fix owner order search tests
 ```
-
