@@ -21,7 +21,9 @@ import { Button } from "@/shared/ui/button";
 import {
   FormSummaryCard,
   StepCard,
-  Stepper,
+  WizardActions,
+  WizardPageLayout,
+  WizardStepper,
 } from "@/shared/ui/multi-step-form";
 import { cn } from "@/shared/utils/cn";
 import { formatMoneyMinor } from "@/shared/utils/format-money";
@@ -317,32 +319,35 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
 
   return (
     <form
-      className="grid min-w-0 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-6"
+      className="min-w-0"
       noValidate
       onSubmit={submitOrder}
     >
-      {message ? (
-        <p
-          aria-live="polite"
-          className={cn(
-            "rounded-md border px-3 py-2 text-sm lg:col-span-2",
-            messageKind === "status"
-              ? "border-border bg-muted"
-              : "border-destructive/30 bg-destructive/10 text-destructive",
-          )}
-          role={messageKind}
-        >
-          {message}
-        </p>
-      ) : null}
-
-      <Stepper
-        className="lg:sticky lg:top-24"
-        currentStepIndex={currentStepIndex}
-        steps={orderBuilderSteps}
-      />
-
-      <div className="grid min-w-0 gap-4">
+      <WizardPageLayout
+        message={
+          message ? (
+            <p
+              aria-live="polite"
+              className={cn(
+                "rounded-md border px-3 py-2 text-sm",
+                messageKind === "status"
+                  ? "border-border bg-muted"
+                  : "border-destructive/30 bg-destructive/10 text-destructive",
+              )}
+              role={messageKind}
+            >
+              {message}
+            </p>
+          ) : null
+        }
+        stepper={
+          <WizardStepper
+            currentStepIndex={currentStepIndex}
+            desktopLayout="rail"
+            steps={orderBuilderSteps}
+          />
+        }
+      >
         <StepCard
           description={currentStep.description}
           errorMessage={stepErrorMessage}
@@ -381,7 +386,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
               </div>
 
               {filteredProducts.length ? (
-                <ul className="grid min-w-0 gap-3 xl:grid-cols-2">
+                <ul className="grid min-w-0 gap-3 lg:grid-cols-2">
                   {filteredProducts.map((product) => {
                     const selected = selectedProductIds.has(product.id);
 
@@ -582,7 +587,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                 ]}
                 title="Підсумок замовлення"
               >
-                <ul className="grid min-w-0 gap-3">
+                <ul className="grid min-w-0 gap-3 lg:grid-cols-2">
                   {selectedProducts.map((product) => {
                     const quantity =
                       parsePositiveInteger(quantities[product.id] ?? "1") ?? 0;
@@ -674,51 +679,64 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
         </StepCard>
 
         {currentStep.id === "products" || currentStep.id === "quantities" ? (
-          <div className="flex min-w-0 flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Button
-              disabled={currentStepIndex === productSelectionStepIndex}
-              onClick={() => moveToStep(currentStepIndex - 1)}
-              type="button"
-              variant="outline"
-            >
-              Назад
-            </Button>
-            <Button disabled={isPending} onClick={goNext} type="button">
-              Далі
-            </Button>
-          </div>
+          <WizardActions
+            primaryAction={
+              <Button disabled={isPending} onClick={goNext} type="button">
+                Далі
+              </Button>
+            }
+            secondaryActions={
+              <Button
+                className="w-full sm:w-auto"
+                disabled={currentStepIndex === productSelectionStepIndex}
+                onClick={() => moveToStep(currentStepIndex - 1)}
+                type="button"
+                variant="outline"
+              >
+                Назад
+              </Button>
+            }
+          />
         ) : null}
 
         {currentStep.id === "review" ? (
-          <div className="flex min-w-0 flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Button
-              disabled={isPending}
-              onClick={() => moveToStep(quantityStepIndex)}
-              type="button"
-              variant="outline"
-            >
-              Назад
-            </Button>
-            <Button disabled={isPending} type="submit">
-              <Send aria-hidden="true" className="size-4" />
-              {isPending ? "Створення…" : "Створити посилання"}
-            </Button>
-          </div>
+          <WizardActions
+            primaryAction={
+              <Button disabled={isPending} type="submit">
+                <Send aria-hidden="true" className="size-4" />
+                {isPending ? "Створення…" : "Створити посилання"}
+              </Button>
+            }
+            secondaryActions={
+              <Button
+                className="w-full sm:w-auto"
+                disabled={isPending}
+                onClick={() => moveToStep(quantityStepIndex)}
+                type="button"
+                variant="outline"
+              >
+                Назад
+              </Button>
+            }
+          />
         ) : null}
 
         {currentStep.id === "link" ? (
-          <div className="flex min-w-0 flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Button
-              disabled={isPending}
-              onClick={() => moveToStep(reviewStepIndex)}
-              type="button"
-              variant="outline"
-            >
-              Повернутися до перевірки
-            </Button>
-          </div>
+          <WizardActions
+            secondaryActions={
+              <Button
+                className="w-full sm:w-auto"
+                disabled={isPending}
+                onClick={() => moveToStep(reviewStepIndex)}
+                type="button"
+                variant="outline"
+              >
+                Повернутися до перевірки
+              </Button>
+            }
+          />
         ) : null}
-      </div>
+      </WizardPageLayout>
     </form>
   );
 }

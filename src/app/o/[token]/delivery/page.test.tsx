@@ -66,12 +66,14 @@ describe("PublicDeliveryPage", () => {
       screen.getByRole("heading", { name: "Доставка та оплата" }),
     ).toBeVisible();
     expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
-    expect(screen.getAllByText("Крок 1 з 4")[0]).toBeVisible();
+    expect(screen.getAllByText("Крок 1 із 4")[0]).toBeVisible();
     expect(screen.getByText("Повне ім’я")).toBeVisible();
     expect(screen.getByText("Доставка")).toBeVisible();
     expect(screen.getByText("Оплата")).toBeVisible();
     expect(screen.getByText("Перевірка")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Назад" })).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: "Назад до замовлення" }),
+    ).toHaveAttribute(
       "href",
       `/o/${validToken}`,
     );

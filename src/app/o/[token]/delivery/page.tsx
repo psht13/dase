@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { lookupPublicOrderUseCase } from "@/modules/orders/application/lookup-public-order";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { confirmDeliveryAction } from "@/modules/orders/ui/delivery-actions";
@@ -11,7 +10,6 @@ import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-
 import { getPaymentRequisiteRepository } from "@/modules/payments/infrastructure/payment-requisite-repository-factory";
 import { retryPublicMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 import { BrandMark } from "@/shared/ui/brand-mark";
-import { Button } from "@/shared/ui/button";
 import { PageHeader, PageShell } from "@/shared/ui/page-layout";
 
 type PublicDeliveryPageProps = {
@@ -52,25 +50,20 @@ export default async function PublicDeliveryPage({
   }
 
   return (
-    <PageShell contentClassName="grid gap-6" maxWidth="lg">
-        <div className="grid gap-2">
-          <BrandMark subtitle="підтвердження замовлення" />
-          <PageHeader
-            description="Вкажіть контактні дані, службу доставки, відділення та спосіб оплати."
-            title="Доставка та оплата"
-          />
-        </div>
-
-        <DeliveryForm
-          action={confirmDeliveryAction.bind(null, token)}
-          paymentRequisites={result.order.paymentRequisites}
+    <PageShell contentClassName="grid gap-6" maxWidth="2xl">
+      <div className="grid gap-2">
+        <BrandMark subtitle="підтвердження замовлення" />
+        <PageHeader
+          description="Вкажіть контактні дані, службу доставки, відділення та спосіб оплати."
+          title="Доставка та оплата"
         />
+      </div>
 
-        <div className="flex justify-start gap-3">
-          <Button asChild variant="outline">
-            <Link href={`/o/${result.order.publicToken}`}>Назад</Link>
-          </Button>
-        </div>
+      <DeliveryForm
+        action={confirmDeliveryAction.bind(null, token)}
+        cancelHref={`/o/${result.order.publicToken}`}
+        paymentRequisites={result.order.paymentRequisites}
+      />
     </PageShell>
   );
 }

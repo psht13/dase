@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Search,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -34,14 +35,16 @@ import {
   FormSummaryCard,
   StepActions,
   StepCard,
-  Stepper,
   type MultiStepFormStep,
+  WizardPageLayout,
+  WizardStepper,
   useMultiStepForm,
 } from "@/shared/ui/multi-step-form";
 import { cn } from "@/shared/utils/cn";
 
 type DeliveryFormProps = {
   action: (formData: FormData) => Promise<DeliveryActionResult>;
+  cancelHref?: string;
   navigateToPayment?: (url: string) => void;
   paymentRequisites: PublicPaymentRequisite[];
 };
@@ -93,6 +96,7 @@ const inputClassName =
 
 export function DeliveryForm({
   action,
+  cancelHref,
   navigateToPayment,
   paymentRequisites,
 }: DeliveryFormProps) {
@@ -346,38 +350,41 @@ export function DeliveryForm({
 
   return (
     <form
-      className="grid min-w-0 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-6"
+      className="min-w-0"
       noValidate
       onSubmit={stepper.handleSubmit(onSubmit)}
     >
-      {serverMessage ? (
-        <p
-          className={cn(
-            "rounded-md border px-3 py-2 text-sm lg:col-span-2",
-            isConfirmed
-              ? "border-emerald-200 bg-emerald-50 text-emerald-950"
-              : "border-destructive/30 bg-destructive/10 text-destructive",
-          )}
-          aria-live="polite"
-          role={isConfirmed ? "status" : "alert"}
-        >
-          {serverMessage}
-        </p>
-      ) : null}
-
       <input type="hidden" {...form.register("cityId")} />
       <input type="hidden" {...form.register("cityName")} />
       <input type="hidden" {...form.register("warehouseAddress")} />
       <input type="hidden" {...form.register("warehouseId")} />
       <input type="hidden" {...form.register("warehouseName")} />
 
-      <Stepper
-        className="lg:sticky lg:top-24"
-        currentStepIndex={stepper.currentStepIndex}
-        steps={deliveryFormSteps}
-      />
-
-      <div className="grid min-w-0 gap-4">
+      <WizardPageLayout
+        message={
+          serverMessage ? (
+            <p
+              className={cn(
+                "rounded-md border px-3 py-2 text-sm",
+                isConfirmed
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+                  : "border-destructive/30 bg-destructive/10 text-destructive",
+              )}
+              aria-live="polite"
+              role={isConfirmed ? "status" : "alert"}
+            >
+              {serverMessage}
+            </p>
+          ) : null
+        }
+        stepper={
+          <WizardStepper
+            currentStepIndex={stepper.currentStepIndex}
+            steps={deliveryFormSteps}
+          />
+        }
+        variant="stacked"
+      >
         <StepCard
           description={stepper.currentStep.description}
           errorMessage={stepper.stepErrorMessage}
@@ -784,6 +791,13 @@ export function DeliveryForm({
           isPending={isBusy || isConfirmed}
           onBack={stepper.goBack}
           onNext={stepper.goNext}
+          secondaryAction={
+            cancelHref ? (
+              <Button asChild className="w-full sm:w-auto" variant="outline">
+                <Link href={cancelHref}>Назад до замовлення</Link>
+              </Button>
+            ) : null
+          }
           submitLabel={
             <>
               <CheckCircle2 aria-hidden="true" className="size-4" />
@@ -791,7 +805,7 @@ export function DeliveryForm({
             </>
           }
         />
-      </div>
+      </WizardPageLayout>
     </form>
   );
 }

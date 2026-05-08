@@ -23,7 +23,7 @@ describe("OrderBuilderForm", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Вибір товарів" })).toBeVisible();
-    expect(screen.getAllByText("Крок 1 з 4")[0]).toBeVisible();
+    expect(screen.getAllByText("Крок 1 із 4")[0]).toBeVisible();
     expect(screen.getByText("Кількість")).toBeVisible();
     expect(screen.getByText("Перевірка")).toBeVisible();
     expect(screen.getByText("Посилання")).toBeVisible();

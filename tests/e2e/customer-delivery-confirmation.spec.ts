@@ -48,7 +48,7 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
     page.getByRole("heading", { name: "Доставка та оплата" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Контакти" })).toBeVisible();
-  await expect(page.getByText("Крок 1 з 4").first()).toBeVisible();
+  await expect(page.getByText("Крок 1 із 4").first()).toBeVisible();
   await expect(page.getByLabel("Повне ім’я")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 

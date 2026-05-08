@@ -38,7 +38,7 @@ describe("DeliveryForm", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
-    expect(screen.getAllByText("Крок 1 з 4")[0]).toBeVisible();
+    expect(screen.getAllByText("Крок 1 із 4")[0]).toBeVisible();
     expect(screen.getByText("Доставка")).toBeVisible();
     expect(screen.getByText("Оплата")).toBeVisible();
     expect(screen.getByText("Перевірка")).toBeVisible();

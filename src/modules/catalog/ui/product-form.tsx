@@ -17,8 +17,9 @@ import {
   FormSummaryCard,
   StepActions,
   StepCard,
-  Stepper,
   type MultiStepFormStep,
+  WizardPageLayout,
+  WizardStepper,
   useMultiStepForm,
 } from "@/shared/ui/multi-step-form";
 
@@ -140,27 +141,30 @@ export function ProductForm({
 
   return (
     <form
-      className="grid min-w-0 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-6"
+      className="min-w-0"
       noValidate
       onSubmit={stepper.handleSubmit(onSubmit)}
     >
-      {serverMessage ? (
-        <p
-          aria-live="polite"
-          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive lg:col-span-2"
-          role="alert"
-        >
-          {serverMessage}
-        </p>
-      ) : null}
-
-      <Stepper
-        className="lg:sticky lg:top-24"
-        currentStepIndex={stepper.currentStepIndex}
-        steps={productFormSteps}
-      />
-
-      <div className="grid min-w-0 gap-4">
+      <WizardPageLayout
+        message={
+          serverMessage ? (
+            <p
+              aria-live="polite"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
+              {serverMessage}
+            </p>
+          ) : null
+        }
+        stepper={
+          <WizardStepper
+            currentStepIndex={stepper.currentStepIndex}
+            desktopLayout="rail"
+            steps={productFormSteps}
+          />
+        }
+      >
         <StepCard
           description={stepper.currentStep.description}
           errorMessage={stepper.stepErrorMessage}
@@ -168,7 +172,7 @@ export function ProductForm({
           title={stepper.currentStep.title}
         >
           {stepper.currentStep.id === "basic" ? (
-            <section className="grid min-w-0 gap-4">
+            <section className="grid min-w-0 gap-4 lg:grid-cols-2">
               <div className="grid min-w-0 gap-2">
                 <label className="text-sm font-medium" htmlFor="product-name">
                   Назва товару
@@ -214,7 +218,7 @@ export function ProductForm({
                 />
               </div>
 
-              <div className="grid min-w-0 gap-2">
+              <div className="grid min-w-0 gap-2 lg:col-span-2">
                 <label
                   className="text-sm font-medium"
                   htmlFor="product-description"
@@ -240,7 +244,7 @@ export function ProductForm({
                 />
               </div>
 
-              <div className="flex min-w-0 items-start gap-3 rounded-md border border-border/80 bg-background px-3 py-3 text-sm">
+              <div className="flex min-w-0 items-start gap-3 rounded-md border border-border/80 bg-background px-3 py-3 text-sm lg:col-span-2">
                 <input
                   aria-describedby="product-active-hint"
                   className="mt-0.5 size-5 shrink-0 rounded border-input"
@@ -469,6 +473,11 @@ export function ProductForm({
           isPending={isPending}
           onBack={stepper.goBack}
           onNext={stepper.goNext}
+          secondaryAction={
+            <Button asChild className="w-full sm:w-auto" variant="outline">
+              <Link href={cancelHref}>Скасувати</Link>
+            </Button>
+          }
           submitLabel={
             <>
               <Save aria-hidden="true" className="size-4" />
@@ -476,13 +485,7 @@ export function ProductForm({
             </>
           }
         />
-
-        <div className="flex min-w-0 sm:justify-end">
-          <Button asChild className="w-full sm:w-auto" variant="outline">
-            <Link href={cancelHref}>Скасувати</Link>
-          </Button>
-        </div>
-      </div>
+      </WizardPageLayout>
     </form>
   );
 }

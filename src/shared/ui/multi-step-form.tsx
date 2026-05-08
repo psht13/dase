@@ -237,7 +237,7 @@ export function useMultiStepForm<TFieldValues extends FieldValues>({
     headingRef,
     isFirstStep,
     isLastStep,
-    progressLabel: `Крок ${currentStepIndex + 1} з ${steps.length}`,
+    progressLabel: `Крок ${currentStepIndex + 1} із ${steps.length}`,
     setCurrentStepIndex: moveToStep,
     stepErrorMessage,
     validateAllSteps,
@@ -245,32 +245,97 @@ export function useMultiStepForm<TFieldValues extends FieldValues>({
   };
 }
 
+type WizardPageLayoutProps = {
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  message?: ReactNode;
+  stepper: ReactNode;
+  stepperClassName?: string;
+  variant?: "sidebar" | "stacked";
+};
+
+export function WizardPageLayout({
+  children,
+  className,
+  contentClassName,
+  message,
+  stepper,
+  stepperClassName,
+  variant = "sidebar",
+}: WizardPageLayoutProps) {
+  const hasSidebar = variant === "sidebar";
+
+  return (
+    <div
+      className={cn(
+        "mx-auto grid w-full min-w-0 gap-4",
+        hasSidebar
+          ? "max-w-6xl lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[14rem_minmax(0,1fr)]"
+          : "max-w-4xl",
+        className,
+      )}
+    >
+      {message ? (
+        <div className={cn("min-w-0", hasSidebar ? "lg:col-span-2" : null)}>
+          {message}
+        </div>
+      ) : null}
+      <div
+        className={cn(
+          "min-w-0",
+          hasSidebar ? "lg:sticky lg:top-24" : null,
+          stepperClassName,
+        )}
+      >
+        {stepper}
+      </div>
+      <div className={cn("grid min-w-0 gap-4", contentClassName)}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 type StepperStep = {
   id: string;
   title: ReactNode;
 };
 
-type StepperProps = {
+type WizardStepperProps = {
   className?: string;
   currentStepIndex: number;
+  desktopLayout?: "inline" | "rail";
   steps: readonly StepperStep[];
 };
 
-export function Stepper({ className, currentStepIndex, steps }: StepperProps) {
+export function WizardStepper({
+  className,
+  currentStepIndex,
+  desktopLayout = "inline",
+  steps,
+}: WizardStepperProps) {
   return (
     <nav
       aria-label="Прогрес форми"
-      className={cn("grid min-w-0 gap-3", className)}
+      className={cn("grid min-w-0 gap-2", className)}
     >
       <p
         aria-live="polite"
         className="text-sm font-medium text-muted-foreground"
       >
-        Крок {currentStepIndex + 1} з {steps.length}
+        Крок {currentStepIndex + 1} із {steps.length}
       </p>
-      <ol className="grid min-w-0 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]">
+      <ol
+        className={cn(
+          "grid min-w-0 gap-1.5",
+          desktopLayout === "rail"
+            ? "sm:grid-cols-2 lg:grid-cols-1"
+            : "sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(8rem,1fr))]",
+        )}
+      >
         {steps.map((step, index) => (
-          <StepIndicator
+          <WizardStepIndicator
             key={step.id}
             label={step.title}
             status={getStepStatus(index, currentStepIndex)}
@@ -283,7 +348,11 @@ export function Stepper({ className, currentStepIndex, steps }: StepperProps) {
   );
 }
 
-type StepIndicatorProps = {
+export function Stepper(props: WizardStepperProps) {
+  return <WizardStepper {...props} />;
+}
+
+type WizardStepIndicatorProps = {
   className?: string;
   label: ReactNode;
   status: "completed" | "current" | "upcoming";
@@ -291,13 +360,13 @@ type StepIndicatorProps = {
   totalSteps: number;
 };
 
-export function StepIndicator({
+export function WizardStepIndicator({
   className,
   label,
   status,
   stepNumber,
   totalSteps,
-}: StepIndicatorProps) {
+}: WizardStepIndicatorProps) {
   const isCompleted = status === "completed";
   const isCurrent = status === "current";
 
@@ -306,27 +375,27 @@ export function StepIndicator({
       <span
         aria-current={isCurrent ? "step" : undefined}
         className={cn(
-          "grid min-h-11 min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-3 rounded-md border px-3 py-2 text-left",
+          "flex min-h-10 min-w-0 items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors",
           isCurrent
-            ? "border-primary bg-primary/10 text-foreground"
+            ? "border-primary/70 bg-primary/5 text-foreground"
             : "border-border/80 bg-card/80 text-muted-foreground",
-          isCompleted ? "border-accent bg-accent/30 text-foreground" : null,
+          isCompleted ? "border-border bg-muted/70 text-foreground" : null,
         )}
       >
         <span
           className={cn(
-            "flex size-8 items-center justify-center rounded-full border text-sm font-semibold tabular-nums",
+            "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
             isCurrent
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-background",
-            isCompleted ? "border-accent bg-accent text-accent-foreground" : null,
+            isCompleted ? "border-foreground/20 bg-foreground/10" : null,
           )}
         >
           {stepNumber}
         </span>
         <span className="grid min-w-0 gap-0.5">
           <span className="text-xs font-medium">
-            Крок {stepNumber} з {totalSteps}
+            Крок {stepNumber} із {totalSteps}
           </span>
           <span className="break-words text-sm font-medium leading-5">
             {label}
@@ -347,7 +416,7 @@ type StepCardProps = {
   title: ReactNode;
 };
 
-export function StepCard({
+export function WizardStepCard({
   children,
   className,
   description,
@@ -369,13 +438,13 @@ export function StepCard({
       aria-describedby={describedBy || undefined}
       aria-labelledby={resolvedHeadingId}
       className={cn(
-        "grid min-w-0 gap-5 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm sm:p-5",
+        "grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm md:p-5 lg:gap-5",
         className,
       )}
     >
       <div className="grid min-w-0 gap-2">
         <h2
-          className="break-words font-display text-xl font-semibold leading-tight text-foreground"
+          className="break-words font-display text-lg font-semibold leading-tight text-foreground sm:text-xl"
           id={resolvedHeadingId}
           ref={headingRef}
           tabIndex={-1}
@@ -406,6 +475,42 @@ export function StepCard({
   );
 }
 
+export function StepCard(props: StepCardProps) {
+  return <WizardStepCard {...props} />;
+}
+
+type WizardActionsProps = {
+  className?: string;
+  primaryAction?: ReactNode;
+  secondaryActions?: ReactNode;
+};
+
+export function WizardActions({
+  className,
+  primaryAction,
+  secondaryActions,
+}: WizardActionsProps) {
+  return (
+    <footer
+      className={cn(
+        "flex min-w-0 flex-col-reverse gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end",
+        className,
+      )}
+    >
+      {secondaryActions ? (
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+          {secondaryActions}
+        </div>
+      ) : null}
+      {primaryAction ? (
+        <div className="min-w-0 [&>*]:w-full sm:[&>*]:w-auto sm:[&>*]:min-w-32">
+          {primaryAction}
+        </div>
+      ) : null}
+    </footer>
+  );
+}
+
 type StepActionsProps = {
   backLabel?: string;
   className?: string;
@@ -415,6 +520,7 @@ type StepActionsProps = {
   nextLabel?: string;
   onBack: () => void;
   onNext: () => Promise<boolean> | boolean | void;
+  secondaryAction?: ReactNode;
   submitLabel?: ReactNode;
 };
 
@@ -427,41 +533,46 @@ export function StepActions({
   nextLabel = "Далі",
   onBack,
   onNext,
+  secondaryAction,
   submitLabel = "Завершити",
 }: StepActionsProps) {
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col-reverse gap-3 sm:flex-row sm:justify-between",
-        className,
-      )}
+  const primaryAction = isLastStep ? (
+    <Button disabled={isPending} key="submit" type="submit">
+      {submitLabel}
+    </Button>
+  ) : (
+    <Button
+      disabled={isPending}
+      key="next"
+      onClick={(event) => {
+        event.preventDefault();
+        void onNext();
+      }}
+      type="button"
     >
-      <Button
-        disabled={isFirstStep || isPending}
-        onClick={onBack}
-        type="button"
-        variant="outline"
-      >
-        {backLabel}
-      </Button>
-      {isLastStep ? (
-        <Button disabled={isPending} key="submit" type="submit">
-          {submitLabel}
-        </Button>
-      ) : (
-        <Button
-          disabled={isPending}
-          key="next"
-          onClick={(event) => {
-            event.preventDefault();
-            void onNext();
-          }}
-          type="button"
-        >
-          {nextLabel}
-        </Button>
-      )}
-    </div>
+      {nextLabel}
+    </Button>
+  );
+
+  return (
+    <WizardActions
+      className={className}
+      primaryAction={primaryAction}
+      secondaryActions={
+        <>
+          <Button
+            className="w-full sm:w-auto"
+            disabled={isFirstStep || isPending}
+            onClick={onBack}
+            type="button"
+            variant="outline"
+          >
+            {backLabel}
+          </Button>
+          {secondaryAction}
+        </>
+      }
+    />
   );
 }
 

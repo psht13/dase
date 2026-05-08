@@ -10,6 +10,8 @@ import {
   StepCard,
   Stepper,
   type MultiStepFormStep,
+  WizardPageLayout,
+  WizardStepper,
   useMultiStepForm,
 } from "@/shared/ui/multi-step-form";
 
@@ -157,7 +159,7 @@ describe("multi-step form foundation", () => {
   it("announces progress and marks the current step", () => {
     render(<DemoMultiStepForm onSubmit={vi.fn()} />);
 
-    expect(screen.getAllByText("Крок 1 з 3")[0]).toBeVisible();
+    expect(screen.getAllByText("Крок 1 із 3")[0]).toBeVisible();
     const progress = screen.getByRole("navigation", {
       name: "Прогрес форми",
     });
@@ -166,6 +168,46 @@ describe("multi-step form foundation", () => {
     expect(currentStep.closest("[aria-current='step']")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Назад" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Далі" })).toBeEnabled();
+  });
+
+  it("renders compact wizard layout state and consistent action buttons", () => {
+    const { container } = render(
+      <WizardPageLayout
+        message={<p role="status">Чернетку збережено</p>}
+        stepper={
+          <WizardStepper
+            currentStepIndex={1}
+            desktopLayout="rail"
+            steps={demoSteps}
+          />
+        }
+      >
+        <StepCard title="Зв’язок">
+          <p>Поля кроку</p>
+        </StepCard>
+        <StepActions
+          isFirstStep={false}
+          isLastStep={false}
+          onBack={vi.fn()}
+          onNext={vi.fn()}
+          secondaryAction={<a href="/dashboard/products">Скасувати</a>}
+        />
+      </WizardPageLayout>,
+    );
+
+    const progress = screen.getByRole("navigation", {
+      name: "Прогрес форми",
+    });
+
+    expect(within(progress).getAllByText("Крок 2 із 3")[0]).toBeVisible();
+    expect(
+      within(progress).getByText("Зв’язок").closest("[aria-current='step']"),
+    ).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Чернетку збережено");
+    expect(screen.getByRole("button", { name: "Далі" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Назад" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Скасувати" })).toBeVisible();
+    expect(container.querySelector("footer")).toHaveClass("sm:justify-end");
   });
 
   it("validates only the current step before moving forward", async () => {

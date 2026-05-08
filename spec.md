@@ -485,6 +485,17 @@ Audit result:
 - Final submit is guarded against accidental double submit. Manual card transfer and cash on delivery both navigate back to `/o/[token]` to show the public status page.
 - Focused UI tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, manual-card and cash-on-delivery status navigation, and Ukrainian labels. Playwright customer delivery E2E now follows the step flow, checks mobile overflow during the public delivery path, revisits the public link, and verifies the delivery form is no longer shown after confirmation.
 
+## Desktop wizard layout update on 2026-05-08
+
+- Shared wizard UI now exposes `WizardPageLayout`, `WizardStepper`, `WizardStepCard`, and `WizardActions` on top of the existing multi-step form state helper. Progress labels use the consistent Ukrainian form `Крок 1 із 4`.
+- Product create/edit forms use a balanced desktop layout with a compact left stepper rail, a wider form container, a two-column `Основне` step on desktop, and a single consistent action footer for `Назад`, `Далі`, `Скасувати`, `Зберегти`, and `Створити`.
+- The owner order builder uses the same compact wizard shell and action footer. Product selection and review lists switch to balanced two-column grids on desktop while staying one-column and overflow-safe on mobile.
+- The public delivery/payment form uses a compact top stepper inside a wider public page shell, keeps mobile controls compact, and moves the order-back link into the wizard action footer.
+- The active step is indicated through `aria-current="step"` and light visual emphasis rather than oversized cards. Mobile action buttons stay full-width with the primary action first; desktop footers align actions to the right inside the form container.
+- No business logic, database schema, roles, payment/shipping behavior, product image strategy, object storage, or external API behavior changed in this UI milestone.
+- Focused component coverage checks the wizard current state and action buttons. Playwright `tests/e2e/wizard-layout-responsive.spec.ts` verifies product form, order builder, and public delivery at 390x844, 768x1024, and 1440x900 with important Ukrainian labels visible and no horizontal overflow.
+- Focused verification passed with `pnpm test src/shared/ui/multi-step-form.test.tsx src/modules/catalog/ui/product-form.test.tsx src/modules/orders/ui/order-builder-form.test.tsx src/modules/orders/ui/delivery-form.test.tsx 'src/app/o/[token]/delivery/page.test.tsx'` and `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e tests/e2e/wizard-layout-responsive.spec.ts`.
+
 ## Core flows
 
 ### Product management
