@@ -64,7 +64,12 @@ export function OwnerOrderRetryShipmentForm({
       ) : null}
 
       <form action={onSubmit}>
-        <Button disabled={!canRetry || isPending} type="submit" variant="outline">
+        <Button
+          className="w-full sm:w-auto"
+          disabled={!canRetry || isPending}
+          type="submit"
+          variant="outline"
+        >
           <RotateCcw aria-hidden="true" className="size-4" />
           {isPending ? "Планування…" : "Повторити створення відправлення"}
         </Button>

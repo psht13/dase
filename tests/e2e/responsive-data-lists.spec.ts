@@ -97,6 +97,79 @@ test("owner product and order lists use desktop tables and mobile cards", async 
   await expectNoHorizontalOverflow(page);
 });
 
+test("owner order details use mobile sections and keep owner actions visible", async ({
+  page,
+}) => {
+  await seedSession(page, "owner");
+  await page.setViewportSize({ height: 844, width: 390 });
+
+  const stamp = Date.now();
+  const productName = `Детальна каблучка ${stamp}`;
+  const sku = `DETAIL-${stamp}`;
+  const customerName = `Олена Детальна ${stamp}`;
+  const customerPhone = `+38067${String(stamp).slice(-7)}`;
+
+  await createProduct(page, {
+    description: "Товар для мобільної сторінки деталей",
+    imageUrl: "https://example.com/e2e-details-ring.jpg",
+    name: productName,
+    price: "1840",
+    sku,
+    stock: "4",
+  });
+  await expect(page).toHaveURL(/\/dashboard\/products$/);
+
+  await createConfirmedOrder(page, {
+    customerName,
+    customerPhone,
+    productName,
+  });
+
+  await page.goto("/dashboard/orders");
+  await expect(page.getByTestId("owner-orders-mobile-list")).toBeVisible();
+  const orderCard = page
+    .getByTestId("owner-orders-mobile-card")
+    .filter({ hasText: customerName })
+    .first();
+
+  await expect(orderCard).toBeVisible();
+  await Promise.all([
+    page.waitForURL(/\/dashboard\/orders\/[^/]+$/),
+    orderCard.getByRole("link", { name: "Відкрити" }).click(),
+  ]);
+
+  await expect(page.getByRole("heading", { name: /Замовлення #/ })).toBeVisible();
+  for (const heading of [
+    "Огляд",
+    "Товари",
+    "Клієнт",
+    "Доставка",
+    "Оплата",
+    "Теги",
+    "Історія статусів",
+    "Аудит",
+  ]) {
+    await expect(
+      page.getByRole("heading", { exact: true, name: heading }),
+    ).toBeVisible();
+  }
+  await expect(
+    page.getByTestId("owner-order-product-card").filter({ hasText: productName }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Повторити створення відправлення" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Оновити статус" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Новий тег")).toBeVisible();
+  await expect(page.getByText("Клієнт підтвердив замовлення").first()).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ height: 740, width: 360 });
+  await expectNoHorizontalOverflow(page);
+});
+
 async function createConfirmedOrder(
   page: Page,
   input: {

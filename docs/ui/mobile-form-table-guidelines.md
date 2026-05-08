@@ -31,7 +31,7 @@ Key findings:
 - The persistent desktop sidebar starts at `md` (768 px), leaving only about 496 px for dashboard content on tablet portrait. Data-heavy owner pages still overflow at 768 px.
 - Product, order-builder, order-list, product-details, and audit tables use fixed `min-w` table widths from 720 px to 980 px. This creates intentional horizontal scroll containers, but on some pages the table also contributes to page-level overflow.
 - Product create/edit forms originally shipped as a single long form and reached roughly 1,830-1,900 px of scroll height on 360-430 px viewports. They now use the shared product stepper documented below, with mobile E2E coverage at 360 px.
-- Owner order details are the heaviest page: roughly 3,750-3,810 px tall on mobile, with multiple card sections plus two horizontally scrolling tables.
+- Owner order details were the heaviest page: roughly 3,750-3,810 px tall on mobile, with multiple card sections plus two horizontally scrolling tables. The 2026-05-08 details refactor replaced those wide product and audit tables with collapsible section cards and compact lists.
 - The public order review is already card-based and is the closest current pattern for mobile owner table replacements.
 
 ## Mobile-First Layout Principles
@@ -119,7 +119,7 @@ Component targets:
 - `ProductTable`: implemented with product cards below `lg` and a compact table on wide screens.
 - `OrderBuilderForm`: implemented as a four-step flow with selectable product cards, large quantity controls, review summary, and link result.
 - `OwnerOrdersTable`: implemented with order summary cards below `lg` and a compact table on wide screens.
-- `OwnerOrderDetailsView`: convert product and audit tables into mobile cards or a timeline.
+- `OwnerOrderDetailsView`: implemented with collapsible section cards, product cards, compact status history, and a compact audit list.
 
 ## Dashboard Navigation Behavior
 
@@ -285,18 +285,18 @@ Remaining plan:
 
 ### `/dashboard/orders/[orderId]`
 
-Current state:
-- About 3,750-3,810 px tall at phone widths.
-- Product and audit tables each use `min-w-[720px]` and horizontal scrolling.
-- Page-level overflow appeared at 768x1024.
-- Detail forms for tags/status/retry stack heavily.
+Current state after 2026-05-08 order details refactor:
+- The page is split into Ukrainian sections: `Огляд`, `Товари`, `Клієнт`, `Доставка`, `Оплата`, `Теги`, `Історія статусів`, and `Аудит`.
+- Each section is an open native `<details>` card, so phone users can collapse dense blocks without losing access to audit/status data.
+- Product and audit tables were removed from the details page. Products render as repeated item cards; audit events render as compact event rows with time, event, actor, and payload summary.
+- Wide desktop widths use a two-column layout: products, status history, and audit in the main column; overview, customer, delivery, payment, and tags in the side column.
+- Manual status update, MonoPay retry, shipment retry, and tag assignment/removal still use the existing server actions and application use cases.
+- Payment retry remains grouped under `Оплата`; shipment retry and disabled-shipping notice remain grouped under `Доставка`.
+- Focused component tests cover section headings, stacked/collapsible structure, retry actions, manual status update, and audit visibility.
+- Playwright E2E covers the details page at 390 px and verifies no page-level horizontal overflow at 360 px.
 
-Plan:
-- Add a compact order summary header with status, total, customer, and primary actions.
-- Convert product table to mobile item cards.
-- Convert audit table to a timeline/card list on mobile.
-- Group customer, delivery, payment, and shipment details into collapsible or scan-friendly sections.
-- Keep tag/status/payment/shipment actions in existing use-case-backed components, but improve mobile layout and target sizes.
+Remaining plan:
+- Use Playwright MCP screenshots after future density changes to keep long customer names, phone numbers, TTNs, provider invoice ids, and audit payload summaries readable.
 
 ### `/o/[token]`
 

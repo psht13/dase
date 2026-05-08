@@ -83,7 +83,11 @@ export function OwnerOrderStatusForm({
           </select>
         </label>
 
-        <Button className="self-end" disabled={isPending} type="submit">
+        <Button
+          className="w-full sm:w-auto sm:self-end"
+          disabled={isPending}
+          type="submit"
+        >
           <Save aria-hidden="true" className="size-4" />
           {isPending ? "Збереження…" : "Оновити статус"}
         </Button>

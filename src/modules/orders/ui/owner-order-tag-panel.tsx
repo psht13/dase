@@ -99,7 +99,7 @@ export function OwnerOrderTagPanel({
         )}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3">
         <form
           action={(formData) =>
             runAction(formData, actions.createAndAssign, () =>
@@ -112,7 +112,7 @@ export function OwnerOrderTagPanel({
           <label className="text-sm font-medium" htmlFor="new-order-tag">
             Новий тег
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               autoComplete="off"
               className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
@@ -120,7 +120,7 @@ export function OwnerOrderTagPanel({
               name="tagName"
               placeholder="Наприклад: Подарунок"
             />
-            <Button disabled={isPending} type="submit">
+            <Button className="w-full sm:w-auto" disabled={isPending} type="submit">
               <Plus aria-hidden="true" className="size-4" />
               Додати
             </Button>
@@ -134,7 +134,7 @@ export function OwnerOrderTagPanel({
           <label className="text-sm font-medium" htmlFor="existing-order-tag">
             Додати наявний тег
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <select
               autoComplete="off"
               className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
@@ -152,7 +152,11 @@ export function OwnerOrderTagPanel({
                 <option value="">Немає доступних тегів</option>
               )}
             </select>
-            <Button disabled={isPending || !unassignedTags.length} type="submit">
+            <Button
+              className="w-full sm:w-auto"
+              disabled={isPending || !unassignedTags.length}
+              type="submit"
+            >
               Додати
             </Button>
           </div>

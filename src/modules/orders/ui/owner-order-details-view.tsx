@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ChevronDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { OrderTagRecord } from "@/modules/orders/application/order-tag-repository";
@@ -55,6 +55,13 @@ export function OwnerOrderDetailsView({
   );
   const isShippingLabelCreationDisabled =
     shippingLabelCreationMode === "disabled";
+  const canRetryShipment =
+    !isShippingLabelCreationDisabled &&
+    order.shipments.some(
+      (shipment) =>
+        shipment.status === "FAILED" &&
+        isShipmentCreationEnabled(shipment.carrier),
+    );
 
   return (
     <div className="grid min-w-0 gap-6">
@@ -66,14 +73,14 @@ export function OwnerOrderDetailsView({
               До списку замовлень
             </Link>
           </Button>
-          <h1 className="mt-4 font-display text-3xl font-semibold">
+          <h1 className="mt-4 break-words font-display text-2xl font-semibold sm:text-3xl">
             Замовлення #{shortOrderId(order.id)}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Поточний статус: {orderStatusLabels[order.status]}
           </p>
         </div>
-        <Button asChild variant="outline">
+        <Button asChild className="w-full sm:w-auto" variant="outline">
           <Link href={publicUrl}>
             <ExternalLink aria-hidden="true" className="size-4" />
             Публічна сторінка
@@ -81,259 +88,315 @@ export function OwnerOrderDetailsView({
         </Button>
       </div>
 
-      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 shadow-sm">
-        <h2 className="font-display text-xl font-semibold">Товари</h2>
-        <div className="w-full max-w-full overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-            <thead className="bg-muted text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Назва</th>
-                <th className="px-4 py-3 font-medium">Артикул</th>
-                <th className="px-4 py-3 font-medium">Кількість</th>
-                <th className="px-4 py-3 font-medium">Ціна</th>
-                <th className="px-4 py-3 font-medium">Сума</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.items.map((item) => (
-                <tr className="border-t" key={item.id}>
-                  <td className="px-4 py-3 font-medium">
-                    {item.productNameSnapshot}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {item.productSkuSnapshot}
-                  </td>
-                  <td className="px-4 py-3">{item.quantity}</td>
-                  <td className="px-4 py-3">
-                    {formatMoneyMinor(item.unitPriceMinor, order.currency)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {formatMoneyMinor(item.lineTotalMinor, order.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-right text-base font-semibold">
-          Разом: {formatMoneyMinor(order.totalMinor, order.currency)}
-        </p>
-      </section>
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:items-start">
+        <div className="grid min-w-0 gap-6 xl:col-start-2 xl:row-start-1">
+          <DetailSection testId="overview" title="Огляд">
+            <dl className="grid min-w-0 gap-3 text-sm">
+              <InfoRow label="Статус" value={orderStatusLabels[order.status]} />
+              <InfoRow
+                label="Сума"
+                value={formatMoneyMinor(order.totalMinor, order.currency)}
+              />
+              <InfoRow label="Створено" value={formatDateTime(order.createdAt)} />
+              <InfoRow
+                label="Підтверджено"
+                value={formatDateTime(order.confirmedAt)}
+              />
+            </dl>
+            <OwnerOrderStatusForm
+              action={updateOwnerOrderStatusAction.bind(null, order.id)}
+              currentStatus={order.status}
+            />
+          </DetailSection>
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-        <InfoSection title="Клієнт">
-          <InfoRow label="Ім’я" value={order.customer?.fullName} />
-          <InfoRow label="Телефон" value={order.customer?.phone} />
-          <InfoRow label="Підтверджено" value={formatDateTime(order.confirmedAt)} />
-        </InfoSection>
+          <DetailSection testId="customer" title="Клієнт">
+            <dl className="grid min-w-0 gap-3 text-sm">
+              <InfoRow label="Ім’я" value={order.customer?.fullName} />
+              <InfoRow label="Телефон" value={order.customer?.phone} />
+              <InfoRow
+                label="Підтверджено"
+                value={formatDateTime(order.confirmedAt)}
+              />
+            </dl>
+          </DetailSection>
 
-        <InfoSection title="Доставка">
-          {order.shipments.length ? (
-            order.shipments.map((shipment) => (
-              <div className="grid gap-2" key={shipment.id}>
-                <InfoRow
-                  label="Служба"
-                  value={shipmentCarrierLabels[shipment.carrier]}
-                />
-                <InfoRow label="Місто" value={shipment.cityName} />
-                <InfoRow label="Відділення" value={shipment.addressText} />
-                <InfoRow
-                  label="Статус"
-                  value={shipmentStatusLabels[shipment.status]}
-                />
+          <DetailSection testId="delivery" title="Доставка">
+            {order.shipments.length ? (
+              <div className="grid min-w-0 gap-4">
+                {order.shipments.map((shipment) => (
+                  <article
+                    className="grid min-w-0 gap-3 rounded-md border border-border/70 p-3"
+                    key={shipment.id}
+                  >
+                    <dl className="grid min-w-0 gap-3 text-sm">
+                      <InfoRow
+                        label="Служба"
+                        value={shipmentCarrierLabels[shipment.carrier]}
+                      />
+                      <InfoRow label="Місто" value={shipment.cityName} />
+                      <InfoRow label="Відділення" value={shipment.addressText} />
+                      <InfoRow
+                        label="Статус відправлення"
+                        value={shipmentStatusLabels[shipment.status]}
+                      />
+                      <InfoRow
+                        label="Номер ТТН"
+                        value={shipment.trackingNumber ?? "Ще не створено"}
+                      />
+                      <InfoRow
+                        label="Документ перевізника"
+                        value={shipment.carrierShipmentId}
+                      />
+                      <InfoRow
+                        label="Посилання на етикетку"
+                        value={shipment.labelUrl}
+                      />
+                    </dl>
+                  </article>
+                ))}
               </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Дані доставки ще не вказано.
-            </p>
-          )}
-        </InfoSection>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Дані доставки ще не вказано.
+              </p>
+            )}
 
-        <InfoSection title="Оплата">
-          {order.payments.length ? (
-            order.payments.map((payment) => (
-              <div className="grid gap-2" key={payment.id}>
-                <InfoRow
-                  label="Спосіб"
-                  value={paymentProviderLabels[payment.provider]}
-                />
-                <InfoRow
-                  label="Статус"
-                  value={paymentStatusLabels[payment.status]}
-                />
-                <InfoRow
-                  label="Сума"
-                  value={formatMoneyMinor(payment.amountMinor, payment.currency)}
-                />
-                <InfoRow
-                  label="Ідентифікатор рахунку"
-                  value={payment.providerInvoiceId}
-                />
+            <OwnerOrderRetryShipmentForm
+              action={retryShipmentCreationAction.bind(null, order.id)}
+              canRetry={canRetryShipment}
+              notice={
+                isShippingLabelCreationDisabled
+                  ? shippingLabelCreationDisabledMessage
+                  : null
+              }
+            />
+          </DetailSection>
+
+          <DetailSection testId="payment" title="Оплата">
+            {order.payments.length ? (
+              <div className="grid min-w-0 gap-4">
+                {order.payments.map((payment) => (
+                  <article
+                    className="grid min-w-0 gap-3 rounded-md border border-border/70 p-3"
+                    key={payment.id}
+                  >
+                    <dl className="grid min-w-0 gap-3 text-sm">
+                      <InfoRow
+                        label="Спосіб"
+                        value={paymentProviderLabels[payment.provider]}
+                      />
+                      <InfoRow
+                        label="Статус"
+                        value={paymentStatusLabels[payment.status]}
+                      />
+                      <InfoRow
+                        label="Сума"
+                        value={formatMoneyMinor(
+                          payment.amountMinor,
+                          payment.currency,
+                        )}
+                      />
+                      <InfoRow
+                        label="Ідентифікатор рахунку"
+                        value={payment.providerInvoiceId}
+                      />
+                    </dl>
+                  </article>
+                ))}
               </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Дані оплати ще не вказано.
-            </p>
-          )}
-        </InfoSection>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Дані оплати ще не вказано.
+              </p>
+            )}
 
-        <InfoSection title="Відправлення">
-          {order.shipments.length ? (
-            order.shipments.map((shipment) => (
-              <div className="grid gap-2" key={shipment.id}>
-                <InfoRow
-                  label="Номер ТТН"
-                  value={shipment.trackingNumber ?? "Ще не створено"}
-                />
-                <InfoRow
-                  label="Документ перевізника"
-                  value={shipment.carrierShipmentId}
-                />
-                <InfoRow label="Посилання на етикетку" value={shipment.labelUrl} />
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Відправлення ще не підготовлено.
-            </p>
-          )}
-        </InfoSection>
-      </div>
-
-      <section className="grid min-w-0 gap-6 rounded-md border p-4">
-        <OwnerOrderTagPanel
-          actions={{
-            assign: assignOrderTagAction.bind(null, order.id),
-            createAndAssign: createAndAssignOrderTagAction.bind(null, order.id),
-            remove: removeOrderTagAction.bind(null, order.id),
-          }}
-          assignedTags={order.tags}
-          availableTags={availableTags}
-        />
-      </section>
-
-      <section className="grid min-w-0 gap-6 rounded-md border p-4">
-        <OwnerOrderStatusForm
-          action={updateOwnerOrderStatusAction.bind(null, order.id)}
-          currentStatus={order.status}
-        />
-      </section>
-
-      <section className="grid min-w-0 gap-6 rounded-md border p-4">
-        <div className="grid gap-2">
-          <h2 className="text-lg font-semibold">Повтор оплати MonoPay</h2>
-          <p className="text-sm text-muted-foreground">
-            Повторне посилання доступне, якщо рахунок MonoPay не створився або
-            попередня оплата завершилась помилкою.
-          </p>
-        </div>
-        {canRetryMonobankPayment ? (
-          <PaymentRetryForm
-            action={retryOwnerMonobankPaymentAction.bind(null, order.id)}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Повтор оплати зараз недоступний.
-          </p>
-        )}
-      </section>
-
-      <section className="grid min-w-0 gap-6 rounded-md border p-4">
-        <OwnerOrderRetryShipmentForm
-          action={retryShipmentCreationAction.bind(null, order.id)}
-          canRetry={
-            !isShippingLabelCreationDisabled &&
-            order.shipments.some(
-              (shipment) =>
-                shipment.status === "FAILED" &&
-                isShipmentCreationEnabled(shipment.carrier),
-            )
-          }
-          notice={
-            isShippingLabelCreationDisabled
-              ? shippingLabelCreationDisabledMessage
-              : null
-          }
-        />
-      </section>
-
-      <section className="grid min-w-0 gap-4 rounded-md border p-4">
-        <h2 className="text-lg font-semibold">Історія статусів</h2>
-        {order.statusHistory.length ? (
-          <div className="grid gap-3">
-            {order.statusHistory.map((entry) => (
-              <div className="rounded-md border px-3 py-2" key={entry.id}>
-                <p className="font-medium">{orderStatusLabels[entry.status]}</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatDateTime(entry.createdAt)} ·{" "}
-                  {auditActorLabels[entry.actorType]} ·{" "}
-                  {getAuditEventLabel(entry.eventType)}
+            <div className="grid min-w-0 gap-3">
+              <div>
+                <h3 className="text-base font-semibold">
+                  Повтор оплати MonoPay
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Повторне посилання доступне, якщо рахунок MonoPay не створився
+                  або попередня оплата завершилась помилкою.
                 </p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Історія статусів порожня.
-          </p>
-        )}
-      </section>
+              {canRetryMonobankPayment ? (
+                <PaymentRetryForm
+                  action={retryOwnerMonobankPaymentAction.bind(null, order.id)}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Повтор оплати зараз недоступний.
+                </p>
+              )}
+            </div>
+          </DetailSection>
 
-      <section className="grid min-w-0 gap-4 rounded-md border p-4">
-        <h2 className="text-lg font-semibold">Аудит подій</h2>
-        {order.auditEvents.length ? (
-          <div className="w-full max-w-full overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-              <thead className="bg-muted text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Час</th>
-                  <th className="px-4 py-3 font-medium">Подія</th>
-                  <th className="px-4 py-3 font-medium">Автор</th>
-                  <th className="px-4 py-3 font-medium">Дані</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.auditEvents.map((event) => (
-                  <tr className="border-t align-top" key={event.id}>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatDateTime(event.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {getAuditEventLabel(event.eventType)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {auditActorLabels[event.actorType]}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {auditPayloadSummary(event.payload)}
-                    </td>
-                  </tr>
+          <DetailSection testId="tags" title="Теги">
+            <OwnerOrderTagPanel
+              actions={{
+                assign: assignOrderTagAction.bind(null, order.id),
+                createAndAssign: createAndAssignOrderTagAction.bind(
+                  null,
+                  order.id,
+                ),
+                remove: removeOrderTagAction.bind(null, order.id),
+              }}
+              assignedTags={order.tags}
+              availableTags={availableTags}
+            />
+          </DetailSection>
+        </div>
+
+        <div className="grid min-w-0 gap-6 xl:col-start-1 xl:row-start-1">
+          <DetailSection testId="products" title="Товари">
+            <ul
+              className="grid min-w-0 gap-3"
+              data-testid="owner-order-products-list"
+            >
+              {order.items.map((item) => (
+                <li
+                  className="grid min-w-0 gap-3 rounded-md border border-border/70 p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+                  data-testid="owner-order-product-card"
+                  key={item.id}
+                >
+                  <div className="min-w-0">
+                    <p className="break-words font-medium">
+                      {item.productNameSnapshot}
+                    </p>
+                    <p className="mt-1 break-words text-sm text-muted-foreground">
+                      Артикул: {item.productSkuSnapshot}
+                    </p>
+                  </div>
+                  <dl className="grid min-w-0 grid-cols-2 gap-3 text-sm sm:min-w-64">
+                    <CompactInfo label="Кількість" value={String(item.quantity)} />
+                    <CompactInfo
+                      label="Ціна"
+                      value={formatMoneyMinor(
+                        item.unitPriceMinor,
+                        order.currency,
+                      )}
+                    />
+                    <CompactInfo
+                      className="col-span-2"
+                      label="Сума"
+                      value={formatMoneyMinor(
+                        item.lineTotalMinor,
+                        order.currency,
+                      )}
+                    />
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            <p className="text-right text-base font-semibold">
+              Разом: {formatMoneyMinor(order.totalMinor, order.currency)}
+            </p>
+          </DetailSection>
+
+          <DetailSection testId="status-history" title="Історія статусів">
+            {order.statusHistory.length ? (
+              <ol className="grid min-w-0 gap-3">
+                {order.statusHistory.map((entry) => (
+                  <li
+                    className="grid min-w-0 gap-1 rounded-md border border-border/70 px-3 py-2"
+                    key={entry.id}
+                  >
+                    <p className="font-medium">
+                      {orderStatusLabels[entry.status]}
+                    </p>
+                    <p className="break-words text-sm text-muted-foreground">
+                      {formatDateTime(entry.createdAt)} ·{" "}
+                      {auditActorLabels[entry.actorType]} ·{" "}
+                      {getAuditEventLabel(entry.eventType)}
+                    </p>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Подій аудиту ще немає.</p>
-        )}
-      </section>
+              </ol>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Історія статусів порожня.
+              </p>
+            )}
+          </DetailSection>
+
+          <DetailSection testId="audit" title="Аудит">
+            <div>
+              <h3 className="text-base font-semibold">Аудит подій</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Події збережені компактно, щоб перевірити зміни без широкої
+                таблиці.
+              </p>
+            </div>
+            {order.auditEvents.length ? (
+              <ol
+                className="grid min-w-0 gap-3"
+                data-testid="owner-order-audit-list"
+              >
+                {order.auditEvents.map((event) => (
+                  <li
+                    className="grid min-w-0 gap-2 rounded-md border border-border/70 px-3 py-2 sm:grid-cols-[10rem_minmax(0,1fr)]"
+                    key={event.id}
+                  >
+                    <p className="text-sm text-muted-foreground">
+                      {formatDateTime(event.createdAt)}
+                    </p>
+                    <div className="grid min-w-0 gap-1">
+                      <p className="break-words font-medium">
+                        {getAuditEventLabel(event.eventType)}
+                      </p>
+                      <p className="break-words text-sm text-muted-foreground">
+                        {auditActorLabels[event.actorType]} ·{" "}
+                        {auditPayloadSummary(event.payload)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Подій аудиту ще немає.
+              </p>
+            )}
+          </DetailSection>
+        </div>
+      </div>
     </div>
   );
 }
 
-function InfoSection({
+function DetailSection({
   children,
+  testId,
   title,
 }: {
   children: ReactNode;
+  testId: string;
   title: string;
 }) {
+  const headingId = `owner-order-${testId}-heading`;
+
   return (
-    <section className="grid min-w-0 gap-3 rounded-md border p-4">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="grid min-w-0 gap-2">{children}</div>
-    </section>
+    <details
+      aria-labelledby={headingId}
+      className="group min-w-0 rounded-md border border-border/80 bg-card/95 shadow-sm"
+      data-testid="owner-order-detail-section"
+      data-section={testId}
+      open
+    >
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+        <h2 className="text-lg font-semibold" id={headingId}>
+          {title}
+        </h2>
+        <ChevronDown
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="grid min-w-0 gap-4 border-t border-border/70 p-4">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -345,9 +408,26 @@ function InfoRow({
   value?: string | null;
 }) {
   return (
-    <div className="grid min-w-0 gap-1 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="break-words">{value || "Не вказано"}</span>
+    <div className="grid min-w-0 gap-1 border-b border-border/60 pb-2 last:border-0 last:pb-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="break-words font-medium">{value || "Не вказано"}</dd>
+    </div>
+  );
+}
+
+function CompactInfo({
+  className,
+  label,
+  value,
+}: {
+  className?: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className={className}>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="break-words font-medium">{value}</dd>
     </div>
   );
 }

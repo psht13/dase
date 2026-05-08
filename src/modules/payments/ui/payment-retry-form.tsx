@@ -42,7 +42,7 @@ export function PaymentRetryForm({ action }: PaymentRetryFormProps) {
       ) : null}
 
       <form action={onSubmit}>
-        <Button disabled={isPending} type="submit">
+        <Button className="w-full sm:w-auto" disabled={isPending} type="submit">
           <CreditCard aria-hidden="true" className="size-4" />
           {isPending ? "Створення посилання…" : "Повторити оплату"}
         </Button>

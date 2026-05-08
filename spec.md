@@ -245,6 +245,15 @@ Responsive product and order list update on 2026-05-08:
 - Product/order reads still go through existing application use cases and repositories; no business logic, filters, roles, database schema, object storage, or external API behavior changed.
 - Component tests cover the compact desktop hierarchy and mobile card rendering for both lists. Playwright coverage checks `/dashboard/products` and `/dashboard/orders` at desktop and 390 px, plus no page-level horizontal overflow at phone widths.
 
+Owner order details layout update on 2026-05-08:
+- `/dashboard/orders/[orderId]` now uses clear Ukrainian sections: `Огляд`, `Товари`, `Клієнт`, `Доставка`, `Оплата`, `Теги`, `Історія статусів`, and `Аудит`.
+- The mobile layout uses open collapsible section cards instead of wide product and audit tables. Products render as item cards, status history renders as compact event cards, and audit events render as a compact readable list.
+- Desktop widths use a two-column layout at wide breakpoints: products, status history, and audit stay in the main column, while overview, customer, delivery, payment, and tags stay in the side column.
+- Existing server actions and application use cases are unchanged. MonoPay retry, shipment retry, manual status update, and tag assignment/removal remain available through the same owner actions.
+- Delivery and shipment details are grouped under `Доставка`; payment details and MonoPay retry are grouped under `Оплата`.
+- Focused component tests cover the Ukrainian section headings, collapsible stacked sections, MonoPay retry eligibility, shipment retry availability, manual status update submission, and compact audit visibility.
+- Playwright E2E covers the owner order details page at 390 px and checks the same page at 360 px for no horizontal overflow.
+
 Ukrposhta active-MVP removal update on 2026-05-07:
 - Added a central shipping carrier registry at `src/modules/shipping/application/shipping-carrier-registry.ts`.
 - The active customer-facing carrier list contains only Nova Post with the Ukrainian label `Нова пошта`.
