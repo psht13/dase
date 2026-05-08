@@ -496,6 +496,15 @@ Audit result:
 - Focused component coverage checks the wizard current state and action buttons. Playwright `tests/e2e/wizard-layout-responsive.spec.ts` verifies product form, order builder, and public delivery at 390x844, 768x1024, and 1440x900 with important Ukrainian labels visible and no horizontal overflow.
 - Focused verification passed with `pnpm test src/shared/ui/multi-step-form.test.tsx src/modules/catalog/ui/product-form.test.tsx src/modules/orders/ui/order-builder-form.test.tsx src/modules/orders/ui/delivery-form.test.tsx 'src/app/o/[token]/delivery/page.test.tsx'` and `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e tests/e2e/wizard-layout-responsive.spec.ts`.
 
+## Standardized action buttons update on 2026-05-08
+
+- Shared `ActionBar` and `FormActions` primitives now centralize action placement, full-width mobile stacking, desktop right alignment, sensible desktop minimum widths, compact action groups, and optional sticky action support.
+- Button variants now include restrained destructive styles and a more readable disabled state. Loading labels are kept inside action groups with reserved desktop width so pending states do not collapse the button layout.
+- Home, setup/login forms, product create/edit wizard, owner order builder, public delivery/payment wizard, owner order details actions, owner payment requisite settings, owner list filters/actions, and public order review/status actions use the shared responsive action patterns where appropriate.
+- Product and public delivery first-step wizards no longer show an inactive generic `Назад` button beside a real cancel/back link. Public delivery keeps a single `Назад до замовлення` link on the initial screen.
+- The home CTA remains a real link: `/setup` while first-owner setup is available, otherwise `/login`.
+- Focused tests cover `ActionBar`/`FormActions` responsive class behavior, wizard action rendering, product/delivery/payment/order detail button placement, and the home CTA link target. Playwright `tests/e2e/action-buttons.spec.ts` verifies desktop product-form alignment, mobile delivery full-width ordering, owner order-detail action overflow, and no duplicate public back links.
+
 ## Core flows
 
 ### Product management

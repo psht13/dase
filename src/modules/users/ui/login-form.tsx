@@ -5,6 +5,7 @@ import { useActionState, useEffect } from "react";
 import { initialLoginActionState } from "@/modules/users/ui/login-action-state";
 import { loginOwnerAction } from "@/modules/users/ui/login-actions";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 
 type LoginFormProps = {
   navigateOnSuccess?: (url: string) => void;
@@ -64,10 +65,14 @@ export function LoginForm({ navigateOnSuccess }: LoginFormProps = {}) {
         />
       </label>
 
-      <Button disabled={isPending} type="submit">
-        <LogIn aria-hidden="true" className="size-4" />
-        {isPending ? "Вхід…" : "Увійти"}
-      </Button>
+      <FormActions
+        primaryAction={
+          <Button disabled={isPending} type="submit">
+            <LogIn aria-hidden="true" className="size-4" />
+            {isPending ? "Вхід…" : "Увійти"}
+          </Button>
+        }
+      />
       <p className="sr-only" role="status">
         {isPending ? "Виконуємо вхід…" : ""}
       </p>

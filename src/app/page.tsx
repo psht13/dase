@@ -4,7 +4,7 @@ import { getOwnerSetupStateUseCase } from "@/modules/users/application/owner-set
 import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
-import { PageHeader, PageShell } from "@/shared/ui/page-layout";
+import { ActionBar, PageHeader, PageShell } from "@/shared/ui/page-layout";
 
 const starterItems = [
   "Каталог товарів",
@@ -41,11 +41,11 @@ export default async function Home() {
               title="Підтвердження замовлень для ювелірних продавців"
               titleClassName="text-3xl sm:text-5xl"
             />
-            <div>
+            <ActionBar align="start">
               <Button asChild>
                 <Link href={cta.href}>{cta.label}</Link>
               </Button>
-            </div>
+            </ActionBar>
           </div>
 
           <div aria-hidden="true" className="hidden justify-center lg:flex">

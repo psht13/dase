@@ -13,6 +13,7 @@ import type { OwnerOrderFilters } from "@/modules/orders/application/owner-order
 import { orderStatuses } from "@/modules/orders/domain/status";
 import type { ShippingCarrierRegistryEntry } from "@/modules/shipping/application/shipping-carrier-registry";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 import { cn } from "@/shared/utils/cn";
 
 type OwnerOrdersFilterFormProps = {
@@ -224,12 +225,14 @@ export function OwnerOrdersFilterForm({
         </label>
       </div>
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Button asChild variant="outline">
-          <Link href="/dashboard/orders">Очистити</Link>
-        </Button>
-        <Button type="submit">Застосувати фільтри</Button>
-      </div>
+      <FormActions
+        primaryAction={<Button type="submit">Застосувати фільтри</Button>}
+        secondaryActions={
+          <Button asChild variant="outline">
+            <Link href="/dashboard/orders">Очистити</Link>
+          </Button>
+        }
+      />
       </form>
     </section>
   );

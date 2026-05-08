@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import type { PaymentRetryActionResult } from "@/modules/payments/ui/payment-actions";
 import { ActionFeedbackMessage } from "@/shared/ui/action-feedback-message";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 
 type PaymentRetryFormProps = {
   action: () => Promise<PaymentRetryActionResult>;
@@ -42,10 +43,14 @@ export function PaymentRetryForm({ action }: PaymentRetryFormProps) {
       ) : null}
 
       <form action={onSubmit}>
-        <Button className="w-full sm:w-auto" disabled={isPending} type="submit">
-          <CreditCard aria-hidden="true" className="size-4" />
-          {isPending ? "Створення посилання…" : "Повторити оплату"}
-        </Button>
+        <FormActions
+          primaryAction={
+            <Button disabled={isPending} type="submit">
+              <CreditCard aria-hidden="true" className="size-4" />
+              {isPending ? "Створення посилання…" : "Повторити оплату"}
+            </Button>
+          }
+        />
       </form>
     </div>
   );

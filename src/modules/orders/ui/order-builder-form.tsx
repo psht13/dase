@@ -25,6 +25,7 @@ import {
   WizardPageLayout,
   WizardStepper,
 } from "@/shared/ui/multi-step-form";
+import { ActionBar } from "@/shared/ui/page-layout";
 import { cn } from "@/shared/utils/cn";
 import { formatMoneyMinor } from "@/shared/utils/format-money";
 
@@ -628,7 +629,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                     <Link2 aria-hidden="true" className="size-4" />
                     Посилання замовлення створено
                   </div>
-                  <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+                  <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                     <label className="grid min-w-0 gap-2 text-sm font-medium">
                       Публічне посилання
                       <input
@@ -640,24 +641,26 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                         value={publicUrl}
                       />
                     </label>
-                    <Button
-                      onClick={copyPublicUrl}
-                      type="button"
-                      variant="outline"
-                    >
-                      <Copy aria-hidden="true" className="size-4" />
-                      Копіювати
-                    </Button>
-                    <Button asChild variant="outline">
-                      <a
-                        href={publicUrl}
-                        rel="noreferrer"
-                        target="_blank"
+                    <ActionBar size="compact">
+                      <Button
+                        onClick={copyPublicUrl}
+                        type="button"
+                        variant="outline"
                       >
-                        <ExternalLink aria-hidden="true" className="size-4" />
-                        Відкрити
-                      </a>
-                    </Button>
+                        <Copy aria-hidden="true" className="size-4" />
+                        Копіювати
+                      </Button>
+                      <Button asChild variant="outline">
+                        <a
+                          href={publicUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <ExternalLink aria-hidden="true" className="size-4" />
+                          Відкрити
+                        </a>
+                      </Button>
+                    </ActionBar>
                   </div>
                   {copyMessage ? (
                     <p aria-live="polite" className="text-sm" role="status">

@@ -15,6 +15,7 @@ import type {
   UseFormReturn,
 } from "react-hook-form";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 import { cn } from "@/shared/utils/cn";
 
 const defaultValidationMessage = "Заповніть обов’язкові поля цього кроку";
@@ -491,23 +492,11 @@ export function WizardActions({
   secondaryActions,
 }: WizardActionsProps) {
   return (
-    <footer
-      className={cn(
-        "flex min-w-0 flex-col-reverse gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-end",
-        className,
-      )}
-    >
-      {secondaryActions ? (
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
-          {secondaryActions}
-        </div>
-      ) : null}
-      {primaryAction ? (
-        <div className="min-w-0 [&>*]:w-full sm:[&>*]:w-auto sm:[&>*]:min-w-32">
-          {primaryAction}
-        </div>
-      ) : null}
-    </footer>
+    <FormActions
+      className={className}
+      primaryAction={primaryAction}
+      secondaryActions={secondaryActions}
+    />
   );
 }
 
@@ -521,6 +510,7 @@ type StepActionsProps = {
   onBack: () => void;
   onNext: () => Promise<boolean> | boolean | void;
   secondaryAction?: ReactNode;
+  showBackButton?: boolean;
   submitLabel?: ReactNode;
 };
 
@@ -534,6 +524,7 @@ export function StepActions({
   onBack,
   onNext,
   secondaryAction,
+  showBackButton = true,
   submitLabel = "Завершити",
 }: StepActionsProps) {
   const primaryAction = isLastStep ? (
@@ -559,18 +550,22 @@ export function StepActions({
       className={className}
       primaryAction={primaryAction}
       secondaryActions={
-        <>
-          <Button
-            className="w-full sm:w-auto"
-            disabled={isFirstStep || isPending}
-            onClick={onBack}
-            type="button"
-            variant="outline"
-          >
-            {backLabel}
-          </Button>
-          {secondaryAction}
-        </>
+        showBackButton || secondaryAction ? (
+          <>
+            {showBackButton ? (
+              <Button
+                className="w-full sm:w-auto"
+                disabled={isFirstStep || isPending}
+                onClick={onBack}
+                type="button"
+                variant="outline"
+              >
+                {backLabel}
+              </Button>
+            ) : null}
+            {secondaryAction}
+          </>
+        ) : undefined
       }
     />
   );

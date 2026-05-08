@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import type { OwnerOrderActionResult } from "@/modules/orders/ui/owner-order-actions";
 import { ActionFeedbackMessage } from "@/shared/ui/action-feedback-message";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 
 type OwnerOrderManualPaymentFormProps = {
   action: () => Promise<OwnerOrderActionResult>;
@@ -56,10 +57,14 @@ export function OwnerOrderManualPaymentForm({
       ) : null}
 
       <form action={onSubmit}>
-        <Button className="w-full sm:w-auto" disabled={isPending} type="submit">
-          <CheckCircle2 aria-hidden="true" className="size-4" />
-          {isPending ? "Підтвердження…" : "Позначити оплату отриманою"}
-        </Button>
+        <FormActions
+          primaryAction={
+            <Button disabled={isPending} type="submit">
+              <CheckCircle2 aria-hidden="true" className="size-4" />
+              {isPending ? "Підтвердження…" : "Позначити оплату отриманою"}
+            </Button>
+          }
+        />
       </form>
     </section>
   );

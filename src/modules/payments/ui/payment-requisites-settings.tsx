@@ -6,6 +6,7 @@ import type { PaymentRequisiteActionState } from "@/modules/payments/ui/payment-
 import { PaymentRequisiteCopyButton } from "@/modules/payments/ui/payment-requisite-copy-button";
 import { PaymentRequisiteForm } from "@/modules/payments/ui/payment-requisite-form";
 import { Button } from "@/shared/ui/button";
+import { ActionBar } from "@/shared/ui/page-layout";
 import { cn } from "@/shared/utils/cn";
 
 type PaymentRequisitesSettingsProps = {
@@ -114,13 +115,13 @@ function PaymentRequisiteCard({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+      <ActionBar align="start" size="compact">
         <PaymentRequisiteCopyButton displayValue={requisite.displayValue} />
         <form
           action={setActiveAction.bind(null, requisite.id, !requisite.isActive)}
           className="min-w-0"
         >
-          <Button className="w-full sm:w-auto" size="sm" type="submit" variant="outline">
+          <Button size="sm" type="submit" variant="outline">
             {requisite.isActive ? (
               <PowerOff aria-hidden="true" className="size-4" />
             ) : (
@@ -129,7 +130,7 @@ function PaymentRequisiteCard({
             {requisite.isActive ? "Вимкнути" : "Увімкнути"}
           </Button>
         </form>
-      </div>
+      </ActionBar>
 
       <details className="group min-w-0 rounded-md border border-border/80 bg-background p-3">
         <summary className="cursor-pointer text-sm font-medium">

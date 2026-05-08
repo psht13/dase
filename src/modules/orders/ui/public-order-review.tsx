@@ -9,7 +9,7 @@ import type { PaymentRetryActionResult } from "@/modules/payments/ui/payment-act
 import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
-import { PageHeader, PageShell } from "@/shared/ui/page-layout";
+import { ActionBar, PageHeader, PageShell } from "@/shared/ui/page-layout";
 import { formatMoneyMinor } from "@/shared/utils/format-money";
 
 type PublicOrderReviewProps = {
@@ -74,12 +74,14 @@ export function PublicOrderReview({
             {formatMoneyMinor(order.totalMinor, order.currency)}
           </p>
         </div>
-        <Button asChild>
-          <Link href={deliveryHref}>
-            <Truck aria-hidden="true" className="size-4" />
-            Перейти до доставки й оплати
-          </Link>
-        </Button>
+        <ActionBar>
+          <Button asChild>
+            <Link href={deliveryHref}>
+              <Truck aria-hidden="true" className="size-4" />
+              Перейти до доставки й оплати
+            </Link>
+          </Button>
+        </ActionBar>
       </div>
     </PageShell>
   );

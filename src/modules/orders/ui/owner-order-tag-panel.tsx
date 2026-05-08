@@ -80,7 +80,7 @@ export function OwnerOrderTagPanel({
                 disabled={isPending}
                 size="sm"
                 type="submit"
-                variant="outline"
+                variant="destructiveOutline"
               >
                 <Tag aria-hidden="true" className="size-4" />
                 {tag.name}

@@ -9,6 +9,7 @@ import {
   formatMoneyMinor,
 } from "@/modules/orders/ui/owner-order-formatters";
 import { Button } from "@/shared/ui/button";
+import { ActionBar } from "@/shared/ui/page-layout";
 import { cn } from "@/shared/utils/cn";
 
 type OwnerOrdersTableProps = {
@@ -111,7 +112,7 @@ function EmptyOrdersState({
             ? "Змініть або скиньте фільтри, щоб побачити інші замовлення."
             : "Створіть посилання замовлення і надішліть його клієнту для підтвердження."}
       </p>
-      <div className="flex min-w-0 flex-col justify-center gap-3 sm:flex-row">
+      <ActionBar align="center">
         {hasActiveFilters ? (
           <Button asChild variant="outline">
             <Link href="/dashboard/orders">Скинути фільтри</Link>
@@ -120,7 +121,7 @@ function EmptyOrdersState({
         <Button asChild>
           <Link href="/dashboard/orders/new">Створити замовлення</Link>
         </Button>
-      </div>
+      </ActionBar>
     </div>
   );
 }

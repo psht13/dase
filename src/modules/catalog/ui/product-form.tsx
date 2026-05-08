@@ -478,6 +478,7 @@ export function ProductForm({
               <Link href={cancelHref}>Скасувати</Link>
             </Button>
           }
+          showBackButton={!stepper.isFirstStep}
           submitLabel={
             <>
               <Save aria-hidden="true" className="size-4" />

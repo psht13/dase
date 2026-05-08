@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { initialOwnerSetupActionState } from "@/modules/users/ui/owner-setup-action-state";
 import { createFirstOwnerAction } from "@/modules/users/ui/owner-setup-actions";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 
 type OwnerSetupFormProps = {
   requiresSetupToken: boolean;
@@ -86,10 +87,14 @@ export function OwnerSetupForm({ requiresSetupToken }: OwnerSetupFormProps) {
         />
       </label>
 
-      <Button disabled={isPending} type="submit">
-        <UserPlus aria-hidden="true" className="size-4" />
-        {isPending ? "Створення…" : "Створити власника"}
-      </Button>
+      <FormActions
+        primaryAction={
+          <Button disabled={isPending} type="submit">
+            <UserPlus aria-hidden="true" className="size-4" />
+            {isPending ? "Створення…" : "Створити власника"}
+          </Button>
+        }
+      />
     </form>
   );
 }

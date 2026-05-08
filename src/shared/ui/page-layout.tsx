@@ -96,19 +96,115 @@ export function PageHeader({
 }
 
 type ActionBarProps = {
+  align?: "start" | "center" | "end" | "between";
   children: ReactNode;
   className?: string;
+  mobile?: "stack" | "row";
+  size?: "compact" | "default";
+  sticky?: boolean;
 };
 
-export function ActionBar({ children, className }: ActionBarProps) {
+const actionAlignmentClassNames: Record<
+  NonNullable<ActionBarProps["align"]>,
+  string
+> = {
+  between: "sm:justify-between",
+  center: "sm:justify-center",
+  end: "sm:justify-end",
+  start: "sm:justify-start",
+};
+
+const actionSizingClassNames: Record<
+  NonNullable<ActionBarProps["size"]>,
+  string
+> = {
+  compact:
+    "[&>a]:min-w-0 [&>button]:min-w-0 [&>form>button]:min-w-0 [&>form]:min-w-0",
+  default:
+    "sm:[&>a]:min-w-36 sm:[&>button]:min-w-36 sm:[&>form>button]:min-w-36",
+};
+
+const directActionWidthClassName =
+  "[&>a]:w-full [&>button]:w-full [&>form>button]:w-full [&>form]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto sm:[&>form>button]:w-auto sm:[&>form]:w-auto";
+
+const nestedActionWidthClassName =
+  "[&>a]:w-full [&>button]:w-full [&>form>button]:w-full [&>form]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto sm:[&>form>button]:w-auto sm:[&>form]:w-auto";
+
+export function ActionBar({
+  align = "end",
+  children,
+  className,
+  mobile = "stack",
+  size = "default",
+  sticky = false,
+}: ActionBarProps) {
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end",
+        "flex min-w-0 gap-3 [&_:where(a,button)]:min-h-11",
+        mobile === "stack"
+          ? cn("flex-col sm:flex-row sm:items-center", directActionWidthClassName)
+          : "flex-row flex-wrap items-center",
+        actionAlignmentClassNames[align],
+        actionSizingClassNames[size],
+        sticky
+          ? "-mx-4 sticky bottom-0 z-20 border-t border-border/80 bg-card/95 px-4 py-3 shadow-lg sm:static sm:m-0 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"
+          : null,
         className,
       )}
     >
       {children}
     </div>
+  );
+}
+
+type FormActionsProps = {
+  className?: string;
+  compact?: boolean;
+  destructiveActions?: ReactNode;
+  primaryAction?: ReactNode;
+  secondaryActions?: ReactNode;
+  sticky?: boolean;
+};
+
+export function FormActions({
+  className,
+  compact = false,
+  destructiveActions,
+  primaryAction,
+  secondaryActions,
+  sticky = false,
+}: FormActionsProps) {
+  const groupClassName = cn(
+    "flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center",
+    nestedActionWidthClassName,
+    compact ? actionSizingClassNames.compact : actionSizingClassNames.default,
+  );
+
+  return (
+    <footer
+      className={cn(
+        "min-w-0 border-t border-border/70 pt-4",
+        sticky
+          ? "-mx-4 sticky bottom-0 z-20 border-border/80 bg-card/95 px-4 pb-3 shadow-lg sm:static sm:m-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none"
+          : null,
+        className,
+      )}
+    >
+      <ActionBar
+        className="flex-col-reverse sm:flex-row"
+        size={compact ? "compact" : "default"}
+      >
+        {destructiveActions ? (
+          <div className={cn(groupClassName, "sm:mr-auto")}>
+            {destructiveActions}
+          </div>
+        ) : null}
+        {secondaryActions ? (
+          <div className={groupClassName}>{secondaryActions}</div>
+        ) : null}
+        {primaryAction ? <div className={groupClassName}>{primaryAction}</div> : null}
+      </ActionBar>
+    </footer>
   );
 }

@@ -7,6 +7,7 @@ import type { PaymentRequisiteRecord } from "@/modules/payments/application/paym
 import { initialPaymentRequisiteActionState } from "@/modules/payments/ui/payment-requisite-action-state";
 import type { PaymentRequisiteActionState } from "@/modules/payments/ui/payment-requisite-action-state";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 
 type PaymentRequisiteFormProps = {
   action: (
@@ -131,14 +132,18 @@ export function PaymentRequisiteForm({
         </span>
       </label>
 
-      <Button className="w-full sm:w-fit" disabled={isPending} type="submit">
-        <Save aria-hidden="true" className="size-4" />
-        {isPending
-          ? "Збереження…"
-          : mode === "create"
-            ? "Додати реквізити"
-            : "Зберегти зміни"}
-      </Button>
+      <FormActions
+        primaryAction={
+          <Button disabled={isPending} type="submit">
+            <Save aria-hidden="true" className="size-4" />
+            {isPending
+              ? "Збереження…"
+              : mode === "create"
+                ? "Додати реквізити"
+                : "Зберегти зміни"}
+          </Button>
+        }
+      />
     </form>
   );
 }

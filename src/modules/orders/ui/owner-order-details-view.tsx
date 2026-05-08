@@ -40,6 +40,7 @@ import {
 import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import { retryShipmentCreationAction } from "@/modules/shipping/ui/shipment-actions";
 import { Button } from "@/shared/ui/button";
+import { ActionBar } from "@/shared/ui/page-layout";
 
 type OwnerOrderDetailsViewProps = {
   availableTags: OrderTagRecord[];
@@ -82,15 +83,23 @@ export function OwnerOrderDetailsView({
 
   return (
     <div className="grid min-w-0 gap-6">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+      <div className="grid min-w-0 gap-4">
+        <ActionBar align="between" size="compact">
           <Button asChild size="sm" variant="outline">
             <Link href="/dashboard/orders">
               <ArrowLeft aria-hidden="true" className="size-4" />
               До списку замовлень
             </Link>
           </Button>
-          <h1 className="mt-4 break-words font-display text-2xl font-semibold sm:text-3xl">
+          <Button asChild size="sm" variant="outline">
+            <Link href={publicUrl}>
+              <ExternalLink aria-hidden="true" className="size-4" />
+              Публічна сторінка
+            </Link>
+          </Button>
+        </ActionBar>
+        <div className="min-w-0">
+          <h1 className="break-words font-display text-2xl font-semibold sm:text-3xl">
             Замовлення {displayOrderNumber(order.id)}
           </h1>
           <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-sm">
@@ -110,12 +119,6 @@ export function OwnerOrderDetailsView({
             Поточний статус: {orderStatusLabels[order.status]}
           </p>
         </div>
-        <Button asChild className="w-full sm:w-auto" variant="outline">
-          <Link href={publicUrl}>
-            <ExternalLink aria-hidden="true" className="size-4" />
-            Публічна сторінка
-          </Link>
-        </Button>
       </div>
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:items-start">

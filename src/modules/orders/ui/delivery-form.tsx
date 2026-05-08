@@ -798,6 +798,7 @@ export function DeliveryForm({
               </Button>
             ) : null
           }
+          showBackButton={!stepper.isFirstStep}
           submitLabel={
             <>
               <CheckCircle2 aria-hidden="true" className="size-4" />

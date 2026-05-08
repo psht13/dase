@@ -2,6 +2,7 @@ import { Edit3, Power, PowerOff } from "lucide-react";
 import Link from "next/link";
 import type { ProductRecord } from "@/modules/catalog/application/product-repository";
 import { Button } from "@/shared/ui/button";
+import { ActionBar } from "@/shared/ui/page-layout";
 import { cn } from "@/shared/utils/cn";
 import { formatMoneyMinor } from "@/shared/utils/format-money";
 
@@ -19,11 +20,11 @@ export function ProductTable({ products, toggleAction }: ProductTableProps) {
           Додайте товар із ціною, залишком і зовнішнім URL зображення, щоб
           використовувати його в нових замовленнях.
         </p>
-        <div>
+        <ActionBar align="center">
           <Button asChild>
             <Link href="/dashboard/products/new">Створити товар</Link>
           </Button>
-        </div>
+        </ActionBar>
       </div>
     );
   }

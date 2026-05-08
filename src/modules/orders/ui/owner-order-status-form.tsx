@@ -12,6 +12,7 @@ import {
 } from "@/modules/orders/domain/status";
 import { ActionFeedbackMessage } from "@/shared/ui/action-feedback-message";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 
 type OwnerOrderStatusFormProps = {
   action: (formData: FormData) => Promise<OwnerOrderActionResult>;
@@ -65,7 +66,7 @@ export function OwnerOrderStatusForm({
         />
       ) : null}
 
-      <form action={onSubmit} className="flex flex-col gap-3 sm:flex-row">
+      <form action={onSubmit} className="grid gap-3">
         <label className="grid flex-1 gap-2 text-sm font-medium">
           Новий статус
           <select
@@ -82,14 +83,14 @@ export function OwnerOrderStatusForm({
           </select>
         </label>
 
-        <Button
-          className="w-full sm:w-auto sm:self-end"
-          disabled={isPending}
-          type="submit"
-        >
-          <Save aria-hidden="true" className="size-4" />
-          {isPending ? "Збереження…" : "Оновити статус"}
-        </Button>
+        <FormActions
+          primaryAction={
+            <Button disabled={isPending} type="submit">
+              <Save aria-hidden="true" className="size-4" />
+              {isPending ? "Збереження…" : "Оновити статус"}
+            </Button>
+          }
+        />
       </form>
     </section>
   );

@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import type { ShipmentRetryActionResult } from "@/modules/shipping/ui/shipment-actions";
 import { ActionFeedbackMessage } from "@/shared/ui/action-feedback-message";
 import { Button } from "@/shared/ui/button";
+import { FormActions } from "@/shared/ui/page-layout";
 
 type OwnerOrderRetryShipmentFormProps = {
   action: () => Promise<ShipmentRetryActionResult>;
@@ -63,15 +64,18 @@ export function OwnerOrderRetryShipmentForm({
       ) : null}
 
       <form action={onSubmit}>
-        <Button
-          className="w-full sm:w-auto"
-          disabled={!canRetry || isPending}
-          type="submit"
-          variant="outline"
-        >
-          <RotateCcw aria-hidden="true" className="size-4" />
-          {isPending ? "Планування…" : "Повторити створення відправлення"}
-        </Button>
+        <FormActions
+          primaryAction={
+            <Button
+              disabled={!canRetry || isPending}
+              type="submit"
+              variant="outline"
+            >
+              <RotateCcw aria-hidden="true" className="size-4" />
+              {isPending ? "Планування…" : "Повторити створення відправлення"}
+            </Button>
+          }
+        />
       </form>
     </section>
   );

@@ -5,7 +5,7 @@ import { OwnerSetupForm } from "@/modules/users/ui/owner-setup-form";
 import { getWebEnv } from "@/shared/config/env";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
-import { PageHeader, PageShell } from "@/shared/ui/page-layout";
+import { ActionBar, PageHeader, PageShell } from "@/shared/ui/page-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -57,9 +57,11 @@ function SetupUnavailable({ message }: { message: string }) {
           description={message}
           title="Налаштування недоступне"
         />
-        <Button asChild variant="outline">
-          <Link href="/login">До сторінки входу</Link>
-        </Button>
+        <ActionBar align="center">
+          <Button asChild variant="outline">
+            <Link href="/login">До сторінки входу</Link>
+          </Button>
+        </ActionBar>
     </PageShell>
   );
 }

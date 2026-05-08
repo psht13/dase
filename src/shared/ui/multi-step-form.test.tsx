@@ -207,7 +207,13 @@ describe("multi-step form foundation", () => {
     expect(screen.getByRole("button", { name: "Далі" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Назад" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Скасувати" })).toBeVisible();
-    expect(container.querySelector("footer")).toHaveClass("sm:justify-end");
+    expect(container.querySelector("footer")).toHaveClass("border-t");
+    expect(container.querySelector("footer > div")).toHaveClass(
+      "flex-col-reverse",
+    );
+    expect(container.querySelector("footer > div")).toHaveClass(
+      "sm:justify-end",
+    );
   });
 
   it("validates only the current step before moving forward", async () => {
