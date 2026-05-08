@@ -53,7 +53,7 @@ The production `worker` does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`
 Shared shipping mode:
 - `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Production defaults to `disabled` when omitted. Use `disabled` for production/demo deployments until Nova Post sender settings are complete. `mock` is rejected in production and is only for local/e2e.
 
-Required only for historical MonoPay / Monobank retry or webhook verification. These are not required for `web` startup or for the active manual online card transfer flow:
+Required only for historical MonoPay / Monobank retry or webhook verification. These are not required for `web` startup, `worker` startup, or the active manual online card transfer customer flow:
 - `MONOBANK_TOKEN`
 - `MONOBANK_API_URL`
 - `MONOBANK_PUBLIC_KEY`
@@ -187,7 +187,11 @@ Completed live setup:
 - Railway PostgreSQL connectivity and migrations were verified with a read-only table count check through the Railway public database proxy.
 
 Remaining manual production verification:
-- Configure real Monobank credentials in Railway variables only if historical MonoPay retry/webhook verification is needed.
+- Configure real Monobank credentials in Railway variables only if historical MonoPay retry/webhook verification is intentionally needed; no Monobank variable is required for the active customer payment flow.
 - Nova Post stage directory lookup variables are configured on `web`, but live shipment creation still requires `SHIPPING_LABEL_CREATION_MODE=live` and complete Nova Post API, sender, payer, and parcel variables on `worker`.
 - Do not configure Ukrposhta for the active MVP; re-enable a future carrier only through the central carrier registry and updated deployment docs.
 - Run the external API checklist above with low-risk production test data.
+
+Prompt 09 production smoke on 2026-05-08:
+- Unauthenticated production health passed at `https://web-production-26609.up.railway.app/api/health` with `status: ok`.
+- Authenticated production smoke was not run because temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` were not set in the shell. Do not configure these values in Railway runtime variables or commit them to repository files.

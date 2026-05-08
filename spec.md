@@ -280,6 +280,18 @@ Final responsive QA update on 2026-05-08:
 - No business logic, database schema, role model, product image strategy, payment behavior, shipping behavior, or object storage behavior changed in the final responsive QA milestone.
 - Focused verification passed with `pnpm test:e2e tests/e2e/final-responsive-qa.spec.ts`.
 
+Prompt 09 final order/payment QA on 2026-05-08:
+- Full local release gate passed: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e`, and `pnpm build`.
+- Coverage from the final run was 88.99% statements, 81.44% branches, 89.76% functions, and 88.99% lines across the configured coverage scope.
+- Full Playwright E2E passed with Chromium: 22 tests passed and the opt-in authenticated production smoke spec skipped by default.
+- Playwright MCP inspected product create, order builder, public delivery, public post-confirmation status, owner order list, owner order details, and payment settings against local E2E-safe data at 390x844, 768x1024, and 1440x900.
+- The active public customer flow was rechecked with a seeded manual-card order: pre-confirmation review showed products and total; the delivery/payment step collected full name, phone, Instagram nickname, Nova Post delivery, and payment method; `Оплата картою онлайн` showed active owner requisites and the Instagram receipt instruction; reopening the public link showed the status page instead of a duplicate form.
+- The active customer UI check passed for the public review, delivery/payment step, and manual-card public status page: `Оплата картою онлайн` and `Після оплати надішліть квитанцію продавцю в Instagram чат` were present where expected, while `MonoPay` and `Monobank` were absent.
+- Owner QA verified search by displayed short order id, visible Instagram nickname, manual card payment status, marking the payment as received, and the resulting `Оплату картою підтверджено` audit event.
+- Cash on delivery remains covered by the full Playwright E2E customer-delivery flow.
+- Production `/api/health` returned `status: ok` on 2026-05-08. The authenticated production smoke test was not run because `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` were not set in the local shell; keep those credentials temporary and local-only when running `pnpm test:e2e:prod`.
+- Automated tests continue to use fixtures, MSW, or in-memory adapters for Monobank and Nova Post; no live external APIs are called in CI or local automated checks.
+
 ## Order, payment, and responsive UI audit on 2026-05-08
 
 Audit scope: public order pages under `/o/[token]`, the customer delivery/payment form, owner product form, owner order builder, owner orders list, owner order details, dashboard shell, payment modules, Monobank provider/webhook code, shipping enqueue/job flow, and migrations through `drizzle/0003_kind_deathstrike.sql`.
@@ -858,6 +870,15 @@ Latest local quality status on 2026-05-08 after final responsive QA:
 - `pnpm test:e2e` passed with Chromium: 19 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-05-08 after Prompt 09 final QA:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.99% statements, 81.44% branches, 89.76% functions, and 88.99% lines across the configured coverage scope.
+- `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e` passed with Chromium: 22 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+- A local browser customer-flow check confirmed the active manual-card UI contains `Оплата картою онлайн` and `Після оплати надішліть квитанцію продавцю в Instagram чат`, and does not contain `MonoPay` or `Monobank`.
+- Production unauthenticated health smoke passed against `https://web-production-26609.up.railway.app/api/health`; authenticated production smoke remains gated by temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD`.
+
 ## Commands
 
 Configured commands:
@@ -1086,18 +1107,18 @@ Status: completed on 2026-04-30.
 - Added focused regression tests for the dashboard shell alignment and product image delete control.
 - Verified the visual fixes in Chromium with screenshots under ignored `output/playwright/` artifacts.
 
-### Milestone 9 - Mobile owner UI refactor
+### Milestone 9 - Responsive order/payment UI refactor
 
-Status: in progress; audit and refactor plan documented, dashboard shell baseline implemented, reusable multi-step form foundation added, and product create/edit, owner order builder, and public delivery forms converted to stepper flows on 2026-05-08.
+Status: completed on 2026-05-08 with final Prompt 09 QA.
 
-- Refactor the owner dashboard shell so phone and tablet portrait layouts use compact mobile navigation instead of the full stacked/persistent sidebar.
-- Replace mobile product/order/order-builder tables with card-first layouts while keeping desktop tables for wide screens.
-- Convert long product, order-builder, and public delivery flows to stepper/card patterns without moving business logic into UI components. Product create/edit, owner order builder, and public delivery are completed.
-- Use `src/shared/ui/multi-step-form.tsx` for future long-form conversions so RHF/Zod validation, focus behavior, progress, and Back/Next controls stay consistent. Product create/edit and public delivery now use this foundation; owner order builder uses the shared stepper UI primitives.
-- Improve owner order details by converting mobile product/audit tables into cards or timelines and reducing the single-page visual weight.
-- Raise touch targets to at least 44 px for mobile controls and action buttons.
-- Keep all new user-facing copy Ukrainian, keep roles limited to `owner` and `user`, keep product images as external URLs only, and avoid database schema changes unless a later UI requirement proves one is necessary.
-- Add focused UI and Playwright coverage for the changed pages using the documented viewport matrix. Product create/edit, owner order builder, and public delivery now have focused unit and Playwright mobile regressions.
+- Owner dashboard shell uses compact mobile/tablet navigation and preserves the desktop sidebar only for wide layouts.
+- Product and order lists use card-first mobile layouts with readable compact desktop tables for wide screens.
+- Product create/edit, owner order builder, and public delivery/payment flows use stepper/card patterns without moving business logic into UI components.
+- `src/shared/ui/multi-step-form.tsx` provides the shared RHF/Zod stepper, focus, validation, progress, and Back/Next primitives used by the long forms.
+- Owner order details use mobile-friendly sections and a balanced desktop primary/sidebar layout.
+- Action buttons use stable 44 px touch targets where practical, full-width mobile placement where appropriate, and consistent desktop alignment.
+- All new user-facing copy remains Ukrainian, roles remain limited to `owner` and `user`, product images remain external URLs only, and no object storage was added.
+- Focused unit tests, full Playwright E2E, MCP inspection, and the final viewport matrix cover the changed pages.
 
 ## Commit message format
 
@@ -1113,7 +1134,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Open questions
 
-- Production MonoPay credentials, public key, and final callback domain.
+- Historical MonoPay credentials, public key, and final callback domain are needed only if historical MonoPay retry/webhook verification is intentionally exercised; they are not required for the active customer payment flow.
 - Nova Post stage directory lookup variables are present on the production `web` service, but live shipment values must still be supplied to the production `worker` before live shipment smoke tests: API key and URL, sender division id, sender name/phone, optional company fields, payer settings, and parcel dimension/weight defaults. Missing required sender config now blocks shipment creation before a live provider call.
 - Production shipping label creation remains disabled by default through `SHIPPING_LABEL_CREATION_MODE=disabled`; switch to `live` only after Nova Post sender, payer, and parcel settings are configured securely.
 - Future Ukrposhta reintroduction requires practical test/production API access, sender/client/address workflow confirmation, shipment/package details, payer settings, label decisions, and enabling the carrier through the central registry.
@@ -1123,8 +1144,8 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
-- Owner dashboard mobile responsiveness is partially implemented. The shared multi-step foundation now exists and product create/edit, owner order builder, and public delivery forms use stepper/card patterns, but product/order tables still depend on horizontal scroll on small screens and long owner order details surfaces still need to be converted to cards or timelines.
-- Real Monobank production credentials are not yet configured in Railway, so live payment smoke tests remain manual. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
+- Authenticated production smoke testing requires temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` values. They were not present during Prompt 09 final QA, so only unauthenticated production health was verified live on 2026-05-08.
+- Real Monobank production credentials are not required for active customer payments and are not currently needed for production startup. They remain necessary only for historical MonoPay retry/webhook verification. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.

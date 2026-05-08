@@ -26,7 +26,7 @@ Production `web` requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH
 
 Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`. It does not require login or setup secrets.
 
-Nova Post secrets should be set only for the live flows that use them. MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option. Keep Railway values in secure service variables or variable references.
+Nova Post secrets should be set only for the live flows that use them. MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option or production startup. Keep Railway values in secure service variables or variable references.
 
 ## First Owner Setup
 
@@ -52,6 +52,8 @@ This is a manual transfer flow, not card processing. The app stores owner-provid
 
 Customers choose `Оплата картою онлайн`, copy one of the active owner requisites, and send the receipt to the seller in Instagram chat.
 
+The active public customer payment UI should show `Оплата картою онлайн` and the instruction `Після оплати надішліть квитанцію продавцю в Instagram чат`. It should not show MonoPay or Monobank copy unless a historical MonoPay retry/status path is deliberately opened for an old order.
+
 If no active requisites exist, the owner dashboard shows a warning and the public customer form offers only `Післяплата`.
 
 When the seller receives and verifies the transfer, the owner order details page provides `Позначити оплату отриманою`. This marks the manual-card payment paid and only then schedules shipment preparation.
@@ -73,6 +75,14 @@ pnpm test:coverage
 pnpm test:e2e
 pnpm build
 ```
+
+For local Playwright runs, use an isolated port if another app is already bound to port 3000:
+
+```bash
+PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e
+```
+
+The responsive QA coverage includes the critical owner and public routes at phone, tablet, and desktop viewports, including 390x844, 768x1024, and 1440x900.
 
 Authenticated production smoke testing is opt-in and uses only temporary local shell variables:
 
