@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Dase | Підтвердження замовлень",
   description: "Вебзастосунок для підтвердження ювелірних замовлень.",
+  icons: {
+    icon: [{ type: "image/svg+xml", url: "/icon.svg" }],
+  },
 };
 
 export default function RootLayout({

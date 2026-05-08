@@ -23,6 +23,7 @@ Playwright MCP was used against the local Next.js dev server with E2E-safe seede
 - 390x844
 - 430x932
 - 768x1024
+- 1024x768
 - 1440x900
 
 Key findings:
@@ -334,6 +335,31 @@ Current state after 2026-05-08 public delivery stepper refactor:
 Remaining plan:
 - Use Playwright screenshots at 360 px and 390 px after related public-page spacing changes to keep result cards and review summaries easy to scan with longer customer-entered values.
 
+## Final Implemented QA Patterns
+
+Final QA date: 2026-05-08.
+
+Implemented test foundation:
+- `tests/e2e/helpers.ts` is the shared E2E support file for responsive QA. Reuse `expectNoHorizontalOverflow(page, context)` instead of adding inline `scrollWidth` checks.
+- The helper checks document/body scroll width against the viewport and reports the first overflowing elements if a page regresses.
+- The final viewport matrix is exported as `responsiveViewportMatrix`: 360x740, 390x844, 430x932, 768x1024, 1024x768, and 1440x900.
+- Shared owner-session, product creation, public-link creation, and confirmed-order helpers keep responsive specs focused on UI behavior.
+
+Final Playwright coverage:
+- `tests/e2e/final-responsive-qa.spec.ts` runs every critical route through the final viewport matrix: `/`, `/login`, `/setup`, `/dashboard`, `/dashboard/products`, `/dashboard/products/new`, `/dashboard/products/[productId]/edit`, `/dashboard/orders/new`, `/dashboard/orders`, `/dashboard/orders/[orderId]`, `/o/[token]`, and `/o/[token]/delivery`.
+- The responsive matrix uses representative E2E-safe owner data, a product edit URL, an unconfirmed public order URL, and a confirmed owner order details URL.
+- Keyboard checks cover the Ukrainian skip link, mobile dashboard nav, product stepper validation/focus, owner order-builder checkbox and quantity controls, filter-panel expansion, product action focus, and desktop dashboard navigation.
+- Delivery state checks cover Ukrainian loading, empty, and success states through mocked carrier route responses while preserving route-handler use in normal flows.
+- Existing focused specs continue to cover mobile product creation, public delivery, owner order-builder, product/order mobile card views, owner order details sections, and desktop table readability.
+
+Final implemented behavior:
+- Critical pages must have no page-level horizontal overflow at 360 px.
+- Forms that are long on mobile use step-based UI state while retaining existing server actions and full-schema validation.
+- Owner product and order tables become cards below `lg`; desktop tables remain semantic and readable.
+- Dashboard phone/tablet navigation remains compact until `lg`; the persistent sidebar starts only on desktop widths.
+- Focus styles, `aria-current`, Ukrainian `aria-label` values, field labels, `aria-describedby`, and live regions must be preserved during future polish.
+- Loading, empty, error, and success copy remains Ukrainian and should be asserted when changed.
+
 ## Testing Checklist
 
 Before implementing each UI refactor slice:
@@ -349,7 +375,7 @@ Component and unit checks:
 - Do not weaken coverage thresholds.
 
 Playwright checks:
-- Use the viewport matrix: 360x740, 390x844, 430x932, 768x1024, 1440x900.
+- Use the viewport matrix: 360x740, 390x844, 430x932, 768x1024, 1024x768, 1440x900.
 - For each changed page, assert no page-level horizontal overflow.
 - Verify product cards, order cards, order-builder selection, mobile filters, and mobile navigation are usable by role/label queries.
 - Verify desktop tables still render on wide screens.

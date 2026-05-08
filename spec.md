@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -260,6 +260,17 @@ Dashboard filter, empty-state, and feedback polish update on 2026-05-08:
 - `/dashboard/orders/[orderId]` now has clearer Ukrainian empty states for no items, no tags, no status history, no audit events, and missing payment/shipment records.
 - Tag updates, manual status updates, MonoPay retry, and shipment retry now share live-region feedback for pending, successful, and failed action states where applicable.
 - Component tests cover mobile filter panel behavior, active summaries, clear filters, Ukrainian empty states, and action feedback messages. Playwright E2E now exercises the owner order filter panel and active-summary behavior after filtering.
+
+Final responsive QA update on 2026-05-08:
+- Playwright MCP inspected the critical product, order-builder, public review, customer delivery, order list, and order-details flows against the local E2E-safe dev server. No page-level horizontal overflow was found in that walkthrough across 390x844 plus the final matrix checks for 360x740, 430x932, 768x1024, 1024x768, and 1440x900 on representative owner and public pages.
+- Added shared Playwright E2E helpers in `tests/e2e/helpers.ts`, including `expectNoHorizontalOverflow(...)` with page-level overflow diagnostics and the final viewport matrix.
+- Added `tests/e2e/final-responsive-qa.spec.ts` to cover all critical routes requested for final QA: `/`, `/login`, `/setup`, `/dashboard`, `/dashboard/products`, `/dashboard/products/new`, `/dashboard/products/[productId]/edit`, `/dashboard/orders/new`, `/dashboard/orders`, `/dashboard/orders/[orderId]`, `/o/[token]`, and `/o/[token]/delivery`.
+- The final Playwright QA coverage verifies mobile public order review, mobile customer delivery steps, mobile product creation steps, mobile owner order-builder steps, mobile product/order list card views, mobile order details sections, and desktop dashboard navigation.
+- Keyboard basics are covered for the global Ukrainian skip link, mobile dashboard nav, product/order stepper controls, order filters, and product action links. Focusable controls keep visible focus styles and accessible Ukrainian labels.
+- Delivery loading, empty, and success states are covered with mocked carrier responses: `Пошук міст…`, `Місто не знайдено`, `Пошук відділень…`, and the existing successful cash-on-delivery confirmation message.
+- Added a small local SVG app icon and metadata link so browser QA no longer produces a missing favicon request during normal page loads.
+- No business logic, database schema, role model, product image strategy, payment behavior, shipping behavior, or object storage behavior changed in the final responsive QA milestone.
+- Focused verification passed with `pnpm test:e2e tests/e2e/final-responsive-qa.spec.ts`.
 
 Ukrposhta active-MVP removal update on 2026-05-07:
 - Added a central shipping carrier registry at `src/modules/shipping/application/shipping-carrier-registry.ts`.
@@ -719,6 +730,14 @@ Latest local quality status on 2026-05-08 after the public delivery stepper adop
 - `pnpm test:e2e` passed with Chromium: 14 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
 - Playwright MCP inspected `/o/[token]/delivery` at 360x740 and 390x844 with E2E-safe public order data. The only console error was the existing missing `/favicon.ico` dev request.
+
+Latest local quality status on 2026-05-08 after final responsive QA:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 90.01% statements, 81.69% branches, 91.1% functions, and 90.01% lines across the configured coverage scope.
+- `pnpm test:e2e tests/e2e/final-responsive-qa.spec.ts` passed with Chromium: 3 tests covering the final viewport matrix, keyboard navigation, and delivery loading/empty/success states.
+- `pnpm test:e2e` passed with Chromium: 19 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
 
 ## Commands
 

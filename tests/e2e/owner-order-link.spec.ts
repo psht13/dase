@@ -1,6 +1,9 @@
-import { expect, type Page, test } from "@playwright/test";
-
-const cookieUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+import { expect, test } from "@playwright/test";
+import {
+  createProduct,
+  expectNoHorizontalOverflow,
+  seedSession,
+} from "./helpers";
 
 test("owner creates an order link and the public page shows selected products", async ({
   page,
@@ -80,61 +83,3 @@ test("owner creates an order link and the public page shows selected products", 
     page.getByRole("link", { name: "Перейти до доставки й оплати" }),
   ).toBeVisible();
 });
-
-async function expectNoHorizontalOverflow(page: Page) {
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
-      ),
-    )
-    .toBe(true);
-}
-
-async function createProduct(
-  page: Page,
-  product: {
-    description: string;
-    imageUrl: string;
-    name: string;
-    price: string;
-    sku: string;
-    stock: string;
-  },
-) {
-  await page.goto("/dashboard/products/new");
-  await page.getByLabel("Назва товару").fill(product.name);
-  await page.getByLabel("Артикул").fill(product.sku);
-  await page.getByLabel("Опис").fill(product.description);
-  await page.getByRole("button", { name: "Далі" }).click();
-  await page.getByLabel("Ціна, грн").fill(product.price);
-  await page.getByRole("textbox", { exact: true, name: "Залишок" }).fill(product.stock);
-  await page.getByRole("button", { name: "Далі" }).click();
-  await page.getByLabel("URL зображення").fill(product.imageUrl);
-  await page.getByRole("button", { name: "Далі" }).click();
-  await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
-  await page.getByRole("button", { name: "Створити товар" }).click();
-}
-
-async function seedSession(page: Page, role: "owner" | "user") {
-  await page.context().addCookies([
-    {
-      name: "dase_e2e_role",
-      url: cookieUrl,
-      value: role,
-    },
-    {
-      name: "dase_e2e_user_id",
-      url: cookieUrl,
-      value:
-        role === "owner"
-          ? "00000000-0000-4000-8000-000000000001"
-          : "00000000-0000-4000-8000-000000000002",
-    },
-    {
-      name: "dase_e2e_email",
-      url: cookieUrl,
-      value: `${role}@example.com`,
-    },
-  ]);
-}
