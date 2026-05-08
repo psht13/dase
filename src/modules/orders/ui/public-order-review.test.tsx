@@ -83,7 +83,7 @@ describe("PublicOrderReview", () => {
           paymentProvider: "MANUAL_CARD_TRANSFER",
           paymentRequisites: [
             {
-              bankName: "monobank",
+              bankName: "ПриватБанк",
               displayValue: "4441 1111 2222 3333",
               id: "requisite-1",
               label: "Основна картка",
@@ -93,7 +93,7 @@ describe("PublicOrderReview", () => {
           ],
           paymentStatus: "PENDING",
           status: "PAYMENT_PENDING",
-          statusLabel: "Очікує оплату",
+          statusLabel: "Очікуємо оплату",
           statusMessage: "Очікуємо оплату картою.",
         })}
       />,

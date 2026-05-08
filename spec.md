@@ -285,7 +285,7 @@ Current active behavior:
 - Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `MONOBANK`, `MANUAL_CARD_TRANSFER`, and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` remain Monobank-specific but nullable.
 - MonoPay is no longer active in the customer delivery/payment form. Monobank provider, webhook, and retry code remains for historical records and explicit retry paths through `MONOBANK_*` variables and `/api/webhooks/monobank`.
 - Owner order search is URL-backed through `/dashboard/orders?search=...`. `matchesSearch(...)` matches customer phone digits, optional Instagram nickname, and shipment tracking numbers. Owner list/detail headings display `shortOrderId(order.id)`, but search does not match full UUIDs or short IDs yet.
-- Shipping enqueueing treats cash on delivery as shipment-ready immediately after confirmation, while MonoPay orders wait for a paid webhook before shipment creation. Manual card transfer must not accidentally enqueue shipment before the owner confirms payment.
+- Shipping enqueueing treats cash on delivery as shipment-ready immediately after confirmation, historical MonoPay orders wait for a paid webhook, and manual card transfer orders wait for the owner to mark the transfer received.
 - Owner dashboard settings exist under `/dashboard/settings/payment` for public payment card/requisite records.
 
 Completed functional changes from this audit:
@@ -330,14 +330,16 @@ Manual card payment requisite settings update on 2026-05-08:
 - Added active customer payment method `Оплата картою онлайн` backed by `MANUAL_CARD_TRANSFER`. This is a manual transfer flow only; the app does not collect customer card number, expiry, CVV, or process cards.
 - The public payment step and post-confirmation status page show the instruction `Переказ можна зробити на одну з карток нижче. Після оплати надішліть квитанцію продавцю в Instagram чат.` and only active owner requisites.
 - Manual card transfer confirmations move the order to `PAYMENT_PENDING`, keep payment status `PENDING`, and do not enqueue shipment creation before payment is handled by the owner workflow.
+- Owner dashboard shows a Ukrainian warning when no active payment requisites exist, and the public delivery form falls back to `Післяплата` without showing the online-card option in that state.
+- Owner order details expose `Позначити оплату отриманою` for pending `MANUAL_CARD_TRANSFER` payments. The action marks the payment `PAID`, transitions the order through `PAID`, appends `MANUAL_PAYMENT_MARKED_PAID`, and only then asks the shipment enqueue use case to prepare shipment creation.
 - MonoPay/Monobank remains implemented for historical records, webhook handling, and retry support, but it is no longer an active option in the customer delivery/payment form.
 - Focused tests cover validation, repository save/list/update/toggle, owner access, user denial through E2E, public active-only read model behavior, Ukrainian UI labels, owner requisite creation, and public manual-card display.
-- Verification for this milestone passed with `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e`, and `pnpm build`. The E2E run used port 3100 because an unrelated local app was already listening on port 3000; the isolated run passed 19 tests with the production smoke skipped.
+- Verification for this milestone passed with `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e`, and `pnpm build`. A plain `pnpm test:e2e` first reused an unrelated local Next app already answering on port 3000 (`/api/health` returned `401 no_refresh_token`), so the clean Dase run used isolated port 3100 and passed 19 tests with the production smoke skipped.
 
 Risks:
 - PostgreSQL enum migrations must be forward-compatible and tested against Railway PostgreSQL before production promotion.
 - Removing MonoPay from the active customer flow while keeping historical Monobank webhooks/read models requires clear filtering so existing orders still render safely.
-- Manual card transfer introduces a payment-confirmation gap: shipment creation should wait for an explicit owner payment action or a clearly allowed manual status transition that also updates payment state.
+- Manual card transfer now depends on owner confirmation before shipment enqueueing. A future receipt-upload flow would need separate storage and moderation decisions; object storage remains out of scope.
 - Publicly showing an order number needs a product decision on whether the current UUID prefix is acceptable or whether a dedicated display number is required.
 - Owner-entered card/requisite data is buyer-visible financial information; avoid logging it unnecessarily and do not treat it like secret environment credentials.
 
@@ -526,7 +528,8 @@ For online card transfer:
 2. Customer chooses `Оплата картою онлайн`.
 3. Public UI shows only active owner requisites and the Instagram receipt instruction.
 4. App saves a pending `MANUAL_CARD_TRANSFER` payment and moves the order to `PAYMENT_PENDING`.
-5. App does not enqueue shipment creation until payment is handled by the owner workflow.
+5. Owner marks the transfer received from order details after checking the receipt.
+6. App marks the payment `PAID`, transitions through `PAID`, writes `MANUAL_PAYMENT_MARKED_PAID`, and then enqueues shipment creation when a shipment is present and eligible.
 
 For historical MonoPay:
 
@@ -1104,9 +1107,10 @@ After external production variables are configured:
 6. Sign in as an `owner` at `/login` and confirm `/dashboard` loads; confirm `/logout` ends the session and a `user` role cannot access dashboard routes.
 7. Create a product using external image URLs only, then create an order link and open the `/o/[token]` public page.
 8. Confirm an invalid, expired, or cancelled public token shows the Ukrainian unavailable state and does not reveal other order data.
-9. Complete a customer delivery confirmation with Nova Post lookup and shipment creation on a low-risk test order.
+9. Complete a customer delivery confirmation with Nova Post lookup and `Оплата картою онлайн`; confirm the public status page shows `Очікуємо оплату`, active requisites, and the Instagram receipt instruction.
 10. Confirm Ukrposhta is not shown in the public customer delivery form unless it is deliberately re-enabled later.
-11. Create a MonoPay invoice, complete payment, verify signed Monobank webhook processing, duplicate webhook idempotency, and stale event handling.
-12. Confirm `Повторити оплату` creates a new MonoPay invoice when a confirmed order is missing a provider invoice id or the previous payment failed.
-13. Confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
-14. Confirm owner order filters, tags, status updates, audit history, payment retry, and shipment retry work with Ukrainian labels in production.
+11. From owner order details, mark the manual card transfer received and confirm payment status becomes paid, `MANUAL_PAYMENT_MARKED_PAID` appears in audit history, and shipment preparation is queued only after this owner action.
+12. For historical MonoPay only, create a retry invoice, complete payment, verify signed Monobank webhook processing, duplicate webhook idempotency, and stale event handling.
+13. Confirm `Повторити оплату` creates a new MonoPay invoice when a historical confirmed order is missing a provider invoice id or the previous payment failed.
+14. Confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
+15. Confirm owner order filters, tags, status updates, audit history, payment retry, and shipment retry work with Ukrainian labels in production.

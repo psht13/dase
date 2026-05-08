@@ -73,6 +73,35 @@ describe("shipment worker use cases", () => {
     expect(context.shipmentJobQueue.createShipmentJobs).toHaveLength(0);
   });
 
+  it("enqueues shipment creation for paid manual card transfer orders", async () => {
+    const context = await createContext({
+      orderStatus: "PAID",
+      paymentProvider: "MANUAL_CARD_TRANSFER",
+      paymentStatus: "PAID",
+    });
+
+    await expect(
+      enqueueShipmentCreationForReadyOrderUseCase(
+        {
+          orderId: context.order.id,
+          requestedBy: "owner",
+        },
+        context,
+      ),
+    ).resolves.toMatchObject({
+      enqueued: true,
+      reason: "enqueued",
+      shipmentId: context.shipment.id,
+    });
+    expect(context.shipmentJobQueue.createShipmentJobs).toEqual([
+      expect.objectContaining({
+        orderId: context.order.id,
+        requestedBy: "owner",
+        shipmentId: context.shipment.id,
+      }),
+    ]);
+  });
+
   it("rejects manual retry enqueueing without a failed shipment", async () => {
     const context = await createContext({
       orderStatus: "SHIPMENT_PENDING",
@@ -902,7 +931,7 @@ type ContextInput = {
     | "PAID"
     | "SHIPMENT_CREATED"
     | "SHIPMENT_PENDING";
-  paymentProvider?: "CASH_ON_DELIVERY" | "MONOBANK";
+  paymentProvider?: "CASH_ON_DELIVERY" | "MANUAL_CARD_TRANSFER" | "MONOBANK";
   paymentStatus?: "PAID" | "PENDING";
   shipmentCarrier?: "NOVA_POSHTA" | "UKRPOSHTA";
   shipmentStatus?: "CREATED" | "DELIVERED" | "FAILED" | "PENDING";

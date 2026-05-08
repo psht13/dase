@@ -179,8 +179,11 @@ function isOrderReadyForShipment(
     return true;
   }
 
-  const hasPaidMonoPay = payments.some(
-    (payment) => payment.provider === "MONOBANK" && payment.status === "PAID",
+  const hasPaidOnlinePayment = payments.some(
+    (payment) =>
+      (payment.provider === "MONOBANK" ||
+        payment.provider === "MANUAL_CARD_TRANSFER") &&
+      payment.status === "PAID",
   );
   const hasCashOnDelivery = payments.some(
     (payment) =>
@@ -188,7 +191,7 @@ function isOrderReadyForShipment(
   );
 
   return (
-    (orderStatus === "PAID" && hasPaidMonoPay) ||
+    (orderStatus === "PAID" && hasPaidOnlinePayment) ||
     (orderStatus === "CONFIRMED_BY_CUSTOMER" && hasCashOnDelivery)
   );
 }

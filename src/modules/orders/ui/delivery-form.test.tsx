@@ -10,7 +10,7 @@ const router = vi.hoisted(() => ({
 
 const activePaymentRequisites = [
   {
-    bankName: "monobank",
+    bankName: "ПриватБанк",
     displayValue: "4441 1111 2222 3333",
     id: "requisite-1",
     label: "Основна картка",
@@ -142,6 +142,7 @@ describe("DeliveryForm", () => {
     expect(
       screen.getByRole("radio", { name: /Оплата картою онлайн/ }),
     ).toBeChecked();
+    expect(screen.queryByText(/MonoPay|Monobank/i)).not.toBeInTheDocument();
     expect(
       screen.getByText(/Переказ можна зробити на одну з карток нижче/),
     ).toBeVisible();

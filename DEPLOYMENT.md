@@ -141,6 +141,8 @@ Do not call live external APIs in CI. After production variables are configured,
 - Confirm `/login` accepts the owner credentials, `/logout` ends the session, and a `user` role cannot access `/dashboard`.
 - With `SHIPPING_LABEL_CREATION_MODE=disabled`, confirm the owner order details page shows the Ukrainian disabled-shipping notice and no live Nova Post shipment is created.
 - Owner payment settings allow creating active requisites under `/dashboard/settings/payment`, and the public customer payment step shows only active requisites for `Оплата картою онлайн`.
+- If no active requisites exist, confirm the owner dashboard warning appears and the public customer payment step does not offer online card payment.
+- For an online-card order, confirm owner order details show `Позначити оплату отриманою`; after using it, payment status becomes paid and shipment preparation is queued only after that action.
 - Historical MonoPay invoice creation redirects to the expected Monobank payment URL when the retry path is used.
 - Historical MonoPay retry shows `Повторити оплату` when a confirmed order is missing a provider invoice or when payment failed.
 - Monobank webhook signature verification accepts a signed provider callback.

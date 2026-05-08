@@ -19,7 +19,7 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   IN_TRANSIT: "У дорозі",
   PAID: "Оплачено",
   PAYMENT_FAILED: "Оплата не вдалася",
-  PAYMENT_PENDING: "Очікує оплату",
+  PAYMENT_PENDING: "Очікуємо оплату",
   RETURNED: "Повернено",
   RETURN_REQUESTED: "Запитано повернення",
   SENT_TO_CUSTOMER: "Надіслано клієнту",
@@ -52,7 +52,7 @@ export const paymentStatusLabels: Record<PaymentStatus, string> = {
   CANCELLED: "Скасовано",
   FAILED: "Помилка оплати",
   PAID: "Оплачено",
-  PENDING: "Очікує оплату",
+  PENDING: "Очікує підтвердження",
   REFUNDED: "Повернено кошти",
 };
 
@@ -69,6 +69,7 @@ const auditEventLabels: Record<string, string> = {
   ORDER_STATUS_UPDATED: "Статус змінено вручну",
   ORDER_TAG_ASSIGNED: "Тег додано до замовлення",
   ORDER_TAG_REMOVED: "Тег знято із замовлення",
+  MANUAL_PAYMENT_MARKED_PAID: "Оплату картою підтверджено",
   PAYMENT_PAID: "Оплату отримано",
   PAYMENT_UPDATED: "Оплату оновлено",
   SHIPMENT_CREATED: "Відправлення створено",

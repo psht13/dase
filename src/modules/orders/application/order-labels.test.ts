@@ -2,6 +2,7 @@ import {
   getAuditEventLabel,
   orderStatusLabels,
   paymentProviderLabels,
+  paymentStatusLabels,
   shipmentCarrierLabels,
 } from "@/modules/orders/application/order-labels";
 
@@ -15,8 +16,12 @@ describe("owner order Ukrainian labels", () => {
     expect(paymentProviderLabels.MANUAL_CARD_TRANSFER).toBe(
       "Оплата картою онлайн",
     );
+    expect(paymentStatusLabels.PENDING).toBe("Очікує підтвердження");
     expect(getAuditEventLabel("ORDER_STATUS_UPDATED")).toBe(
       "Статус змінено вручну",
+    );
+    expect(getAuditEventLabel("MANUAL_PAYMENT_MARKED_PAID")).toBe(
+      "Оплату картою підтверджено",
     );
   });
 });

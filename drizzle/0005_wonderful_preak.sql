@@ -1,4 +1,4 @@
-ALTER TYPE "public"."payment_provider" ADD VALUE 'MANUAL_CARD_TRANSFER' BEFORE 'CASH_ON_DELIVERY';--> statement-breakpoint
+ALTER TYPE "public"."payment_provider" ADD VALUE IF NOT EXISTS 'MANUAL_CARD_TRANSFER';--> statement-breakpoint
 CREATE TABLE "payment_requisites" (
 	"bank_name" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

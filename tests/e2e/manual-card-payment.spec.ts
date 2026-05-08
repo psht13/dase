@@ -13,13 +13,15 @@ test("owner creates payment requisites and customer sees online card payment", a
   const stamp = Date.now();
   const productName = `Підвіска оплата ${stamp}`;
   const paymentValue = "4441 1111 2222 3333";
+  const customerPhone = `+38067${String(stamp).slice(-7).padStart(7, "0")}`;
+  const customerInstagram = `@olena.payment.${stamp}`;
 
   await page.goto("/dashboard/settings/payment");
   await expect(
     page.getByRole("heading", { name: "Реквізити для оплати" }),
   ).toBeVisible();
   await page.getByLabel("Назва").fill("Основна картка");
-  await page.getByLabel("Банк").fill("monobank");
+  await page.getByLabel("Банк").fill("ПриватБанк");
   await page.getByLabel("Отримувач").fill("Олена Петренко");
   await page
     .getByLabel("Номер картки, IBAN або реквізити")
@@ -46,8 +48,8 @@ test("owner creates payment requisites and customer sees online card payment", a
     .getByRole("link", { name: "Перейти до доставки й оплати" })
     .click();
   await page.getByLabel("Повне ім’я").fill("Олена Петренко");
-  await page.getByLabel("Телефон").fill("+380671234567");
-  await page.getByLabel("Instagram нікнейм").fill("@olena.payment");
+  await page.getByLabel("Телефон").fill(customerPhone);
+  await page.getByLabel("Instagram нікнейм").fill(customerInstagram);
   await page.getByRole("button", { name: "Далі" }).click();
   await page.getByLabel("Місто або населений пункт").fill("Київ");
   await page.getByRole("button", { name: /Київ.*Київська область/ }).click();
@@ -73,7 +75,25 @@ test("owner creates payment requisites and customer sees online card payment", a
   await expect(
     page.getByRole("heading", { name: /Замовлення #/ }),
   ).toBeVisible();
+  await expect(page.getByText("Очікуємо оплату").first()).toBeVisible();
   await expect(page.getByText("Очікуємо оплату картою.")).toBeVisible();
   await expect(page.getByText(paymentValue)).toBeVisible();
   await expectNoHorizontalOverflow(page);
+
+  await page.goto(`/dashboard/orders?search=${encodeURIComponent(customerPhone)}`);
+  await expect(
+    page.getByTestId("owner-orders-mobile-card").getByText(customerPhone),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Відкрити" }).first().click();
+  await expect(page.getByRole("heading", { name: /Оплата/ })).toBeVisible();
+  await expect(page.getByText("Оплата картою онлайн")).toBeVisible();
+  await expect(page.getByText("Очікує підтвердження")).toBeVisible();
+  await expect(page.getByText(customerInstagram)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Позначити оплату отриманою" })
+    .click();
+  await expect(page.getByText("Оплачено").first()).toBeVisible();
+  await expect(
+    page.getByText("Оплату картою підтверджено", { exact: true }),
+  ).toBeVisible();
 });

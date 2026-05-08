@@ -18,6 +18,14 @@ import {
 import { getAuditEventRepository } from "@/modules/orders/infrastructure/audit-event-repository-factory";
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { getOrderTagRepository } from "@/modules/orders/infrastructure/order-tag-repository-factory";
+import {
+  ManualCardPaymentCannotBeMarkedPaidError,
+  ManualCardPaymentNotFoundError,
+  markManualCardPaymentPaidUseCase,
+} from "@/modules/payments/application/mark-manual-card-payment-paid";
+import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
+import { getShipmentJobQueue } from "@/modules/shipping/infrastructure/shipment-job-queue-factory";
+import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 
 export type OwnerOrderActionResult = {
@@ -153,6 +161,51 @@ export async function updateOwnerOrderStatusAction(
 
   return {
     message: "Статус замовлення оновлено",
+    ok: true,
+  };
+}
+
+export async function markManualCardPaymentPaidAction(
+  orderId: string,
+): Promise<OwnerOrderActionResult> {
+  const owner = await requireOwnerSession();
+
+  try {
+    await markManualCardPaymentPaidUseCase(
+      {
+        orderId,
+        ownerId: owner.id,
+      },
+      {
+        auditEventRepository: getAuditEventRepository(),
+        orderRepository: getOrderRepository(),
+        paymentRepository: getPaymentRepository(),
+        shipmentJobQueue: getShipmentJobQueue(),
+        shipmentRepository: getShipmentRepository(),
+      },
+    );
+  } catch (error) {
+    if (error instanceof ManualCardPaymentNotFoundError) {
+      return {
+        message: "Оплату для цього замовлення не знайдено",
+        ok: false,
+      };
+    }
+
+    if (error instanceof ManualCardPaymentCannotBeMarkedPaidError) {
+      return {
+        message: "Цю оплату не можна позначити отриманою",
+        ok: false,
+      };
+    }
+
+    throw error;
+  }
+
+  revalidateOrderPages(orderId);
+
+  return {
+    message: "Оплату позначено отриманою",
     ok: true,
   };
 }

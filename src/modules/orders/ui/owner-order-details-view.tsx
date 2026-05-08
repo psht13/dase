@@ -17,6 +17,7 @@ import { isOrderStatus } from "@/modules/orders/domain/status";
 import {
   assignOrderTagAction,
   createAndAssignOrderTagAction,
+  markManualCardPaymentPaidAction,
   removeOrderTagAction,
   updateOwnerOrderStatusAction,
 } from "@/modules/orders/ui/owner-order-actions";
@@ -25,6 +26,7 @@ import {
   formatMoneyMinor,
   shortOrderId,
 } from "@/modules/orders/ui/owner-order-formatters";
+import { OwnerOrderManualPaymentForm } from "@/modules/orders/ui/owner-order-manual-payment-form";
 import { OwnerOrderRetryShipmentForm } from "@/modules/orders/ui/owner-order-retry-shipment-form";
 import { OwnerOrderStatusForm } from "@/modules/orders/ui/owner-order-status-form";
 import { OwnerOrderTagPanel } from "@/modules/orders/ui/owner-order-tag-panel";
@@ -54,6 +56,16 @@ export function OwnerOrderDetailsView({
   const canRetryMonobankPayment = order.payments.some((payment) =>
     canCreateMonobankInvoiceForPayment(order.status, payment),
   );
+  const hasHistoricalMonobankPayment = order.payments.some(
+    (payment) => payment.provider === "MONOBANK",
+  );
+  const canMarkManualCardPaymentPaid =
+    order.status === "PAYMENT_PENDING" &&
+    order.payments.some(
+      (payment) =>
+        payment.provider === "MANUAL_CARD_TRANSFER" &&
+        payment.status === "PENDING",
+    );
   const isShippingLabelCreationDisabled =
     shippingLabelCreationMode === "disabled";
   const canRetryShipment =
@@ -199,10 +211,12 @@ export function OwnerOrderDetailsView({
                           payment.currency,
                         )}
                       />
-                      <InfoRow
-                        label="Ідентифікатор рахунку"
-                        value={payment.providerInvoiceId}
-                      />
+                      {payment.provider === "MONOBANK" ? (
+                        <InfoRow
+                          label="Ідентифікатор рахунку"
+                          value={payment.providerInvoiceId}
+                        />
+                      ) : null}
                     </dl>
                   </article>
                 ))}
@@ -211,26 +225,34 @@ export function OwnerOrderDetailsView({
               <EmptyInlineState message="Оплата ще не створена. Після підтвердження клієнтом тут буде спосіб оплати та статус рахунку." />
             )}
 
-            <div className="grid min-w-0 gap-3">
-              <div>
-                <h3 className="text-base font-semibold">
-                  Повтор оплати MonoPay
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Повторне посилання доступне, якщо рахунок MonoPay не створився
-                  або попередня оплата завершилась помилкою.
-                </p>
+            {canMarkManualCardPaymentPaid ? (
+              <OwnerOrderManualPaymentForm
+                action={markManualCardPaymentPaidAction.bind(null, order.id)}
+              />
+            ) : null}
+
+            {hasHistoricalMonobankPayment ? (
+              <div className="grid min-w-0 gap-3">
+                <div>
+                  <h3 className="text-base font-semibold">
+                    Повтор оплати MonoPay
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Повторне посилання доступне, якщо рахунок MonoPay не
+                    створився або попередня оплата завершилась помилкою.
+                  </p>
+                </div>
+                {canRetryMonobankPayment ? (
+                  <PaymentRetryForm
+                    action={retryOwnerMonobankPaymentAction.bind(null, order.id)}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Повтор оплати зараз недоступний.
+                  </p>
+                )}
               </div>
-              {canRetryMonobankPayment ? (
-                <PaymentRetryForm
-                  action={retryOwnerMonobankPaymentAction.bind(null, order.id)}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Повтор оплати зараз недоступний.
-                </p>
-              )}
-            </div>
+            ) : null}
           </DetailSection>
 
           <DetailSection testId="tags" title="Теги">

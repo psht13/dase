@@ -62,6 +62,13 @@ export class PublicOrderCannotBeConfirmedError extends Error {
   }
 }
 
+export class PublicOrderUnsupportedPaymentMethodError extends Error {
+  constructor() {
+    super("Public order payment method is not active");
+    this.name = "PublicOrderUnsupportedPaymentMethodError";
+  }
+}
+
 export async function confirmPublicOrderUseCase(
   input: ConfirmPublicOrderInput,
   dependencies: ConfirmPublicOrderDependencies,
@@ -108,6 +115,10 @@ async function confirmPublicOrderWithoutUnitOfWork(
 
   if (order.status !== "SENT_TO_CUSTOMER") {
     throw new PublicOrderCannotBeConfirmedError(order);
+  }
+
+  if (!isActiveCustomerPaymentMethod(input.paymentMethod)) {
+    throw new PublicOrderUnsupportedPaymentMethodError();
   }
 
   assertOrderStatusTransition(order.status, "CONFIRMED_BY_CUSTOMER");
@@ -213,6 +224,15 @@ async function confirmPublicOrderWithoutUnitOfWork(
         ? "PAYMENT_PENDING"
         : "CONFIRMED_BY_CUSTOMER",
   };
+}
+
+function isActiveCustomerPaymentMethod(
+  paymentMethod: PaymentProviderCode,
+): boolean {
+  return (
+    paymentMethod === "MANUAL_CARD_TRANSFER" ||
+    paymentMethod === "CASH_ON_DELIVERY"
+  );
 }
 
 function formatAddressText(input: ConfirmPublicOrderInput): string {

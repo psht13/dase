@@ -2,6 +2,7 @@ import {
   confirmPublicOrderUseCase,
   PublicOrderCannotBeConfirmedError,
   PublicOrderConfirmationUnavailableError,
+  PublicOrderUnsupportedPaymentMethodError,
 } from "@/modules/orders/application/confirm-public-order";
 import type { AuditEventRepository } from "@/modules/orders/application/audit-event-repository";
 import type { CustomerRepository } from "@/modules/orders/application/customer-repository";
@@ -158,6 +159,26 @@ describe("confirmPublicOrderUseCase", () => {
         }),
       }),
     );
+  });
+
+  it("rejects Monobank as an active customer payment method", async () => {
+    const dependencies = createDependencies(createOrder());
+
+    await expect(
+      confirmPublicOrderUseCase(
+        createInput({ paymentMethod: "MONOBANK" as never }),
+        {
+          ...dependencies,
+          now: () => now,
+        },
+      ),
+    ).rejects.toBeInstanceOf(PublicOrderUnsupportedPaymentMethodError);
+
+    expect(dependencies.customerRepository.save).not.toHaveBeenCalled();
+    expect(dependencies.paymentRepository.save).not.toHaveBeenCalled();
+    expect(
+      dependencies.shipmentJobQueue.enqueueCreateShipment,
+    ).not.toHaveBeenCalled();
   });
 
 

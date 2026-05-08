@@ -104,7 +104,7 @@ describe("lookupPublicOrderUseCase", () => {
         displayNumber: "#55e143f7",
         state: "status",
         status: "PAYMENT_PENDING",
-        statusLabel: "Очікує оплату",
+        statusLabel: "Очікуємо оплату",
         statusMessage: "Очікуємо оплату картою.",
       },
     });

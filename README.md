@@ -52,6 +52,10 @@ This is a manual transfer flow, not card processing. The app stores owner-provid
 
 Customers choose `Оплата картою онлайн`, copy one of the active owner requisites, and send the receipt to the seller in Instagram chat.
 
+If no active requisites exist, the owner dashboard shows a warning and the public customer form offers only `Післяплата`.
+
+When the seller receives and verifies the transfer, the owner order details page provides `Позначити оплату отриманою`. This marks the manual-card payment paid and only then schedules shipment preparation.
+
 ## Shipping Demo Modes
 
 Use `SHIPPING_LABEL_CREATION_MODE=disabled` for demos and staging when Nova Post sender settings are not complete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import type { OwnerOrderDetails } from "@/modules/orders/application/owner-order-read-model";
 import {
   createAndAssignOrderTagAction,
+  markManualCardPaymentPaidAction,
   updateOwnerOrderStatusAction,
 } from "@/modules/orders/ui/owner-order-actions";
 import { OwnerOrderDetailsView } from "@/modules/orders/ui/owner-order-details-view";
@@ -18,6 +19,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/modules/orders/ui/owner-order-actions", () => ({
   assignOrderTagAction: vi.fn(),
   createAndAssignOrderTagAction: vi.fn(),
+  markManualCardPaymentPaidAction: vi.fn(),
   removeOrderTagAction: vi.fn(),
   updateOwnerOrderStatusAction: vi.fn(),
 }));
@@ -65,8 +67,9 @@ describe("OwnerOrderDetailsView", () => {
     expect(screen.getAllByText("Нова пошта")[0]).toBeVisible();
     expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();
     expect(screen.getByText("Післяплата")).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Повтор оплати MonoPay" })).toBeVisible();
-    expect(screen.getByText("Повтор оплати зараз недоступний.")).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Повтор оплати MonoPay" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Теги" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Теги замовлення" })).toBeVisible();
     expect(screen.getByLabelText("Зняти тег Подарунок")).toBeVisible();
@@ -141,6 +144,52 @@ describe("OwnerOrderDetailsView", () => {
     expect(
       screen.getByRole("button", { name: "Повторити оплату" }),
     ).toBeVisible();
+  });
+
+  it("shows manual card payment confirmation action for pending online card payments", async () => {
+    const user = userEvent.setup();
+    vi.mocked(markManualCardPaymentPaidAction).mockResolvedValue({
+      message: "Оплату позначено отриманою",
+      ok: true,
+    });
+
+    render(
+      <OwnerOrderDetailsView
+        availableTags={[]}
+        order={createOrderDetails({
+          payments: [
+            {
+              amountMinor: 2_400_00,
+              createdAt: new Date("2026-04-30T10:00:00.000Z"),
+              currency: "UAH",
+              failureReason: null,
+              id: "payment-2",
+              orderId: "order-1",
+              paidAt: null,
+              provider: "MANUAL_CARD_TRANSFER",
+              providerInvoiceId: null,
+              providerModifiedAt: null,
+              status: "PENDING",
+              updatedAt: new Date("2026-04-30T10:00:00.000Z"),
+            },
+          ],
+          status: "PAYMENT_PENDING",
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Оплата картою онлайн")).toBeVisible();
+    expect(screen.getByText("Очікує підтвердження")).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Позначити оплату отриманою" }),
+    );
+
+    await waitFor(() => {
+      expect(markManualCardPaymentPaidAction).toHaveBeenCalledWith("order-1");
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Оплату позначено отриманою")).toBeVisible();
+    });
   });
 
   it("keeps the shipment retry action available for failed active-carrier shipments", () => {

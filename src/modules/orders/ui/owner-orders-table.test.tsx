@@ -60,6 +60,7 @@ describe("owner orders UI", () => {
       screen.queryByRole("option", { name: "Укрпошта (вимкнено)" }),
     ).toBeNull();
     expect(screen.getByLabelText("Спосіб оплати")).toBeVisible();
+    expect(screen.queryByRole("option", { name: "MonoPay" })).toBeNull();
     expect(screen.getByLabelText("Тег")).toBeVisible();
     expect(
       screen.getByPlaceholderText("Телефон, Instagram або ТТН"),
