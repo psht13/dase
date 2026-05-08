@@ -4,6 +4,7 @@ import { getOwnerSetupStateUseCase } from "@/modules/users/application/owner-set
 import { getUserRepository } from "@/modules/users/infrastructure/user-repository-factory";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
+import { PageHeader, PageShell } from "@/shared/ui/page-layout";
 
 const starterItems = [
   "Каталог товарів",
@@ -28,21 +29,18 @@ export default async function Home() {
       };
 
   return (
-    <main
-      className="min-h-screen bg-[hsl(var(--brand-shell))]"
-      id="main-content"
+    <PageShell
+      contentClassName="flex min-h-dvh flex-col justify-center gap-6 py-8 sm:py-10 lg:gap-8 lg:py-12"
+      maxWidth="2xl"
     >
-      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center gap-10 px-6 py-12">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
-          <div className="max-w-3xl space-y-6">
+        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+          <div className="grid max-w-3xl gap-5">
             <BrandMark subtitle="ювелірні замовлення" />
-            <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
-              Підтвердження замовлень для ювелірних продавців
-            </h1>
-            <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-              Основа застосунку готова для кабінету власника, публічних
-              посилань замовлень, оплати та доставки.
-            </p>
+            <PageHeader
+              description="Основа застосунку готова для кабінету власника, публічних посилань замовлень, оплати та доставки."
+              title="Підтвердження замовлень для ювелірних продавців"
+              titleClassName="text-3xl sm:text-5xl"
+            />
             <div>
               <Button asChild>
                 <Link href={cta.href}>{cta.label}</Link>
@@ -50,10 +48,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div
-            aria-hidden="true"
-            className="hidden justify-center lg:flex"
-          >
+          <div aria-hidden="true" className="hidden justify-center lg:flex">
             <div className="grid size-72 place-items-center rounded-full bg-[hsl(var(--brand-blush))] text-center font-display text-7xl font-semibold leading-[0.85] text-foreground shadow-[0_24px_70px_hsl(var(--brand-blush-deep))] ring-1 ring-border">
               <span>
                 DA
@@ -67,7 +62,7 @@ export default async function Home() {
         <div className="grid gap-3 sm:grid-cols-3">
           {starterItems.map((item) => (
             <div
-              className="flex min-h-24 items-center gap-3 rounded-md border border-border/80 bg-card/95 px-4 py-3 text-card-foreground shadow-sm"
+              className="flex min-h-20 min-w-0 items-center gap-3 rounded-md border border-border/80 bg-card/95 px-4 py-3 text-card-foreground shadow-sm sm:min-h-24"
               key={item}
             >
               <CheckCircle2
@@ -78,7 +73,6 @@ export default async function Home() {
             </div>
           ))}
         </div>
-      </section>
-    </main>
+    </PageShell>
   );
 }

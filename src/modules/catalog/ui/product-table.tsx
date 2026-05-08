@@ -2,6 +2,7 @@ import { Edit3, Power, PowerOff } from "lucide-react";
 import Link from "next/link";
 import type { ProductRecord } from "@/modules/catalog/application/product-repository";
 import { Button } from "@/shared/ui/button";
+import { formatMoneyMinor } from "@/shared/utils/format-money";
 
 type ProductTableProps = {
   products: ProductRecord[];
@@ -21,7 +22,7 @@ export function ProductTable({ products, toggleAction }: ProductTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className="w-full max-w-full overflow-x-auto rounded-md border">
       <table className="w-full min-w-[760px] border-collapse text-left text-sm">
         <thead className="bg-muted text-muted-foreground">
           <tr>
@@ -45,7 +46,7 @@ export function ProductTable({ products, toggleAction }: ProductTableProps) {
                 {product.sku}
               </td>
               <td className="px-4 py-3">
-                {formatPrice(product.priceMinor, product.currency)}
+                {formatMoneyMinor(product.priceMinor, product.currency)}
               </td>
               <td className="px-4 py-3">{product.stockQuantity}</td>
               <td className="px-4 py-3">
@@ -109,11 +110,4 @@ function ProductImage({ product }: { product: ProductRecord }) {
       width="56"
     />
   );
-}
-
-function formatPrice(priceMinor: number, currency: string): string {
-  return new Intl.NumberFormat("uk-UA", {
-    currency,
-    style: "currency",
-  }).format(priceMinor / 100);
 }

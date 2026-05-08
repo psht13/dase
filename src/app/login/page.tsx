@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LoginForm } from "@/modules/users/ui/login-form";
 import { BrandMark } from "@/shared/ui/brand-mark";
+import { PageHeader, PageShell } from "@/shared/ui/page-layout";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -15,20 +16,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const setupCreated = params?.setup === "created";
 
   return (
-    <main
-      className="min-h-screen bg-[hsl(var(--brand-shell))]"
-      id="main-content"
+    <PageShell
+      contentClassName="flex min-h-dvh flex-col justify-center gap-6"
+      maxWidth="sm"
     >
-      <section className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-5 py-10">
         <div className="grid gap-3">
           <BrandMark subtitle="вхід власника" />
-          <h1 className="font-display text-4xl font-semibold">
-            Вхід до кабінету
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Увійдіть як власник, щоб керувати товарами, замовленнями, оплатами
-            та відправленнями.
-          </p>
+          <PageHeader
+            description="Увійдіть як власник, щоб керувати товарами, замовленнями, оплатами та відправленнями."
+            title="Вхід до кабінету"
+          />
         </div>
 
         {setupCreated ? (
@@ -49,17 +46,19 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         ) : null}
 
-        <div className="rounded-md border border-border/80 bg-card/95 p-5 shadow-sm">
+        <div className="rounded-md border border-border/80 bg-card/95 p-4 shadow-sm sm:p-5">
           <LoginForm />
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
           Перший запуск?{" "}
-          <Link className="font-medium text-foreground underline" href="/setup">
+          <Link
+            className="inline-flex min-h-11 items-center font-medium text-foreground underline"
+            href="/setup"
+          >
             Створити першого власника
           </Link>
         </p>
-      </section>
-    </main>
+    </PageShell>
   );
 }

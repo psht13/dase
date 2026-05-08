@@ -79,7 +79,7 @@ export function ProductForm({
 
   return (
     <form
-      className="grid gap-8"
+      className="grid min-w-0 gap-6 sm:gap-8"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
     >
@@ -104,7 +104,7 @@ export function ProductForm({
             }
             aria-invalid={Boolean(form.formState.errors.name)}
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-name"
             placeholder="Каблучка з перлами"
             {...form.register("name")}
@@ -125,7 +125,7 @@ export function ProductForm({
             }
             aria-invalid={Boolean(form.formState.errors.sku)}
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-sku"
             placeholder="RING-001"
             spellCheck={false}
@@ -172,7 +172,7 @@ export function ProductForm({
             }
             aria-invalid={Boolean(form.formState.errors.price)}
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-price"
             inputMode="decimal"
             placeholder="1200,00"
@@ -196,7 +196,7 @@ export function ProductForm({
             }
             aria-invalid={Boolean(form.formState.errors.stockQuantity)}
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="product-stock"
             inputMode="numeric"
             placeholder="5"
@@ -230,10 +230,10 @@ export function ProductForm({
 
             return (
               <div
-                className="grid gap-4 rounded-md border border-border/80 bg-card p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_10rem_3.5rem] sm:items-start"
+                className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_10rem_3.5rem] sm:items-start"
                 key={field.id}
               >
-                <div className="grid gap-2">
+                <div className="grid min-w-0 gap-2">
                   <label
                     className="text-sm font-medium"
                     htmlFor={`product-image-${index}`}
@@ -250,7 +250,7 @@ export function ProductForm({
                       form.formState.errors.imageUrls?.[index]?.url,
                     )}
                     autoComplete="off"
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     id={`product-image-${index}`}
                     placeholder="https://example.com/image.jpg"
                     spellCheck={false}
@@ -302,7 +302,7 @@ export function ProductForm({
 
       <label className="flex items-center gap-3 text-sm font-medium">
         <input
-          className="size-4 rounded border-input"
+          className="size-5 rounded border-input"
           type="checkbox"
           {...form.register("isActive")}
         />

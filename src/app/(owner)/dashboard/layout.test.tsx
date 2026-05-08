@@ -6,6 +6,10 @@ vi.mock("@/modules/users/ui/require-owner-session", () => ({
   requireOwnerSession: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/dashboard/products",
+}));
+
 describe("DashboardLayout", () => {
   it("renders the Ukrainian owner dashboard shell", async () => {
     vi.mocked(requireOwnerSession).mockResolvedValue({
@@ -20,27 +24,34 @@ describe("DashboardLayout", () => {
     );
 
     expect(screen.getByText("Кабінет власника")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Огляд/i })).toBeVisible();
-    expect(screen.getByRole("link", { name: /Каталог товарів/i })).toBeVisible();
+    expect(screen.getAllByRole("link", { name: /Огляд/i })[0]).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Створити замовлення/i }),
+      screen.getAllByRole("link", { name: /Каталог товарів/i })[0],
+    ).toBeVisible();
+    expect(
+      screen.getAllByRole("link", { name: /Створити замовлення/i })[0],
     ).toBeVisible();
     expect(screen.getByText("Роль: власник")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Вийти" })).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Вийти" }).closest("form"),
-    ).toHaveAttribute("action", "/logout");
-    expect(
-      screen.getByRole("button", { name: "Вийти" }).closest("form"),
-    ).toHaveAttribute("method", "post");
+    expect(screen.getByTestId("mobile-dashboard-nav")).toHaveClass(
+      "grid-cols-4",
+    );
+    expect(screen.getByText("Поточний розділ")).toBeVisible();
+    expect(screen.getAllByText("Каталог товарів")[0]).toBeVisible();
+    const logoutButtons = screen.getAllByRole("button", { name: "Вийти" });
+    expect(logoutButtons).toHaveLength(2);
+    for (const button of logoutButtons) {
+      expect(button.closest("form")).toHaveAttribute("action", "/logout");
+      expect(button.closest("form")).toHaveAttribute("method", "post");
+    }
+    expect(container.querySelector('a[href="/logout"]')).not.toBeInTheDocument();
     expect(screen.getByText("Вміст сторінки")).toBeVisible();
 
     const shell = container.querySelector("#main-content > div");
-    expect(shell).toHaveClass("w-full");
+    expect(shell).toHaveClass("w-full", "min-w-0");
     expect(shell).not.toHaveClass("mx-auto");
     expect(shell).not.toHaveClass("max-w-7xl");
 
     const sidebar = container.querySelector("aside");
-    expect(sidebar).toHaveClass("md:sticky", "md:top-0", "md:h-screen");
+    expect(sidebar).toHaveClass("hidden", "lg:sticky", "lg:top-0", "lg:h-dvh");
   });
 });

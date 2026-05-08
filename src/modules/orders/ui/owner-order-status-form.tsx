@@ -71,7 +71,7 @@ export function OwnerOrderStatusForm({
           Новий статус
           <select
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={currentStatus}
             name="status"
           >

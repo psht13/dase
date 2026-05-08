@@ -1,30 +1,28 @@
 import { Package, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/shared/ui/button";
+import { PageHeader } from "@/shared/ui/page-layout";
 
 export default function DashboardPage() {
   return (
-    <div className="grid gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">
-            Панель власника
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Керуйте товарами, посиланнями замовлень і виконанням доставок.
-          </p>
-        </div>
-        <Button asChild>
+    <div className="grid min-w-0 gap-6">
+      <PageHeader
+        actions={
+          <Button asChild>
           <Link href="/dashboard/products/new">
             <Package aria-hidden="true" className="size-4" />
             Додати товар
           </Link>
-        </Button>
-      </div>
+          </Button>
+        }
+        description="Керуйте товарами, посиланнями замовлень і виконанням доставок."
+        title="Панель власника"
+        titleClassName="sm:text-3xl"
+      />
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid min-w-0 gap-4 sm:grid-cols-2">
         <Link
-          className="rounded-md border border-border/80 bg-card/95 p-5 shadow-sm transition-colors hover:bg-accent/30"
+          className="min-w-0 rounded-md border border-border/80 bg-card/95 p-5 shadow-sm transition-colors hover:bg-accent/30"
           href="/dashboard/products"
         >
           <Package
@@ -40,7 +38,7 @@ export default function DashboardPage() {
         </Link>
 
         <Link
-          className="rounded-md border border-border/80 bg-card/95 p-5 shadow-sm transition-colors hover:bg-accent/30"
+          className="min-w-0 rounded-md border border-border/80 bg-card/95 p-5 shadow-sm transition-colors hover:bg-accent/30"
           href="/dashboard/orders"
         >
           <ShoppingBag

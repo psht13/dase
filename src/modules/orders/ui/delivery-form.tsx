@@ -188,7 +188,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
 
   return (
     <form
-      className="grid gap-6"
+      className="grid min-w-0 gap-6"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
     >
@@ -206,7 +206,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         </p>
       ) : null}
 
-      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
+      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor="delivery-full-name">
             Повне ім’я
@@ -219,7 +219,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             }
             aria-invalid={Boolean(form.formState.errors.fullName)}
             autoComplete="name"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-full-name"
             placeholder="Ім’я та прізвище"
             {...form.register("fullName")}
@@ -240,7 +240,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             }
             aria-invalid={Boolean(form.formState.errors.phone)}
             autoComplete="tel"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-phone"
             inputMode="tel"
             placeholder="+380XXXXXXXXX"
@@ -254,7 +254,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
+      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor="delivery-carrier">
             Служба доставки
@@ -267,7 +267,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             }
             aria-invalid={Boolean(form.formState.errors.carrier)}
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-carrier"
             {...carrierField}
             onChange={(event) => {
@@ -308,7 +308,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
               }
               aria-invalid={Boolean(form.formState.errors.cityId)}
               autoComplete="address-level2"
-              className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-11 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               id="delivery-city"
               onChange={(event) => {
                 form.setValue("cityId", "", { shouldValidate: true });
@@ -360,7 +360,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
               }
               aria-invalid={Boolean(form.formState.errors.warehouseId)}
               autoComplete="off"
-              className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="h-11 w-full rounded-md border border-input bg-background px-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               disabled={!selectedCityId}
               id="delivery-warehouse"
               onChange={(event) => {
@@ -400,7 +400,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
+      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm">
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor="delivery-payment">
             Спосіб оплати
@@ -413,7 +413,7 @@ export function DeliveryForm({ action }: DeliveryFormProps) {
             }
             aria-invalid={Boolean(form.formState.errors.paymentMethod)}
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id="delivery-payment"
             {...form.register("paymentMethod")}
           >
@@ -484,7 +484,7 @@ function LookupResults<T>({
     <div className="grid gap-2 rounded-md border border-border/80 bg-background p-2 shadow-sm">
       {results.map((result, index) => (
         <button
-          className="grid gap-1 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="grid min-h-11 gap-1 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           key={index}
           onClick={() => onSelect(result)}
           type="button"

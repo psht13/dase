@@ -23,13 +23,13 @@ export function OwnerOrdersFilterForm({
   tagOptions,
 }: OwnerOrdersFilterFormProps) {
   return (
-    <form className="grid gap-4 rounded-md border p-4" method="get">
-      <div className="grid gap-4 md:grid-cols-3">
+    <form className="grid min-w-0 gap-4 rounded-md border p-4" method="get">
+      <div className="grid min-w-0 gap-4 md:grid-cols-3">
         <label className="grid gap-2 text-sm font-medium">
           Статус
           <select
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.status ?? ""}
             name="status"
           >
@@ -46,7 +46,7 @@ export function OwnerOrdersFilterForm({
           Служба доставки
           <select
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.deliveryCarrier ?? ""}
             name="deliveryCarrier"
           >
@@ -63,7 +63,7 @@ export function OwnerOrdersFilterForm({
           Спосіб оплати
           <select
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.paymentMethod ?? ""}
             name="paymentMethod"
           >
@@ -76,12 +76,12 @@ export function OwnerOrdersFilterForm({
         </label>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid min-w-0 gap-4 md:grid-cols-4">
         <label className="grid gap-2 text-sm font-medium">
           Тег
           <select
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={filters.tagId ?? ""}
             name="tagId"
           >
@@ -98,7 +98,7 @@ export function OwnerOrdersFilterForm({
           Дата від
           <input
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={dateInputValue(filters.dateFrom)}
             name="dateFrom"
             type="date"
@@ -109,7 +109,7 @@ export function OwnerOrdersFilterForm({
           Дата до
           <input
             autoComplete="off"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm"
             defaultValue={dateInputValue(filters.dateTo)}
             name="dateTo"
             type="date"
@@ -125,7 +125,7 @@ export function OwnerOrdersFilterForm({
             />
             <input
               autoComplete="off"
-              className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm"
+              className="h-11 w-full rounded-md border border-input bg-background px-9 text-sm"
               defaultValue={filters.search ?? ""}
               name="search"
               placeholder="Телефон або ТТН"

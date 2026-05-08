@@ -1,8 +1,7 @@
+import { formatMoneyMinor as formatSharedMoneyMinor } from "@/shared/utils/format-money";
+
 export function formatMoneyMinor(amountMinor: number, currency: string): string {
-  return new Intl.NumberFormat("uk-UA", {
-    currency,
-    style: "currency",
-  }).format(amountMinor / 100);
+  return formatSharedMoneyMinor(amountMinor, currency);
 }
 
 export function formatDateTime(date: Date | null): string {

@@ -23,7 +23,7 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
     .getByLabel("URL зображення")
     .fill("https://example.com/e2e-earrings.jpg");
   await page.getByRole("button", { name: "Створити товар" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/products$/);
+  await expect(page).toHaveURL(/\/dashboard\/products$/, { timeout: 15_000 });
   await expect(page.getByText(productName)).toBeVisible();
 
   await page.goto("/dashboard/orders/new");

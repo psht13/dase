@@ -115,7 +115,7 @@ export function OwnerOrderTagPanel({
           <div className="flex gap-2">
             <input
               autoComplete="off"
-              className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
               id="new-order-tag"
               name="tagName"
               placeholder="Наприклад: Подарунок"
@@ -137,7 +137,7 @@ export function OwnerOrderTagPanel({
           <div className="flex gap-2">
             <select
               autoComplete="off"
-              className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
               disabled={!unassignedTags.length}
               id="existing-order-tag"
               name="tagId"

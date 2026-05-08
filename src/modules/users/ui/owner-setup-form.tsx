@@ -38,7 +38,7 @@ export function OwnerSetupForm({ requiresSetupToken }: OwnerSetupFormProps) {
             Токен налаштування
             <input
               autoComplete="off"
-              className="rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-h-11 rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
               name="setupToken"
               placeholder="Введіть захищений токен"
               required
@@ -53,7 +53,7 @@ export function OwnerSetupForm({ requiresSetupToken }: OwnerSetupFormProps) {
         Ім’я власника
         <input
           autoComplete="name"
-          className="rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          className="min-h-11 rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
           name="name"
           placeholder="Олена"
           required
@@ -65,7 +65,7 @@ export function OwnerSetupForm({ requiresSetupToken }: OwnerSetupFormProps) {
         Електронна пошта
         <input
           autoComplete="email"
-          className="rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          className="min-h-11 rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
           name="email"
           placeholder="owner@example.com"
           required
@@ -78,7 +78,7 @@ export function OwnerSetupForm({ requiresSetupToken }: OwnerSetupFormProps) {
         Пароль
         <input
           autoComplete="new-password"
-          className="rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          className="min-h-11 rounded-md border border-input bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
           name="password"
           placeholder="Створіть пароль"
           required

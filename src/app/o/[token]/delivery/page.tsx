@@ -7,6 +7,7 @@ import { PublicOrderUnavailable } from "@/modules/orders/ui/public-order-review"
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
+import { PageHeader, PageShell } from "@/shared/ui/page-layout";
 
 type PublicDeliveryPageProps = {
   params: Promise<{
@@ -33,20 +34,13 @@ export default async function PublicDeliveryPage({
   }
 
   return (
-    <main
-      className="min-h-screen bg-[hsl(var(--brand-shell))]"
-      id="main-content"
-    >
-      <section className="mx-auto grid w-full max-w-3xl gap-6 px-5 py-10">
+    <PageShell contentClassName="grid gap-6" maxWidth="lg">
         <div className="grid gap-2">
           <BrandMark subtitle="підтвердження замовлення" />
-          <h1 className="font-display text-4xl font-semibold">
-            Доставка та оплата
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Вкажіть контактні дані, службу доставки, відділення та спосіб
-            оплати.
-          </p>
+          <PageHeader
+            description="Вкажіть контактні дані, службу доставки, відділення та спосіб оплати."
+            title="Доставка та оплата"
+          />
         </div>
 
         <DeliveryForm action={confirmDeliveryAction.bind(null, token)} />
@@ -56,7 +50,6 @@ export default async function PublicDeliveryPage({
             <Link href={`/o/${result.order.publicToken}`}>Назад</Link>
           </Button>
         </div>
-      </section>
-    </main>
+    </PageShell>
   );
 }

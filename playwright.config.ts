@@ -8,13 +8,16 @@ export default defineConfig({
   testMatch: isProductionSmoke
     ? "**/production-auth-smoke.spec.ts"
     : "**/*.spec.ts",
-  fullyParallel: true,
+  // Local fallback repositories are process-global in the dev server.
+  // Keep browser flows single-worker so seeded E2E data stays deterministic.
+  fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL,
     trace: "on-first-retry",
   },
+  workers: isProductionSmoke ? undefined : 1,
   webServer: isProductionSmoke
     ? undefined
     : {

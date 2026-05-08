@@ -101,6 +101,13 @@ Component targets:
 
 The dashboard shell should distinguish phone, tablet, and desktop.
 
+Implemented shell baseline on 2026-05-08:
+- Phone and tablet widths below `lg` use a compact sticky top shell with the Dase mark, owner email, POST logout button, current-section label, and four Ukrainian navigation targets.
+- Desktop `lg` and wider keeps the persistent sidebar, now with active-route styling and the same route matching used by the mobile header.
+- The owner content region uses `min-w-0`, responsive horizontal padding, and a `lg` sidebar breakpoint so 768 px tablet portrait keeps the wider mobile layout instead of a constrained desktop sidebar.
+- Logout remains a real POST form to `/logout`; do not replace it with a Next `Link` or client-only navigation.
+- The shell refactor added Playwright coverage for `/dashboard`, `/dashboard/products`, mobile logout to `/login?logout=1`, and page-level overflow at 360 px.
+
 Phone:
 - Brand and current page/account controls stay in a compact sticky top bar.
 - Primary navigation moves into a menu button, bottom nav, or compact segmented nav.
@@ -177,16 +184,14 @@ Plan:
 
 ### `/dashboard`
 
-Current state:
-- No horizontal overflow.
-- On phone widths the stacked dashboard sidebar and account header push page content down.
-- Nav links are about 42 px high.
+Current state after 2026-05-08 shell refactor:
+- No page-level horizontal overflow at 360x740 in Playwright.
+- Phone widths use a compact sticky top header with current-section label and 44 px-plus navigation/logout targets.
+- Desktop sidebar remains at `lg` and wider with active/current route styling.
+- Logout is still submitted through a POST form action to `/logout`.
 
-Plan:
-- Refactor the owner shell before individual dashboard pages.
-- Move phone navigation to a compact sticky top/bottom pattern.
-- Keep the desktop sidebar for wide screens, preferably `lg` and above.
-- Raise nav and logout targets to at least 44 px.
+Remaining plan:
+- Continue table-to-card and long-form refactors page by page; do not move auth or business rules into shell components.
 
 ### `/dashboard/products`
 

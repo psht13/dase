@@ -21,6 +21,7 @@ import {
 import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipment-repository-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 import { Button } from "@/shared/ui/button";
+import { PageHeader } from "@/shared/ui/page-layout";
 
 type OrdersPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -66,23 +67,20 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   );
 
   return (
-    <div className="grid gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">
-            Замовлення
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Переглядайте замовлення, фільтруйте їх і керуйте виконанням.
-          </p>
-        </div>
-        <Button asChild>
+    <div className="grid min-w-0 gap-6">
+      <PageHeader
+        actions={
+          <Button asChild>
           <Link href="/dashboard/orders/new">
             <Plus aria-hidden="true" className="size-4" />
             Створити замовлення
           </Link>
-        </Button>
-      </div>
+          </Button>
+        }
+        description="Переглядайте замовлення, фільтруйте їх і керуйте виконанням."
+        title="Замовлення"
+        titleClassName="sm:text-3xl"
+      />
 
       <OwnerOrdersFilterForm
         deliveryCarrierOptions={deliveryCarrierOptions}

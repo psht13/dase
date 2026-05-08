@@ -7,6 +7,7 @@ import type { OrderBuilderProduct } from "@/modules/orders/application/list-orde
 import type { OrderBuilderActionResult } from "@/modules/orders/ui/order-actions";
 import { appendOrderBuilderItemToFormData } from "@/modules/orders/ui/order-builder-form-data";
 import { Button } from "@/shared/ui/button";
+import { formatMoneyMinor } from "@/shared/utils/format-money";
 
 type OrderBuilderFormProps = {
   action: (formData: FormData) => Promise<OrderBuilderActionResult>;
@@ -121,7 +122,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
   }
 
   return (
-    <form className="grid gap-6" noValidate onSubmit={submitOrder}>
+    <form className="grid min-w-0 gap-6" noValidate onSubmit={submitOrder}>
       {message ? (
         <p
           aria-live="polite"
@@ -136,7 +137,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-md border">
+      <div className="w-full max-w-full overflow-x-auto rounded-md border">
         <table className="w-full min-w-[820px] border-collapse text-left text-sm">
           <thead className="bg-muted text-muted-foreground">
             <tr>
@@ -167,7 +168,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                     <input
                       aria-label={`Додати ${product.name}`}
                       checked={selected}
-                      className="size-4 rounded border-input"
+                      className="size-5 rounded border-input"
                       onChange={(event) =>
                         toggleProduct(product.id, event.target.checked)
                       }
@@ -182,14 +183,14 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                     {product.sku}
                   </td>
                   <td className="px-4 py-3">
-                    {formatPrice(product.priceMinor, product.currency)}
+                    {formatMoneyMinor(product.priceMinor, product.currency)}
                   </td>
                   <td className="px-4 py-3">
                     <label className="sr-only" htmlFor={`quantity-${product.id}`}>
                       Кількість для {product.name}
                     </label>
                     <input
-                      className="h-10 w-24 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                      className="h-11 w-24 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                       disabled={!selected}
                       id={`quantity-${product.id}`}
                       inputMode="numeric"
@@ -206,7 +207,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
                     />
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {formatPrice(lineTotal, product.currency)}
+                    {formatMoneyMinor(lineTotal, product.currency)}
                   </td>
                 </tr>
               );
@@ -219,7 +220,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
         <div>
           <p className="text-sm text-muted-foreground">Разом до сплати</p>
           <p className="font-display text-3xl font-semibold">
-            {formatPrice(totalMinor, products[0]?.currency ?? "UAH")}
+            {formatMoneyMinor(totalMinor, products[0]?.currency ?? "UAH")}
           </p>
         </div>
         <Button disabled={isPending} type="submit">
@@ -238,7 +239,7 @@ export function OrderBuilderForm({ action, products }: OrderBuilderFormProps) {
             <label className="grid gap-2 text-sm font-medium">
               Публічне посилання
               <input
-                className="h-10 rounded-md border border-emerald-200 bg-white px-3 text-sm text-foreground"
+                className="h-11 rounded-md border border-emerald-200 bg-white px-3 text-sm text-foreground"
                 readOnly
                 value={publicUrl}
               />
@@ -282,11 +283,4 @@ function ProductPreview({ product }: { product: OrderBuilderProduct }) {
       width="56"
     />
   );
-}
-
-function formatPrice(priceMinor: number, currency: string): string {
-  return new Intl.NumberFormat("uk-UA", {
-    currency,
-    style: "currency",
-  }).format(priceMinor / 100);
 }

@@ -57,9 +57,9 @@ export function OwnerOrderDetailsView({
     shippingLabelCreationMode === "disabled";
 
   return (
-    <div className="grid gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+    <div className="grid min-w-0 gap-6">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <Button asChild size="sm" variant="outline">
             <Link href="/dashboard/orders">
               <ArrowLeft aria-hidden="true" className="size-4" />
@@ -81,9 +81,9 @@ export function OwnerOrderDetailsView({
         </Button>
       </div>
 
-      <section className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 shadow-sm">
+      <section className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 shadow-sm">
         <h2 className="font-display text-xl font-semibold">Товари</h2>
-        <div className="overflow-x-auto">
+        <div className="w-full max-w-full overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead className="bg-muted text-muted-foreground">
               <tr>
@@ -120,7 +120,7 @@ export function OwnerOrderDetailsView({
         </p>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
         <InfoSection title="Клієнт">
           <InfoRow label="Ім’я" value={order.customer?.fullName} />
           <InfoRow label="Телефон" value={order.customer?.phone} />
@@ -202,7 +202,7 @@ export function OwnerOrderDetailsView({
         </InfoSection>
       </div>
 
-      <section className="grid gap-6 rounded-md border p-4">
+      <section className="grid min-w-0 gap-6 rounded-md border p-4">
         <OwnerOrderTagPanel
           actions={{
             assign: assignOrderTagAction.bind(null, order.id),
@@ -214,14 +214,14 @@ export function OwnerOrderDetailsView({
         />
       </section>
 
-      <section className="grid gap-6 rounded-md border p-4">
+      <section className="grid min-w-0 gap-6 rounded-md border p-4">
         <OwnerOrderStatusForm
           action={updateOwnerOrderStatusAction.bind(null, order.id)}
           currentStatus={order.status}
         />
       </section>
 
-      <section className="grid gap-6 rounded-md border p-4">
+      <section className="grid min-w-0 gap-6 rounded-md border p-4">
         <div className="grid gap-2">
           <h2 className="text-lg font-semibold">Повтор оплати MonoPay</h2>
           <p className="text-sm text-muted-foreground">
@@ -240,7 +240,7 @@ export function OwnerOrderDetailsView({
         )}
       </section>
 
-      <section className="grid gap-6 rounded-md border p-4">
+      <section className="grid min-w-0 gap-6 rounded-md border p-4">
         <OwnerOrderRetryShipmentForm
           action={retryShipmentCreationAction.bind(null, order.id)}
           canRetry={
@@ -259,7 +259,7 @@ export function OwnerOrderDetailsView({
         />
       </section>
 
-      <section className="grid gap-4 rounded-md border p-4">
+      <section className="grid min-w-0 gap-4 rounded-md border p-4">
         <h2 className="text-lg font-semibold">Історія статусів</h2>
         {order.statusHistory.length ? (
           <div className="grid gap-3">
@@ -281,10 +281,10 @@ export function OwnerOrderDetailsView({
         )}
       </section>
 
-      <section className="grid gap-4 rounded-md border p-4">
+      <section className="grid min-w-0 gap-4 rounded-md border p-4">
         <h2 className="text-lg font-semibold">Аудит подій</h2>
         {order.auditEvents.length ? (
-          <div className="overflow-x-auto">
+          <div className="w-full max-w-full overflow-x-auto">
             <table className="w-full min-w-[720px] border-collapse text-left text-sm">
               <thead className="bg-muted text-muted-foreground">
                 <tr>
@@ -330,9 +330,9 @@ function InfoSection({
   title: string;
 }) {
   return (
-    <section className="grid gap-3 rounded-md border p-4">
+    <section className="grid min-w-0 gap-3 rounded-md border p-4">
       <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="grid gap-2">{children}</div>
+      <div className="grid min-w-0 gap-2">{children}</div>
     </section>
   );
 }
@@ -345,9 +345,9 @@ function InfoRow({
   value?: string | null;
 }) {
   return (
-    <div className="grid gap-1 text-sm">
+    <div className="grid min-w-0 gap-1 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span>{value || "Не вказано"}</span>
+      <span className="break-words">{value || "Не вказано"}</span>
     </div>
   );
 }

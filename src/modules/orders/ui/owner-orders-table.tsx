@@ -30,7 +30,7 @@ export function OwnerOrdersTable({ orders }: OwnerOrdersTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className="w-full max-w-full overflow-x-auto rounded-md border">
       <table className="w-full min-w-[980px] border-collapse text-left text-sm">
         <thead className="bg-muted text-muted-foreground">
           <tr>

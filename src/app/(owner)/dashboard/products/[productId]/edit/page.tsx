@@ -6,6 +6,7 @@ import { priceMinorToFormValue } from "@/modules/catalog/application/product-val
 import { getProductRepository } from "@/modules/catalog/infrastructure/product-repository-factory";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 import { Button } from "@/shared/ui/button";
+import { PageHeader } from "@/shared/ui/page-layout";
 
 type EditProductPageProps = {
   params: Promise<{
@@ -30,13 +31,12 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
   if (!product) {
     return (
-      <div className="mx-auto grid max-w-3xl gap-4">
-        <h1 className="font-display text-3xl font-semibold">
-          Товар не знайдено
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Перевірте каталог або створіть новий товар.
-        </p>
+      <div className="mx-auto grid w-full max-w-3xl min-w-0 gap-4">
+        <PageHeader
+          description="Перевірте каталог або створіть новий товар."
+          title="Товар не знайдено"
+          titleClassName="sm:text-3xl"
+        />
         <div>
           <Button asChild variant="outline">
             <Link href="/dashboard/products">До каталогу</Link>
@@ -47,13 +47,12 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   }
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold">
-          Редагування товару
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{product.name}</p>
-      </div>
+    <div className="mx-auto grid w-full max-w-3xl min-w-0 gap-6">
+      <PageHeader
+        description={product.name}
+        title="Редагування товару"
+        titleClassName="sm:text-3xl"
+      />
 
       <ProductForm
         action={updateProductAction.bind(null, product.id)}

@@ -225,6 +225,15 @@ Runtime-aware environment validation update on 2026-05-07:
 - Missing environment errors report variable names and runtime context only; they do not include secret values.
 - Tests cover web production validation, worker production validation, live and disabled shipping modes, dev/test fallback behavior, and the worker config path proving owner setup tokens are not required by the worker.
 
+Mobile dashboard shell update on 2026-05-08:
+- The owner dashboard shell is now mobile-first at 360 px with a compact sticky Ukrainian top header, visible current-section label, four tap-friendly mobile navigation links, and the persistent sidebar deferred to `lg` desktop widths.
+- Dashboard navigation now marks the active section with `aria-current="page"` and keeps desktop sidebar spacing/current states consistent with the mobile route state.
+- Logout remains a POST form action to `/logout`; no `/logout` client-side navigation link was introduced, preserving the production redirect contract to `/login?logout=1`.
+- Shared page layout primitives (`PageShell`, `PageHeader`, and `ActionBar`) now keep public/auth page containers mobile-safe with `min-w-0`, responsive typography, and at least 44 px primary touch targets where practical.
+- Public pages `/`, `/login`, `/setup`, `/o/[token]`, and `/o/[token]/delivery` were tightened for mobile width through shared containers, smaller mobile headings, wrapping-safe content, and 44 px form/button controls.
+- Playwright coverage now includes a 360 px dashboard shell/logout check and a 360 px no-horizontal-overflow check for the public/auth/order pages.
+- Local Playwright E2E runs use one browser worker because the E2E-safe fallback repositories are process-global in the dev server; this keeps seeded owner/order flows deterministic.
+
 Ukrposhta active-MVP removal update on 2026-05-07:
 - Added a central shipping carrier registry at `src/modules/shipping/application/shipping-carrier-registry.ts`.
 - The active customer-facing carrier list contains only Nova Post with the Ukrainian label `Нова пошта`.

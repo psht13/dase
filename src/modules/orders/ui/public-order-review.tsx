@@ -6,6 +6,8 @@ import type { PaymentRetryActionResult } from "@/modules/payments/ui/payment-act
 import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
+import { PageHeader, PageShell } from "@/shared/ui/page-layout";
+import { formatMoneyMinor } from "@/shared/utils/format-money";
 
 type PublicOrderReviewProps = {
   deliveryHref: string;
@@ -19,20 +21,13 @@ export function PublicOrderReview({
   paymentRetryAction,
 }: PublicOrderReviewProps) {
   return (
-    <main
-      className="min-h-screen bg-[hsl(var(--brand-shell))]"
-      id="main-content"
-    >
-      <section className="mx-auto grid w-full max-w-4xl gap-8 px-5 py-10">
+    <PageShell contentClassName="grid gap-6 sm:gap-8" maxWidth="xl">
         <div className="grid gap-2">
           <BrandMark subtitle="підтвердження замовлення" />
-          <h1 className="font-display text-4xl font-semibold">
-            Ваше замовлення
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Перевірте товари, кількість і суму перед заповненням доставки та
-            оплати.
-          </p>
+          <PageHeader
+            description="Перевірте товари, кількість і суму перед заповненням доставки та оплати."
+            title="Ваше замовлення"
+          />
         </div>
 
         <PaymentStatusNotice order={order} />
@@ -46,22 +41,24 @@ export function PublicOrderReview({
         <div className="grid gap-4">
           {order.items.map((item) => (
             <article
-              className="grid gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm sm:grid-cols-[5rem_1fr_auto]"
+              className="grid min-w-0 gap-4 rounded-md border border-border/80 bg-card/95 p-4 text-card-foreground shadow-sm sm:grid-cols-[5rem_1fr_auto]"
               key={`${item.productSkuSnapshot}-${item.productNameSnapshot}`}
             >
               <PublicOrderItemImage item={item} />
-              <div className="grid gap-1">
-                <h2 className="font-semibold">{item.productNameSnapshot}</h2>
+              <div className="grid min-w-0 gap-1">
+                <h2 className="break-words font-semibold">
+                  {item.productNameSnapshot}
+                </h2>
                 <p className="text-sm text-muted-foreground">
                   Артикул: {item.productSkuSnapshot}
                 </p>
                 <p className="text-sm">Кількість: {item.quantity}</p>
                 <p className="text-sm">
-                  Ціна: {formatPrice(item.unitPriceMinor, order.currency)}
+                  Ціна: {formatMoneyMinor(item.unitPriceMinor, order.currency)}
                 </p>
               </div>
-              <p className="text-right font-semibold sm:min-w-28">
-                {formatPrice(item.lineTotalMinor, order.currency)}
+              <p className="font-semibold sm:min-w-28 sm:text-right">
+                {formatMoneyMinor(item.lineTotalMinor, order.currency)}
               </p>
             </article>
           ))}
@@ -71,7 +68,7 @@ export function PublicOrderReview({
           <div>
             <p className="text-sm text-muted-foreground">Разом</p>
             <p className="font-display text-3xl font-semibold">
-              {formatPrice(order.totalMinor, order.currency)}
+              {formatMoneyMinor(order.totalMinor, order.currency)}
             </p>
           </div>
           <Button asChild>
@@ -81,8 +78,7 @@ export function PublicOrderReview({
             </Link>
           </Button>
         </div>
-      </section>
-    </main>
+    </PageShell>
   );
 }
 
@@ -109,24 +105,20 @@ function PaymentStatusNotice({ order }: { order: PublicOrderReviewData }) {
 
 export function PublicOrderUnavailable() {
   return (
-    <main
-      className="min-h-screen bg-[hsl(var(--brand-shell))]"
-      id="main-content"
+    <PageShell
+      contentClassName="flex min-h-dvh flex-col justify-center gap-4 text-center"
+      maxWidth="md"
     >
-      <section className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center gap-4 px-5 py-10 text-center">
         <BrandMark
           className="justify-center"
           subtitle="підтвердження замовлення"
         />
-        <h1 className="font-display text-4xl font-semibold">
-          Посилання недоступне
-        </h1>
-        <p className="text-muted-foreground">
-          Замовлення не знайдено, посилання вже неактивне або термін його дії
-          завершився.
-        </p>
-      </section>
-    </main>
+        <PageHeader
+          className="items-center text-center sm:items-center"
+          description="Замовлення не знайдено, посилання вже неактивне або термін його дії завершився."
+          title="Посилання недоступне"
+        />
+    </PageShell>
   );
 }
 
@@ -159,11 +151,4 @@ function PublicOrderItemImage({
       width="80"
     />
   );
-}
-
-function formatPrice(priceMinor: number, currency: string): string {
-  return new Intl.NumberFormat("uk-UA", {
-    currency,
-    style: "currency",
-  }).format(priceMinor / 100);
 }

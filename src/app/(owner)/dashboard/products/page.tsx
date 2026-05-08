@@ -6,6 +6,7 @@ import { toggleProductActiveAction } from "@/modules/catalog/ui/product-actions"
 import { ProductTable } from "@/modules/catalog/ui/product-table";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 import { Button } from "@/shared/ui/button";
+import { PageHeader } from "@/shared/ui/page-layout";
 
 export default async function ProductsPage() {
   const owner = await requireOwnerSession();
@@ -19,23 +20,20 @@ export default async function ProductsPage() {
   );
 
   return (
-    <div className="grid gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">
-            Каталог товарів
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Товари власника для створення замовлень.
-          </p>
-        </div>
-        <Button asChild>
+    <div className="grid min-w-0 gap-6">
+      <PageHeader
+        actions={
+          <Button asChild>
           <Link href="/dashboard/products/new">
             <Plus aria-hidden="true" className="size-4" />
             Створити товар
           </Link>
-        </Button>
-      </div>
+          </Button>
+        }
+        description="Товари власника для створення замовлень."
+        title="Каталог товарів"
+        titleClassName="sm:text-3xl"
+      />
 
       <ProductTable
         products={products}
