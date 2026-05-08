@@ -75,6 +75,26 @@ Recommended step groups:
   - `Доставка`: carrier, city, warehouse.
   - `Оплата`: payment method and confirmation.
 
+## Reusable Multi-Step Foundation
+
+Shared primitives live in `src/shared/ui/multi-step-form.tsx`:
+- `Stepper` renders the Ukrainian progress label `Крок {current} з {total}` and marks the active step with `aria-current="step"`.
+- `StepIndicator` renders one accessible progress item.
+- `StepCard` wraps the active step, exposes a focusable `h2`, and announces step-level validation errors through `role="alert"` and `aria-live`.
+- `StepActions` renders Ukrainian `Назад`, `Далі`, and final-submit controls.
+- `FormSummaryCard` renders final review data before the unchanged server-action submit.
+- `useMultiStepForm` keeps local step UI state, validates only the current step through React Hook Form `trigger`, preserves registered form values between steps, handles Back/Next, exposes `validateAllSteps`, and wraps final submit so partial data is not submitted before the last step.
+
+Adoption checklist for feature forms:
+- Keep the existing Zod schema and server action as the source of truth for the complete payload. Client step validation is only guidance.
+- Define a typed `steps` array near the form component with Ukrainian `title` values and RHF field names for each step, for example `fields: ["name", "sku"]`. For field arrays, include the stable array path such as `imageUrls` when the whole repeated group belongs to one step.
+- Keep `useForm` default values complete for every field and do not enable unregister-on-unmount behavior for step panels. This preserves values while the user moves between steps.
+- Use `onSubmit={stepper.handleSubmit(onSubmit)}` on the `<form>`. Pressing Enter before the last step should advance/validate the current step, not call the server action.
+- Render `Stepper`, one active `StepCard`, and `StepActions`. Pass `stepper.headingRef` and `stepper.stepErrorMessage` to `StepCard` so focus and live-region behavior remain consistent.
+- On the final review step, render `FormSummaryCard` and optionally a `Перевірити` button that calls `stepper.validateAllSteps()` before the user clicks the final submit button.
+- If a server action returns field errors, keep the existing `form.setError(...)` mapping and reveal the matching step before focusing the invalid field. Do not move server validation or business rules into the UI layer.
+- Keep all new labels, helper text, errors, loading states, and button text Ukrainian.
+
 ## Table-To-Card Rules
 
 Desktop tables can remain where they are useful, but mobile should not depend on horizontal table scrolling.

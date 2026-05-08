@@ -328,6 +328,15 @@ Audit result:
 - Product create/edit forms and owner order details are the highest-risk mobile surfaces because they are long single-screen flows; they should move to stepper/card patterns without changing business logic, database schema, or application/domain boundaries.
 - No UI implementation, business logic, database schema, role model, object storage, or image upload behavior changed in this planning milestone.
 
+## Reusable multi-step form foundation on 2026-05-08
+
+- Added shared multi-step form UI primitives in `src/shared/ui/multi-step-form.tsx`: `Stepper`, `StepIndicator`, `StepActions`, `StepCard`, and `FormSummaryCard`.
+- Added `useMultiStepForm` for React Hook Form flows. It keeps step index as local UI state, validates only the current step through RHF `trigger`, preserves values between steps, prevents early form submits from sending partial data, moves final-submit failures to the first invalid step, and focuses either the revealed step heading or invalid field.
+- The foundation is generic UI code only. It does not change domain/application rules, server actions, database schema, roles, product image handling, payment, or shipping behavior.
+- Existing product and delivery forms remain on their current submit paths. Later form refactors should adopt the foundation while keeping the existing Zod schema and complete server-action validation as the source of truth.
+- `docs/ui/mobile-form-table-guidelines.md` now documents how feature forms should adopt the shared stepper and keep all user-facing text Ukrainian.
+- Focused component tests cover Ukrainian progress/actions, `aria-current`, current-step validation, live-region step errors, focus movement, state preservation, early-submit handling, full-submit gating, and the optional `Перевірити` review action.
+
 ## Core flows
 
 ### Product management
@@ -621,6 +630,13 @@ Latest local quality status on 2026-05-08 after the mobile UI audit and refactor
 - `pnpm test:e2e` passed with Chromium: 11 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-05-08 after the reusable multi-step form foundation:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.76% statements, 80.23% branches, 91.01% functions, and 88.76% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 13 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -851,11 +867,12 @@ Status: completed on 2026-04-30.
 
 ### Milestone 9 - Mobile owner UI refactor
 
-Status: planned; audit and refactor plan documented on 2026-05-08.
+Status: in progress; audit and refactor plan documented, dashboard shell baseline implemented, and reusable multi-step form foundation added on 2026-05-08.
 
 - Refactor the owner dashboard shell so phone and tablet portrait layouts use compact mobile navigation instead of the full stacked/persistent sidebar.
 - Replace mobile product/order/order-builder tables with card-first layouts while keeping desktop tables for wide screens.
 - Convert long product and order-builder flows to stepper/card patterns without moving business logic into UI components.
+- Use `src/shared/ui/multi-step-form.tsx` for future long-form conversions so RHF/Zod validation, focus behavior, progress, and Back/Next controls stay consistent.
 - Improve owner order details by converting mobile product/audit tables into cards or timelines and reducing the single-page visual weight.
 - Raise touch targets to at least 44 px for mobile controls and action buttons.
 - Keep all new user-facing copy Ukrainian, keep roles limited to `owner` and `user`, keep product images as external URLs only, and avoid database schema changes unless a later UI requirement proves one is necessary.
@@ -885,7 +902,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
-- Owner dashboard mobile responsiveness is documented but not yet implemented. Product/order tables still depend on horizontal scroll on small screens, the order builder can create page-level horizontal overflow at phone and tablet portrait widths, and long owner forms/details still need stepper/card refactors.
+- Owner dashboard mobile responsiveness is partially implemented. The shared multi-step foundation now exists, but product/order tables still depend on horizontal scroll on small screens, the order builder can create page-level horizontal overflow at phone and tablet portrait widths, and long owner forms/details still need to be converted to stepper/card patterns.
 - Real Monobank production credentials are not yet configured in Railway, so live payment smoke tests remain manual. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
