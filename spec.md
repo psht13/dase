@@ -123,7 +123,7 @@ Shipment worker update on 2026-04-30:
 - Tests cover job enqueueing, shipment creation success and failure, tracking status mapping, auto-completion rules, retry action copy, pg-boss retry options, and Ukrainian shipment status/job labels.
 
 Owner order management update on 2026-04-30:
-- `/dashboard/orders` lists owner orders with Ukrainian labels and filters for status, delivery carrier, payment method, tag, date range, and customer phone or tracking number search.
+- `/dashboard/orders` lists owner orders with Ukrainian labels and filters for status, delivery carrier, payment method, tag, date range, order ID/display number, customer phone, tracking number, Instagram nickname, or customer full-name search.
 - `/dashboard/orders/[orderId]` shows products, customer info, delivery info, payment info, shipment info, status history, and audit events.
 - Owner order reads are implemented through application use cases and repository ports; React components and route files do not contain order management business rules.
 - Order tag storage is implemented for Drizzle and in-memory fallback through `OrderTagRepository`.
@@ -240,8 +240,8 @@ Responsive product and order list update on 2026-05-08:
 - Product cards show image, product name, SKU, active/inactive badge, price, stock, edit action, and active toggle action with comfortable mobile targets.
 - The desktop product table now groups image, name, and SKU into one primary product column, groups price and stock into one secondary column, and keeps status/action columns compact.
 - `/dashboard/orders` now renders mobile order cards below `lg` and a simplified desktop table at `lg` and wider.
-- Order cards show short order id, status badge, customer name/phone, total, date, delivery, payment, key tags, and the details action without horizontal table scrolling.
-- The desktop order table now groups date under the order id, phone under the customer, delivery/payment under status, and tags under the amount column while preserving existing filters and owner-only access.
+- Order cards show the same display order number as the public page, status badge, total, customer name, Instagram nickname when present, phone, date, compact tags, and the details action without horizontal table scrolling.
+- The desktop order table now keeps each row to a summary column and compact action column: order number, status, and total first; customer, Instagram, and date second; compact tags after that, while preserving existing filters and owner-only access.
 - Product/order reads still go through existing application use cases and repositories; no business logic, filters, roles, database schema, object storage, or external API behavior changed.
 - Component tests cover the compact desktop hierarchy and mobile card rendering for both lists. Playwright coverage checks `/dashboard/products` and `/dashboard/orders` at desktop and 390 px, plus no page-level horizontal overflow at phone widths.
 
@@ -284,7 +284,7 @@ Current active behavior:
 - Customer payment defaults to `MANUAL_CARD_TRANSFER` when the owner has active payment requisites, otherwise to `CASH_ON_DELIVERY`. The active customer choices are `Оплата картою онлайн` and `Післяплата`.
 - Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `MONOBANK`, `MANUAL_CARD_TRANSFER`, and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` remain Monobank-specific but nullable.
 - MonoPay is no longer active in the customer delivery/payment form. Monobank provider, webhook, and retry code remains for historical records and explicit retry paths through `MONOBANK_*` variables and `/api/webhooks/monobank`.
-- Owner order search is URL-backed through `/dashboard/orders?search=...`. `matchesSearch(...)` matches customer phone digits, optional Instagram nickname, and shipment tracking numbers. Owner list/detail headings display `shortOrderId(order.id)`, but search does not match full UUIDs or short IDs yet.
+- Owner order search is URL-backed through `/dashboard/orders?search=...`. `matchesSearch(...)` matches full order UUIDs, the displayed short order number, customer phone digits, optional Instagram nickname with or without leading `@`, customer full names, and shipment tracking numbers.
 - Shipping enqueueing treats cash on delivery as shipment-ready immediately after confirmation, historical MonoPay orders wait for a paid webhook, and manual card transfer orders wait for the owner to mark the transfer received.
 - Owner dashboard settings exist under `/dashboard/settings/payment` for public payment card/requisite records.
 
@@ -293,7 +293,7 @@ Completed functional changes from this audit:
 - Kept Monobank adapter, webhook, and historical payment records readable for existing data, while removing MonoPay from the active customer flow and default form value. MonoPay retry no longer appears for new manual-card customer flows.
 - Instagram nickname capture is complete for the public contact step, server validation, confirmation use case input, customer persistence, owner order list/detail read models, and UI tests with Ukrainian labels.
 - Extended the public status page with owner-configured manual-card requisites.
-- Add owner order search matching for full order UUID and the displayed short order ID in `matchesSearch(...)`; update the filter placeholder from `Телефон або ТТН` to include order number.
+- Add owner order search matching for full order UUID, the displayed short order ID, customer full name, Instagram with or without leading `@`, phone, and tracking in `matchesSearch(...)`; update the filter placeholder to `ID, Instagram, телефон або ТТН`.
 - Added owner payment settings under the dashboard, with Ukrainian labels for creating, editing, ordering, enabling, and disabling visible card/requisite records.
 
 Migration plan:
@@ -335,6 +335,13 @@ Manual card payment requisite settings update on 2026-05-08:
 - MonoPay/Monobank remains implemented for historical records, webhook handling, and retry support, but it is no longer an active option in the customer delivery/payment form.
 - Focused tests cover validation, repository save/list/update/toggle, owner access, user denial through E2E, public active-only read model behavior, Ukrainian UI labels, owner requisite creation, and public manual-card display.
 - Verification for this milestone passed with `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e`, and `pnpm build`. A plain `pnpm test:e2e` first reused an unrelated local Next app already answering on port 3000 (`/api/health` returned `401 no_refresh_token`), so the clean Dase run used isolated port 3100 and passed 19 tests with the production smoke skipped.
+
+Owner order search and summary update on 2026-05-08:
+- Owner order search now reuses `formatOrderDisplayNumber(order.id)` and matches full UUIDs, the displayed short number such as `#55e143f7` or `55e143f7`, customer full names, customer phone digits, shipment tracking numbers, and Instagram nicknames case-insensitively with or without a leading `@`.
+- The owner order filter placeholder is `ID, Instagram, телефон або ТТН`, and search-empty results show `За цим пошуком замовлень не знайдено`.
+- Owner order list rows and mobile cards now use the same display number as the public order page, with a lighter summary hierarchy: order number, status, and total first; customer, Instagram, and date metadata second; compact tags and the details action after that. Mobile cards also keep the customer phone visible for quick contact.
+- Owner order details headers now show `Замовлення #...`, the Ukrainian status label, the customer name or `Клієнт ще не вказаний`, and the formatted Instagram nickname when present.
+- Focused tests cover search by full id, short id, Instagram with and without `@`, phone, tracking number, and customer full name, plus the Ukrainian placeholder, search-empty state, lighter list/card summaries, and details header summary.
 
 Risks:
 - PostgreSQL enum migrations must be forward-compatible and tested against Railway PostgreSQL before production promotion.

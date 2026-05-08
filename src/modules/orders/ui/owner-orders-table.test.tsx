@@ -63,7 +63,7 @@ describe("owner orders UI", () => {
     expect(screen.queryByRole("option", { name: "MonoPay" })).toBeNull();
     expect(screen.getByLabelText("Тег")).toBeVisible();
     expect(
-      screen.getByPlaceholderText("Телефон, Instagram або ТТН"),
+      screen.getByPlaceholderText("ID, Instagram, телефон або ТТН"),
     ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Застосувати фільтри" }),
@@ -78,23 +78,23 @@ describe("owner orders UI", () => {
     const table = within(screen.getByTestId("owner-orders-desktop-table"));
 
     expect(table.getByRole("columnheader", { name: "Замовлення" })).toBeVisible();
-    expect(table.getByRole("columnheader", { name: "Клієнт" })).toBeVisible();
-    expect(table.getByRole("columnheader", { name: "Статус" })).toBeVisible();
-    expect(
-      table.getByRole("columnheader", { name: "Сума і теги" }),
-    ).toBeVisible();
     expect(table.getByRole("columnheader", { name: "Дії" })).toBeVisible();
+    expect(
+      table.queryByRole("columnheader", { name: "Клієнт" }),
+    ).not.toBeInTheDocument();
+    expect(
+      table.queryByRole("columnheader", { name: "Статус" }),
+    ).not.toBeInTheDocument();
     expect(
       table.queryByRole("columnheader", { name: "Телефон" }),
     ).not.toBeInTheDocument();
     expect(
       table.queryByRole("columnheader", { name: "Доставка" }),
     ).not.toBeInTheDocument();
-    expect(table.getByText("Олена Петренко")).toBeVisible();
-    expect(table.getByText("+380671234567")).toBeVisible();
-    expect(table.getByText("@olena.shop")).toBeVisible();
+    expect(table.getByText(/Олена Петренко.*@olena\.shop/i)).toBeVisible();
+    expect(table.queryByText("+380671234567")).not.toBeInTheDocument();
     expect(table.getByText("Готується відправлення")).toBeVisible();
-    expect(table.getByText("Нова пошта · Післяплата")).toBeVisible();
+    expect(table.queryByText("Нова пошта · Післяплата")).not.toBeInTheDocument();
     expect(table.getByText("Подарунок")).toBeVisible();
   });
 
@@ -109,8 +109,8 @@ describe("owner orders UI", () => {
     expect(card.getByText("@olena.shop")).toBeVisible();
     expect(card.getByText("Готується відправлення")).toBeVisible();
     expect(card.getByText(/2\s?400,00/)).toBeVisible();
-    expect(card.getByText("Нова пошта")).toBeVisible();
-    expect(card.getByText("Оплата: Післяплата")).toBeVisible();
+    expect(card.queryByText("Нова пошта")).not.toBeInTheDocument();
+    expect(card.queryByText("Оплата: Післяплата")).not.toBeInTheDocument();
     expect(card.getByText("Подарунок")).toBeVisible();
     expect(card.getByRole("link", { name: "Відкрити" })).toBeVisible();
   });
@@ -133,6 +133,17 @@ describe("owner orders UI", () => {
     expect(
       screen.getByRole("link", { name: "Скинути фільтри" }),
     ).toHaveAttribute("href", "/dashboard/orders");
+  });
+
+  it("renders a Ukrainian empty state for search results", () => {
+    render(<OwnerOrdersTable hasActiveFilters hasSearchFilter orders={[]} />);
+
+    expect(
+      screen.getByText("За цим пошуком замовлень не знайдено"),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Спробуйте інший ID, Instagram, телефон або ТТН."),
+    ).toBeVisible();
   });
 
   it("shows disabled legacy carrier filters only when historical records exist", async () => {

@@ -1,32 +1,33 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
-import {
-  orderStatusLabels,
-  paymentProviderLabels,
-  shipmentCarrierLabels,
-} from "@/modules/orders/application/order-labels";
+import { orderStatusLabels } from "@/modules/orders/application/order-labels";
 import type { OwnerOrderSummary } from "@/modules/orders/application/owner-order-read-model";
 import {
+  displayOrderNumber,
   formatDateTime,
   formatMoneyMinor,
-  shortOrderId,
 } from "@/modules/orders/ui/owner-order-formatters";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/utils/cn";
 
 type OwnerOrdersTableProps = {
   hasActiveFilters?: boolean;
+  hasSearchFilter?: boolean;
   orders: OwnerOrderSummary[];
 };
 
 export function OwnerOrdersTable({
   hasActiveFilters = false,
+  hasSearchFilter = false,
   orders,
 }: OwnerOrdersTableProps) {
   if (!orders.length) {
     return (
-      <EmptyOrdersState hasActiveFilters={hasActiveFilters} />
+      <EmptyOrdersState
+        hasActiveFilters={hasActiveFilters}
+        hasSearchFilter={hasSearchFilter}
+      />
     );
   }
 
@@ -48,48 +49,32 @@ export function OwnerOrdersTable({
         <table className="w-full table-fixed border-collapse text-left text-sm">
           <thead className="bg-muted text-muted-foreground">
             <tr>
-              <th className="w-[22%] px-4 py-3 font-medium">Замовлення</th>
-              <th className="w-[26%] px-4 py-3 font-medium">Клієнт</th>
-              <th className="w-[24%] px-4 py-3 font-medium">Статус</th>
-              <th className="w-[16%] px-4 py-3 font-medium">Сума і теги</th>
-              <th className="w-[12%] px-4 py-3 text-right font-medium">Дії</th>
+              <th className="w-[84%] px-4 py-3 font-medium">Замовлення</th>
+              <th className="w-[16%] px-4 py-3 text-right font-medium">Дії</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => (
               <tr className="border-t align-top" key={order.id}>
                 <td className="min-w-0 px-4 py-3">
-                  <p className="font-medium">#{shortOrderId(order.id)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDateTime(order.createdAt)}
-                  </p>
-                </td>
-                <td className="min-w-0 px-4 py-3">
-                  <p className="truncate font-medium">
-                    {order.customer?.fullName ?? "Клієнт ще не вказаний"}
-                  </p>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {order.customer?.phone ?? "Телефон не вказано"}
-                  </p>
-                  {order.customer?.instagramUsername ? (
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {formatInstagramUsername(order.customer.instagramUsername)}
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                    <p className="font-medium">{displayOrderNumber(order.id)}</p>
+                    <StatusBadge label={orderStatusLabels[order.status]} />
+                    <p className="font-medium tabular-nums">
+                      {formatMoneyMinor(order.totalMinor, order.currency)}
                     </p>
-                  ) : null}
-                </td>
-                <td className="min-w-0 px-4 py-3">
-                  <StatusBadge label={orderStatusLabels[order.status]} />
-                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                    {deliveryLabel(order)} · {paymentLabel(order)}
-                  </p>
-                </td>
-                <td className="px-4 py-3">
-                  <p className="font-medium tabular-nums">
-                    {formatMoneyMinor(order.totalMinor, order.currency)}
-                  </p>
-                  <div className="mt-2">
-                    <TagList maxVisible={2} tags={order.tags.map((tag) => tag.name)} />
                   </div>
+                  <p className="mt-2 truncate text-xs text-muted-foreground">
+                    {customerSummary(order)}
+                  </p>
+                  {order.tags.length ? (
+                    <div className="mt-2">
+                      <TagList
+                        maxVisible={2}
+                        tags={order.tags.map((tag) => tag.name)}
+                      />
+                    </div>
+                  ) : null}
                 </td>
                 <td className="px-4 py-3">
                   <OrderActionLink isCompact orderId={order.id} />
@@ -105,20 +90,26 @@ export function OwnerOrdersTable({
 
 function EmptyOrdersState({
   hasActiveFilters,
+  hasSearchFilter,
 }: {
   hasActiveFilters: boolean;
+  hasSearchFilter: boolean;
 }) {
   return (
     <div className="grid min-w-0 gap-3 rounded-md border border-dashed p-6 text-center sm:p-8">
       <h2 className="text-lg font-semibold">
-        {hasActiveFilters
-          ? "За фільтрами нічого не знайдено"
-          : "Замовлень ще немає"}
+        {hasSearchFilter
+          ? "За цим пошуком замовлень не знайдено"
+          : hasActiveFilters
+            ? "За фільтрами нічого не знайдено"
+            : "Замовлень ще немає"}
       </h2>
       <p className="mx-auto max-w-xl text-sm text-muted-foreground">
-        {hasActiveFilters
-          ? "Змініть або скиньте фільтри, щоб побачити інші замовлення."
-          : "Створіть посилання замовлення і надішліть його клієнту для підтвердження."}
+        {hasSearchFilter
+          ? "Спробуйте інший ID, Instagram, телефон або ТТН."
+          : hasActiveFilters
+            ? "Змініть або скиньте фільтри, щоб побачити інші замовлення."
+            : "Створіть посилання замовлення і надішліть його клієнту для підтвердження."}
       </p>
       <div className="flex min-w-0 flex-col justify-center gap-3 sm:flex-row">
         {hasActiveFilters ? (
@@ -137,14 +128,14 @@ function EmptyOrdersState({
 function OrderCard({ order }: { order: OwnerOrderSummary }) {
   return (
     <article
-      aria-label={`Замовлення #${shortOrderId(order.id)}`}
+      aria-label={`Замовлення ${displayOrderNumber(order.id)}`}
       className="grid min-w-0 gap-4 rounded-md border bg-card p-4"
       data-testid="owner-orders-mobile-card"
     >
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold">
-            Замовлення #{shortOrderId(order.id)}
+            Замовлення {displayOrderNumber(order.id)}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {formatDateTime(order.createdAt)}
@@ -157,43 +148,40 @@ function OrderCard({ order }: { order: OwnerOrderSummary }) {
         <p className="break-words font-medium">
           {order.customer?.fullName ?? "Клієнт ще не вказаний"}
         </p>
-        <p className="break-words text-muted-foreground">
-          {order.customer?.phone ?? "Телефон не вказано"}
-        </p>
         {order.customer?.instagramUsername ? (
           <p className="break-words text-muted-foreground">
             {formatInstagramUsername(order.customer.instagramUsername)}
           </p>
         ) : null}
+        <p className="break-words text-muted-foreground">
+          {order.customer?.phone ?? "Телефон не вказано"}
+        </p>
       </div>
 
-      <dl className="grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <dt className="text-xs font-medium uppercase text-muted-foreground">
-            Сума
-          </dt>
-          <dd className="mt-1 font-medium tabular-nums">
-            {formatMoneyMinor(order.totalMinor, order.currency)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium uppercase text-muted-foreground">
-            Доставка
-          </dt>
-          <dd className="mt-1 break-words">{deliveryLabel(order)}</dd>
-        </div>
-      </dl>
-
-      <div className="grid min-w-0 gap-2 text-sm">
-        <p className="break-words text-muted-foreground">
-          Оплата: {paymentLabel(order)}
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 text-sm">
+        <p className="font-medium tabular-nums">
+          {formatMoneyMinor(order.totalMinor, order.currency)}
         </p>
-        <TagList maxVisible={3} tags={order.tags.map((tag) => tag.name)} />
+        {order.tags.length ? (
+          <TagList maxVisible={3} tags={order.tags.map((tag) => tag.name)} />
+        ) : null}
       </div>
 
       <OrderActionLink orderId={order.id} />
     </article>
   );
+}
+
+function customerSummary(order: OwnerOrderSummary): string {
+  const parts = [
+    order.customer?.fullName ?? "Клієнт ще не вказаний",
+    order.customer?.instagramUsername
+      ? formatInstagramUsername(order.customer.instagramUsername)
+      : null,
+    formatDateTime(order.createdAt),
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.join(" · ");
 }
 
 function StatusBadge({ label }: { label: string }) {
@@ -259,24 +247,4 @@ function OrderActionLink({
       </Button>
     </div>
   );
-}
-
-function deliveryLabel(order: OwnerOrderSummary): string {
-  const shipment = order.shipments[0];
-
-  if (!shipment) {
-    return "Доставку ще не вказано";
-  }
-
-  return shipmentCarrierLabels[shipment.carrier];
-}
-
-function paymentLabel(order: OwnerOrderSummary): string {
-  const payment = order.payments[0];
-
-  if (!payment) {
-    return "Оплату ще не вказано";
-  }
-
-  return paymentProviderLabels[payment.provider];
 }

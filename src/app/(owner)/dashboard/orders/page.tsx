@@ -89,6 +89,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
       />
       <OwnerOrdersTable
         hasActiveFilters={hasActiveOrderFilters(filters)}
+        hasSearchFilter={Boolean(filters.search?.trim())}
         orders={orders}
       />
     </div>

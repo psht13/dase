@@ -140,6 +140,6 @@ describe("OrderDetailsPage", () => {
 
     expect(screen.getByRole("heading", { name: /Замовлення #order-1/i })).toBeVisible();
     expect(screen.getByText("Каблучка")).toBeVisible();
-    expect(screen.getByText("Олена Петренко")).toBeVisible();
+    expect(screen.getAllByText("Олена Петренко")[0]).toBeVisible();
   });
 });

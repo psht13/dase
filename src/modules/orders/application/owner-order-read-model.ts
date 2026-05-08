@@ -7,6 +7,7 @@ import type {
   CustomerRepository,
 } from "@/modules/orders/application/customer-repository";
 import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
+import { formatOrderDisplayNumber } from "@/modules/orders/application/order-display-number";
 import type {
   OrderRepository,
   PersistedOrder,
@@ -254,17 +255,27 @@ function matchesSearch(order: OwnerOrderSummary, rawSearch: string): boolean {
   }
 
   const searchDigits = onlyDigits(search);
+  const searchWithoutHash = search.replace(/^#+/, "");
   const phone = order.customer?.phone ?? "";
   const phoneDigits = onlyDigits(phone);
+  const customerFullName = order.customer?.fullName.toLowerCase() ?? "";
   const instagramUsername = formatInstagramUsername(
     order.customer?.instagramUsername,
   )?.toLowerCase();
   const instagramSearch = search.replace(/^@+/, "");
+  const orderId = order.id.toLowerCase();
+  const displayNumber = formatOrderDisplayNumber(order.id).toLowerCase();
+  const displayNumberWithoutHash = displayNumber.replace(/^#/, "");
   const trackingNumbers = order.shipments
     .map((shipment) => shipment.trackingNumber ?? "")
     .filter(Boolean);
 
   return (
+    (searchWithoutHash.length > 0 && orderId.includes(searchWithoutHash)) ||
+    (searchWithoutHash.length > 0 && displayNumber.includes(search)) ||
+    (searchWithoutHash.length > 0 &&
+      displayNumberWithoutHash.includes(searchWithoutHash)) ||
+    customerFullName.includes(search) ||
     (searchDigits.length > 0 && phoneDigits.includes(searchDigits)) ||
     (instagramUsername && instagramSearch.length > 0
       ? instagramUsername.includes(search) ||

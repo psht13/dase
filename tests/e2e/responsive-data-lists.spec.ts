@@ -72,7 +72,7 @@ test("owner product and order lists use desktop tables and mobile cards", async 
     ordersTable.getByRole("columnheader", { name: "Замовлення" }),
   ).toBeVisible();
   await expect(
-    ordersTable.getByRole("columnheader", { name: "Сума і теги" }),
+    ordersTable.getByRole("columnheader", { name: "Дії" }),
   ).toBeVisible();
   const orderRow = ordersTable.getByRole("row", {
     name: new RegExp(customerName),
@@ -92,7 +92,7 @@ test("owner product and order lists use desktop tables and mobile cards", async 
   await expect(orderCard).toBeVisible();
   await expect(orderCard.getByText(customerPhone)).toBeVisible();
   await expect(orderCard.getByText("Готується відправлення")).toBeVisible();
-  await expect(orderCard.getByText("Без тегів")).toBeVisible();
+  await expect(orderCard.getByText(/1\s?590,00/)).toBeVisible();
   await expect(orderCard.getByRole("link", { name: "Відкрити" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 

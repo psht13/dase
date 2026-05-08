@@ -56,13 +56,13 @@ describe("OwnerOrderDetailsView", () => {
 
     expect(screen.getByRole("heading", { name: /Замовлення #order-1/i })).toBeVisible();
     expect(screen.getByText("Поточний статус: Готується відправлення")).toBeVisible();
+    expect(screen.getAllByText("Олена Петренко")[0]).toBeVisible();
+    expect(screen.getAllByText("@olena.shop")[0]).toBeVisible();
     expect(screen.getByRole("heading", { name: "Огляд" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Товари" })).toBeVisible();
     expect(screen.getByText("Каблучка")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Клієнт" })).toBeVisible();
-    expect(screen.getByText("Олена Петренко")).toBeVisible();
     expect(screen.getByText("Instagram нікнейм")).toBeVisible();
-    expect(screen.getByText("@olena.shop")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
     expect(screen.getAllByText("Нова пошта")[0]).toBeVisible();
     expect(screen.getByRole("heading", { name: "Оплата" })).toBeVisible();

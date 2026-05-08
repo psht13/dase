@@ -22,9 +22,9 @@ import {
   updateOwnerOrderStatusAction,
 } from "@/modules/orders/ui/owner-order-actions";
 import {
+  displayOrderNumber,
   formatDateTime,
   formatMoneyMinor,
-  shortOrderId,
 } from "@/modules/orders/ui/owner-order-formatters";
 import { OwnerOrderManualPaymentForm } from "@/modules/orders/ui/owner-order-manual-payment-form";
 import { OwnerOrderRetryShipmentForm } from "@/modules/orders/ui/owner-order-retry-shipment-form";
@@ -75,6 +75,10 @@ export function OwnerOrderDetailsView({
         shipment.status === "FAILED" &&
         isShipmentCreationEnabled(shipment.carrier),
     );
+  const customerName = order.customer?.fullName ?? "Клієнт ще не вказаний";
+  const customerInstagram = formatInstagramUsername(
+    order.customer?.instagramUsername,
+  );
 
   return (
     <div className="grid min-w-0 gap-6">
@@ -87,9 +91,22 @@ export function OwnerOrderDetailsView({
             </Link>
           </Button>
           <h1 className="mt-4 break-words font-display text-2xl font-semibold sm:text-3xl">
-            Замовлення #{shortOrderId(order.id)}
+            Замовлення {displayOrderNumber(order.id)}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-sm">
+            <span className="inline-flex rounded-md bg-secondary px-2 py-1 font-medium">
+              {orderStatusLabels[order.status]}
+            </span>
+            <span className="min-w-0 break-words text-muted-foreground">
+              {customerName}
+            </span>
+            {customerInstagram ? (
+              <span className="break-words text-muted-foreground">
+                {customerInstagram}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
             Поточний статус: {orderStatusLabels[order.status]}
           </p>
         </div>

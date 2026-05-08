@@ -93,7 +93,7 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await expect(page.getByRole("heading", { name: "Товари" })).toBeVisible();
   await expect(page.getByText(productName)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Аудит подій" })).toBeVisible();
-  await expect(page.getByText(`@${instagramUsername}`)).toBeVisible();
+  await expect(page.getByText(`@${instagramUsername}`).first()).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Повторити створення відправлення" }),
   ).toBeVisible();
@@ -105,7 +105,12 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
 
   await page.getByLabel("Новий тег").fill(tagName);
   await page.getByRole("button", { name: "Додати" }).first().click();
-  await expect(page.getByRole("status")).toHaveText("Тег додано до замовлення");
+  await expect(
+    page
+      .getByLabel("Теги")
+      .locator('[role="status"]')
+      .filter({ hasText: "Тег додано до замовлення" }),
+  ).toBeVisible();
   await expect(page.getByLabel(`Зняти тег ${tagName}`)).toBeVisible();
 
   await page.getByLabel("Новий статус").selectOption("CANCELLED");

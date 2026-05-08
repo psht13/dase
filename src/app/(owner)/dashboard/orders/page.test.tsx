@@ -108,7 +108,7 @@ describe("OrdersPage", () => {
     expect(screen.getByRole("heading", { name: "Замовлення" })).toBeVisible();
     expect(screen.getByRole("link", { name: /Створити замовлення/i })).toBeVisible();
     const ordersTable = within(screen.getByTestId("owner-orders-desktop-table"));
-    expect(ordersTable.getByText("Олена Петренко")).toBeVisible();
+    expect(ordersTable.getByText(/Олена Петренко/)).toBeVisible();
     expect(ordersTable.getByText("Готується відправлення")).toBeVisible();
   });
 });

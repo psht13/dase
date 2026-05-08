@@ -52,7 +52,51 @@ describe("owner order read use cases", () => {
     });
   });
 
-  it("searches owner orders by Instagram nickname", async () => {
+  it("searches owner orders by full id", async () => {
+    const order = createOrder({
+      customerId: "customer-1",
+      id: "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
+      status: "SHIPMENT_PENDING",
+    });
+    const dependencies = createDependencies([order]);
+
+    const orders = await listOwnerOrdersUseCase(
+      {
+        filters: {
+          search: "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
+        },
+        ownerId: "owner-1",
+      },
+      dependencies,
+    );
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0]?.id).toBe("55e143f7-1f01-4bd9-9bcb-4c7417db75bb");
+  });
+
+  it("searches owner orders by short display id", async () => {
+    const order = createOrder({
+      customerId: "customer-1",
+      id: "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
+      status: "SHIPMENT_PENDING",
+    });
+    const dependencies = createDependencies([order]);
+
+    const orders = await listOwnerOrdersUseCase(
+      {
+        filters: {
+          search: "55e143f7",
+        },
+        ownerId: "owner-1",
+      },
+      dependencies,
+    );
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0]?.id).toBe("55e143f7-1f01-4bd9-9bcb-4c7417db75bb");
+  });
+
+  it("searches owner orders by Instagram nickname with @", async () => {
     const order = createOrder({
       customerId: "customer-1",
       id: "order-1",
@@ -72,6 +116,50 @@ describe("owner order read use cases", () => {
 
     expect(orders).toHaveLength(1);
     expect(orders[0]?.customer?.instagramUsername).toBe("olena.shop");
+  });
+
+  it("searches owner orders by Instagram nickname without @", async () => {
+    const order = createOrder({
+      customerId: "customer-1",
+      id: "order-1",
+      status: "SHIPMENT_PENDING",
+    });
+    const dependencies = createDependencies([order]);
+
+    const orders = await listOwnerOrdersUseCase(
+      {
+        filters: {
+          search: "OLENA.SHOP",
+        },
+        ownerId: "owner-1",
+      },
+      dependencies,
+    );
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0]?.customer?.instagramUsername).toBe("olena.shop");
+  });
+
+  it("searches owner orders by phone", async () => {
+    const order = createOrder({
+      customerId: "customer-1",
+      id: "order-1",
+      status: "SHIPMENT_PENDING",
+    });
+    const dependencies = createDependencies([order]);
+
+    const orders = await listOwnerOrdersUseCase(
+      {
+        filters: {
+          search: "0671234567",
+        },
+        ownerId: "owner-1",
+      },
+      dependencies,
+    );
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0]?.customer?.phone).toBe("+380671234567");
   });
 
   it("searches owner orders by tracking number", async () => {
@@ -94,6 +182,28 @@ describe("owner order read use cases", () => {
 
     expect(orders).toHaveLength(1);
     expect(orders[0]?.shipments[0]?.trackingNumber).toBe("TTN-001");
+  });
+
+  it("searches owner orders by customer full name", async () => {
+    const order = createOrder({
+      customerId: "customer-1",
+      id: "order-1",
+      status: "SHIPMENT_PENDING",
+    });
+    const dependencies = createDependencies([order]);
+
+    const orders = await listOwnerOrdersUseCase(
+      {
+        filters: {
+          search: "петренко",
+        },
+        ownerId: "owner-1",
+      },
+      dependencies,
+    );
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0]?.customer?.fullName).toBe("Олена Петренко");
   });
 
   it("loads order details with status history from audit events", async () => {

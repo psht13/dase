@@ -140,7 +140,7 @@ test("keyboard navigation reaches mobile nav, steppers, filters, and actions", a
 
   await page.getByRole("button", { name: "Далі" }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Кількість" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Кількість" })).toBeFocused();
 
   const increaseQuantityButton = page.getByRole("button", {
     name: `Збільшити кількість для ${productName}`,

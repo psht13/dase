@@ -88,7 +88,7 @@ test("owner creates payment requisites and customer sees online card payment", a
   await expect(page.getByRole("heading", { name: /Оплата/ })).toBeVisible();
   await expect(page.getByText("Оплата картою онлайн")).toBeVisible();
   await expect(page.getByText("Очікує підтвердження")).toBeVisible();
-  await expect(page.getByText(customerInstagram)).toBeVisible();
+  await expect(page.getByText(customerInstagram).first()).toBeVisible();
   await page
     .getByRole("button", { name: "Позначити оплату отриманою" })
     .click();

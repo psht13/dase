@@ -218,7 +218,7 @@ export function OwnerOrdersFilterForm({
               className="h-11 w-full rounded-md border border-input bg-background px-9 text-sm"
               defaultValue={filters.search ?? ""}
               name="search"
-              placeholder="Телефон, Instagram або ТТН"
+              placeholder="ID, Instagram, телефон або ТТН"
             />
           </span>
         </label>

@@ -16,6 +16,10 @@ export function formatDateTime(date: Date | null): string {
   }).format(date);
 }
 
+export function displayOrderNumber(orderId: string): string {
+  return formatOrderDisplayNumber(orderId);
+}
+
 export function shortOrderId(orderId: string): string {
-  return formatOrderDisplayNumber(orderId).slice(1);
+  return displayOrderNumber(orderId).slice(1);
 }
