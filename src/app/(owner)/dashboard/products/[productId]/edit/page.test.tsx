@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import type { ProductRecord } from "@/modules/catalog/application/product-repository";
 import { getProductRepository } from "@/modules/catalog/infrastructure/product-repository-factory";
+import { ProductForm } from "@/modules/catalog/ui/product-form";
 import { requireOwnerSession } from "@/modules/users/ui/require-owner-session";
 import EditProductPage from "./page";
 
@@ -13,11 +14,12 @@ vi.mock("@/modules/catalog/infrastructure/product-repository-factory", () => ({
 }));
 
 vi.mock("@/modules/catalog/ui/product-form", () => ({
-  ProductForm: () => <div>Форма редагування</div>,
+  ProductForm: vi.fn(() => <div>Форма редагування</div>),
 }));
 
 describe("EditProductPage", () => {
   beforeEach(() => {
+    vi.mocked(ProductForm).mockClear();
     vi.mocked(requireOwnerSession).mockResolvedValue({
       email: "owner@example.com",
       id: "owner-1",
@@ -42,6 +44,15 @@ describe("EditProductPage", () => {
     ).toBeVisible();
     expect(screen.getByText("Каблучка")).toBeVisible();
     expect(screen.getByText("Форма редагування")).toBeVisible();
+    expect(vi.mocked(ProductForm).mock.calls[0]?.[0].defaultValues).toEqual({
+      description: "Срібна каблучка",
+      imageUrls: [{ url: "https://example.com/ring.jpg" }],
+      isActive: true,
+      name: "Каблучка",
+      price: "120",
+      sku: "RING-1",
+      stockQuantity: "3",
+    });
   });
 
   it("renders a Ukrainian not found state for another owner's product", async () => {
@@ -70,7 +81,16 @@ function createProduct(ownerId: string): ProductRecord {
     currency: "UAH",
     description: "Срібна каблучка",
     id: "product-1",
-    images: [],
+    images: [
+      {
+        altText: null,
+        createdAt: now,
+        id: "image-1",
+        productId: "product-1",
+        sortOrder: 0,
+        url: "https://example.com/ring.jpg",
+      },
+    ],
     isActive: true,
     name: "Каблучка",
     ownerId,

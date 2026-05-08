@@ -9,16 +9,14 @@ test("owner creates an order link and the public page shows selected products", 
   const sku = `ORDER-E2E-${Date.now()}`;
   const productName = `Підвіска Playwright ${Date.now()}`;
 
-  await page.goto("/dashboard/products/new");
-  await page.getByLabel("Назва товару").fill(productName);
-  await page.getByLabel("Артикул").fill(sku);
-  await page.getByLabel("Опис").fill("Срібна підвіска для e2e перевірки");
-  await page.getByLabel("Ціна, грн").fill("1750");
-  await page.getByLabel("Залишок").fill("8");
-  await page
-    .getByLabel("URL зображення")
-    .fill("https://example.com/e2e-pendant.jpg");
-  await page.getByRole("button", { name: "Створити товар" }).click();
+  await createProduct(page, {
+    description: "Срібна підвіска для e2e перевірки",
+    imageUrl: "https://example.com/e2e-pendant.jpg",
+    name: productName,
+    price: "1750",
+    sku,
+    stock: "8",
+  });
 
   await expect(page).toHaveURL(/\/dashboard\/products$/);
   await expect(page.getByText(productName)).toBeVisible();
@@ -46,6 +44,31 @@ test("owner creates an order link and the public page shows selected products", 
     page.getByRole("link", { name: "Перейти до доставки й оплати" }),
   ).toBeVisible();
 });
+
+async function createProduct(
+  page: Page,
+  product: {
+    description: string;
+    imageUrl: string;
+    name: string;
+    price: string;
+    sku: string;
+    stock: string;
+  },
+) {
+  await page.goto("/dashboard/products/new");
+  await page.getByLabel("Назва товару").fill(product.name);
+  await page.getByLabel("Артикул").fill(product.sku);
+  await page.getByLabel("Опис").fill(product.description);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page.getByLabel("Ціна, грн").fill(product.price);
+  await page.getByRole("textbox", { exact: true, name: "Залишок" }).fill(product.stock);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page.getByLabel("URL зображення").fill(product.imageUrl);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
+  await page.getByRole("button", { name: "Створити товар" }).click();
+}
 
 async function seedSession(page: Page, role: "owner" | "user") {
   await page.context().addCookies([

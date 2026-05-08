@@ -30,7 +30,7 @@ Key findings:
 - Dashboard mobile starts with a full-height content stack: brand, all nav links, account header, then page content. At 360-430 px the owner navigation consumes about 309 px before content appears.
 - The persistent desktop sidebar starts at `md` (768 px), leaving only about 496 px for dashboard content on tablet portrait. Data-heavy owner pages still overflow at 768 px.
 - Product, order-builder, order-list, product-details, and audit tables use fixed `min-w` table widths from 720 px to 980 px. This creates intentional horizontal scroll containers, but on some pages the table also contributes to page-level overflow.
-- Product create/edit forms are a single long form and reached roughly 1,830-1,900 px of scroll height on 360-430 px viewports.
+- Product create/edit forms originally shipped as a single long form and reached roughly 1,830-1,900 px of scroll height on 360-430 px viewports. They now use the shared product stepper documented below, with mobile E2E coverage at 360 px.
 - Owner order details are the heaviest page: roughly 3,750-3,810 px tall on mobile, with multiple card sections plus two horizontally scrolling tables.
 - The public order review is already card-based and is the closest current pattern for mobile owner table replacements.
 
@@ -62,10 +62,10 @@ Rules:
 
 Recommended step groups:
 - Product create/edit:
-  - `Основне`: name, SKU, description.
-  - `Ціна й залишок`: price and stock.
+  - `Основне`: name, SKU, description, and active status when present.
+  - `Ціна та залишок`: price and stock.
   - `Зображення`: external image URLs and previews.
-  - `Публікація`: active toggle, review, save/cancel.
+  - `Перевірка`: summary, save, and cancel.
 - Order builder:
   - `Товари`: card list with selectable products.
   - `Кількість`: quantity controls for selected products.
@@ -94,6 +94,7 @@ Adoption checklist for feature forms:
 - On the final review step, render `FormSummaryCard` and optionally a `Перевірити` button that calls `stepper.validateAllSteps()` before the user clicks the final submit button.
 - If a server action returns field errors, keep the existing `form.setError(...)` mapping and reveal the matching step before focusing the invalid field. Do not move server validation or business rules into the UI layer.
 - Keep all new labels, helper text, errors, loading states, and button text Ukrainian.
+- Product create/edit now follows this checklist in `src/modules/catalog/ui/product-form.tsx`. It keeps the original product schema, server actions, and external-image-URL strategy, and reveals the matching step when server validation returns field errors.
 
 ## Table-To-Card Rules
 
@@ -228,27 +229,26 @@ Plan:
 
 ### `/dashboard/products/new`
 
-Current state:
-- Single long product form reaches about 1,850 px at 360x740.
-- 360x740 showed small page-level overflow (`scrollWidth` about 363 px).
-- The image URL row combines input, preview, and delete action in one dense repeated card.
+Current state after 2026-05-08 product stepper refactor:
+- The form uses the shared four-step flow: `Основне`, `Ціна та залишок`, `Зображення`, and `Перевірка`.
+- `Далі` validates only the current step; the final submit still uses the existing product server action and complete Zod validation.
+- Entered values are preserved between steps through React Hook Form state.
+- The image URL step keeps external URLs only, stacks URL input, helper copy, preview, and delete action safely on phone widths, and does not add file uploads or object storage.
+- Playwright MCP inspected the page at 360x740, and Playwright E2E covers the create form through all steps at 360 px with no page-level horizontal overflow.
 
-Plan:
-- Convert to a product form stepper.
-- Add `min-w-0`/`w-full` protections to the form container and repeated image rows.
-- Make image URL rows stack predictably on mobile.
-- Keep create behavior in the existing server action and application use case.
+Remaining plan:
+- Keep monitoring image URL lengths and preview behavior when product table/card refactors add more mobile catalog coverage.
 
 ### `/dashboard/products/[productId]/edit`
 
-Current state:
-- Same mobile issues as new product.
-- Long product names can stretch the header copy.
+Current state after 2026-05-08 product stepper refactor:
+- The edit page reuses the product stepper and preloads existing product values into the matching steps.
+- Long product names wrap in the page header instead of stretching the viewport.
+- The update path still uses the existing server action and product application use case.
+- Playwright MCP inspected the edit page at 360x740 with E2E-safe seeded product data, and Playwright E2E verifies the edit page loads at 360 px without page-level horizontal overflow.
 
-Plan:
-- Reuse the product form stepper.
-- Wrap/truncate the product name subtitle intentionally.
-- Keep update behavior in the existing server action and application use case.
+Remaining plan:
+- Revisit mobile edit entry points when the catalog table is converted to mobile cards.
 
 ### `/dashboard/orders/new`
 

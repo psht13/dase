@@ -13,16 +13,14 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   const customerName = `Олена Управління ${stamp}`;
   const customerPhone = `+38067${String(stamp).slice(-7)}`;
 
-  await page.goto("/dashboard/products/new");
-  await page.getByLabel("Назва товару").fill(productName);
-  await page.getByLabel("Артикул").fill(sku);
-  await page.getByLabel("Опис").fill("Срібні сережки для e2e перевірки");
-  await page.getByLabel("Ціна, грн").fill("2100");
-  await page.getByLabel("Залишок").fill("5");
-  await page
-    .getByLabel("URL зображення")
-    .fill("https://example.com/e2e-earrings.jpg");
-  await page.getByRole("button", { name: "Створити товар" }).click();
+  await createProduct(page, {
+    description: "Срібні сережки для e2e перевірки",
+    imageUrl: "https://example.com/e2e-earrings.jpg",
+    name: productName,
+    price: "2100",
+    sku,
+    stock: "5",
+  });
   await expect(page).toHaveURL(/\/dashboard\/products$/, { timeout: 15_000 });
   await expect(page.getByText(productName)).toBeVisible();
 
@@ -92,6 +90,31 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
     page.getByRole("row", { name: new RegExp(customerName) }).getByText(tagName),
   ).toBeVisible();
 });
+
+async function createProduct(
+  page: Page,
+  product: {
+    description: string;
+    imageUrl: string;
+    name: string;
+    price: string;
+    sku: string;
+    stock: string;
+  },
+) {
+  await page.goto("/dashboard/products/new");
+  await page.getByLabel("Назва товару").fill(product.name);
+  await page.getByLabel("Артикул").fill(product.sku);
+  await page.getByLabel("Опис").fill(product.description);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page.getByLabel("Ціна, грн").fill(product.price);
+  await page.getByRole("textbox", { exact: true, name: "Залишок" }).fill(product.stock);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page.getByLabel("URL зображення").fill(product.imageUrl);
+  await page.getByRole("button", { name: "Далі" }).click();
+  await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
+  await page.getByRole("button", { name: "Створити товар" }).click();
+}
 
 async function seedSession(page: Page, role: "owner" | "user") {
   await page.context().addCookies([

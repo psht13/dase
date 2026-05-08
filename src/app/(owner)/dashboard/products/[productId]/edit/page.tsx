@@ -47,7 +47,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl min-w-0 gap-6">
+    <div className="mx-auto grid w-full max-w-5xl min-w-0 gap-6">
       <PageHeader
         description={product.name}
         title="Редагування товару"

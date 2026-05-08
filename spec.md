@@ -337,6 +337,17 @@ Audit result:
 - `docs/ui/mobile-form-table-guidelines.md` now documents how feature forms should adopt the shared stepper and keep all user-facing text Ukrainian.
 - Focused component tests cover Ukrainian progress/actions, `aria-current`, current-step validation, live-region step errors, focus movement, state preservation, early-submit handling, full-submit gating, and the optional `Перевірити` review action.
 
+## Product form stepper adoption on 2026-05-08
+
+- `/dashboard/products/new` and `/dashboard/products/[productId]/edit` now use the shared multi-step form foundation while preserving the existing React Hook Form state, Zod product schema, FormData conversion, and create/update server actions.
+- The product form steps are Ukrainian and mobile-first: `Основне` for name, SKU, description, and active status; `Ціна та залишок` for price and stock; `Зображення` for one or more external image URLs with previews; and `Перевірка` for a compact final summary before saving.
+- `Далі` validates only the fields for the current step. Server-side validation still validates the full payload, and server field errors reveal the step that owns the invalid field.
+- Product images remain external URLs stored in `product_images`; no file upload, binary storage, object storage, database schema change, or product business-rule change was introduced.
+- The shared step actions now keep `Далі` and final submit buttons as distinct React elements and prevent next-step clicks from submitting the form during the button swap into the review step.
+- Unit tests cover step navigation, per-step validation, preserved values, final summary data, create-action submission, edit default values, server-error step reveal, image preview, large image-delete target, and Ukrainian labels.
+- Playwright E2E product creation now follows the multi-step flow. Mobile E2E checks cover product create and edit forms at 360 px with no page-level horizontal overflow, including the image preview step.
+- Playwright MCP inspected `/dashboard/products/new` and `/dashboard/products/[productId]/edit` at a 360x740 viewport with E2E-safe owner data.
+
 ## Core flows
 
 ### Product management
@@ -637,6 +648,13 @@ Latest local quality status on 2026-05-08 after the reusable multi-step form fou
 - `pnpm test:e2e` passed with Chromium: 13 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
 
+Latest local quality status on 2026-05-08 after the product form stepper adoption:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 88.97% statements, 80.37% branches, 91.1% functions, and 88.97% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 14 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+
 ## Commands
 
 Configured commands:
@@ -867,16 +885,16 @@ Status: completed on 2026-04-30.
 
 ### Milestone 9 - Mobile owner UI refactor
 
-Status: in progress; audit and refactor plan documented, dashboard shell baseline implemented, and reusable multi-step form foundation added on 2026-05-08.
+Status: in progress; audit and refactor plan documented, dashboard shell baseline implemented, reusable multi-step form foundation added, and product create/edit forms converted to the stepper on 2026-05-08.
 
 - Refactor the owner dashboard shell so phone and tablet portrait layouts use compact mobile navigation instead of the full stacked/persistent sidebar.
 - Replace mobile product/order/order-builder tables with card-first layouts while keeping desktop tables for wide screens.
-- Convert long product and order-builder flows to stepper/card patterns without moving business logic into UI components.
-- Use `src/shared/ui/multi-step-form.tsx` for future long-form conversions so RHF/Zod validation, focus behavior, progress, and Back/Next controls stay consistent.
+- Convert long product and order-builder flows to stepper/card patterns without moving business logic into UI components. Product create/edit is completed; order builder remains planned.
+- Use `src/shared/ui/multi-step-form.tsx` for future long-form conversions so RHF/Zod validation, focus behavior, progress, and Back/Next controls stay consistent. Product create/edit now uses this foundation.
 - Improve owner order details by converting mobile product/audit tables into cards or timelines and reducing the single-page visual weight.
 - Raise touch targets to at least 44 px for mobile controls and action buttons.
 - Keep all new user-facing copy Ukrainian, keep roles limited to `owner` and `user`, keep product images as external URLs only, and avoid database schema changes unless a later UI requirement proves one is necessary.
-- Add focused UI and Playwright coverage for the changed pages using the documented viewport matrix.
+- Add focused UI and Playwright coverage for the changed pages using the documented viewport matrix. Product create/edit now has unit coverage and a 360 px Playwright regression.
 
 ## Commit message format
 
@@ -902,7 +920,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Known limitations
 
-- Owner dashboard mobile responsiveness is partially implemented. The shared multi-step foundation now exists, but product/order tables still depend on horizontal scroll on small screens, the order builder can create page-level horizontal overflow at phone and tablet portrait widths, and long owner forms/details still need to be converted to stepper/card patterns.
+- Owner dashboard mobile responsiveness is partially implemented. The shared multi-step foundation now exists and product create/edit forms use it, but product/order tables still depend on horizontal scroll on small screens, the order builder can create page-level horizontal overflow at phone and tablet portrait widths, and long owner order-builder/details surfaces still need to be converted to stepper/card patterns.
 - Real Monobank production credentials are not yet configured in Railway, so live payment smoke tests remain manual. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.

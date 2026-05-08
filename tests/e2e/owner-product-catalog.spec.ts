@@ -17,21 +17,36 @@ test("owner creates a product from the dashboard catalog", async ({ page }) => {
   ).toBeFocused();
 
   await page.getByRole("link", { name: "Створити товар" }).click();
-  await page.getByRole("button", { name: "Створити товар" }).click();
+  await expect(page.getByRole("heading", { name: "Основне" })).toBeVisible();
+  await page.getByRole("button", { name: "Далі" }).click();
   await expect(page.getByText("Вкажіть назву товару")).toBeVisible();
   await expect(page.getByText("Вкажіть артикул")).toBeVisible();
   await expect(
     page.getByText("Додайте посилання на зображення", { exact: true }),
-  ).toBeVisible();
+  ).toBeHidden();
 
   await page.getByLabel("Назва товару").fill(productName);
   await page.getByLabel("Артикул").fill(sku);
   await page.getByLabel("Опис").fill("Срібна каблучка для e2e перевірки");
+  await page.getByRole("button", { name: "Далі" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Ціна та залишок" }),
+  ).toBeVisible();
   await page.getByLabel("Ціна, грн").fill("1499,50");
-  await page.getByLabel("Залишок").fill("4");
+  await page.getByRole("textbox", { exact: true, name: "Залишок" }).fill("4");
+  await page.getByRole("button", { name: "Далі" }).click();
+
+  await expect(page.getByRole("heading", { name: "Зображення" })).toBeVisible();
   await page
     .getByLabel("URL зображення")
     .fill("https://example.com/e2e-ring.jpg");
+  await expect(page.getByAltText("Зображення товару 1")).toBeVisible();
+  await page.getByRole("button", { name: "Далі" }).click();
+
+  await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
+  await expect(page.getByText(productName)).toBeVisible();
+  await expect(page.getByText("1499,50 грн")).toBeVisible();
   await page.getByRole("button", { name: "Створити товар" }).click();
 
   await expect(page).toHaveURL(/\/dashboard\/products$/);

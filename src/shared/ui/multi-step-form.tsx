@@ -415,7 +415,7 @@ type StepActionsProps = {
   nextLabel?: string;
   onBack: () => void;
   onNext: () => Promise<boolean> | boolean | void;
-  submitLabel?: string;
+  submitLabel?: ReactNode;
 };
 
 export function StepActions({
@@ -445,13 +445,15 @@ export function StepActions({
         {backLabel}
       </Button>
       {isLastStep ? (
-        <Button disabled={isPending} type="submit">
+        <Button disabled={isPending} key="submit" type="submit">
           {submitLabel}
         </Button>
       ) : (
         <Button
           disabled={isPending}
-          onClick={() => {
+          key="next"
+          onClick={(event) => {
+            event.preventDefault();
             void onNext();
           }}
           type="button"
