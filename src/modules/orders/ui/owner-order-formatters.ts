@@ -1,3 +1,4 @@
+import { formatOrderDisplayNumber } from "@/modules/orders/application/order-display-number";
 import { formatMoneyMinor as formatSharedMoneyMinor } from "@/shared/utils/format-money";
 
 export function formatMoneyMinor(amountMinor: number, currency: string): string {
@@ -16,5 +17,5 @@ export function formatDateTime(date: Date | null): string {
 }
 
 export function shortOrderId(orderId: string): string {
-  return orderId.slice(0, 8);
+  return formatOrderDisplayNumber(orderId).slice(1);
 }

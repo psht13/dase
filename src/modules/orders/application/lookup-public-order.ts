@@ -1,5 +1,9 @@
 import type { OrderRepository } from "@/modules/orders/application/order-repository";
+import { formatOrderDisplayNumber } from "@/modules/orders/application/order-display-number";
+import { orderStatusLabels } from "@/modules/orders/application/order-labels";
 import { isValidPublicOrderToken } from "@/modules/orders/application/public-order-token";
+import { getPublicOrderStatusMessage } from "@/modules/orders/application/public-order-status";
+import type { OrderStatus } from "@/modules/orders/domain/status";
 import type {
   PaymentProviderCode,
   PaymentRepository,
@@ -7,7 +11,7 @@ import type {
 } from "@/modules/payments/application/payment-repository";
 import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
 
-export type PublicOrderReview = {
+type PublicOrderBase = {
   canRetryMonobankPayment: boolean;
   currency: string;
   items: PublicOrderReviewItem[];
@@ -15,8 +19,20 @@ export type PublicOrderReview = {
   paymentStatus: PaymentStatus | null;
   publicToken: string;
   publicTokenExpiresAt: Date;
-  status: string;
+  status: OrderStatus;
   totalMinor: number;
+};
+
+export type PublicOrderReview = PublicOrderBase & {
+  state: "review";
+  status: "SENT_TO_CUSTOMER";
+};
+
+export type PublicOrderStatus = PublicOrderBase & {
+  displayNumber: string;
+  state: "status";
+  statusLabel: string;
+  statusMessage: string;
 };
 
 export type PublicOrderReviewItem = {
@@ -35,7 +51,7 @@ export type PublicOrderLookupResult =
     }
   | {
       available: true;
-      order: PublicOrderReview;
+      order: PublicOrderReview | PublicOrderStatus;
     };
 
 export async function lookupPublicOrderUseCase(
@@ -86,27 +102,46 @@ export async function lookupPublicOrderUseCase(
   const monobankPayment =
     payments.find((payment) => payment.provider === "MONOBANK") ?? null;
 
+  const publicOrderBase: PublicOrderBase = {
+    canRetryMonobankPayment: monobankPayment
+      ? canCreateMonobankInvoiceForPayment(order.status, monobankPayment)
+      : false,
+    currency: order.currency,
+    items: order.items.map((item) => ({
+      lineTotalMinor: item.lineTotalMinor,
+      productImageUrlsSnapshot: item.productImageUrlsSnapshot,
+      productNameSnapshot: item.productNameSnapshot,
+      productSkuSnapshot: item.productSkuSnapshot,
+      quantity: item.quantity,
+      unitPriceMinor: item.unitPriceMinor,
+    })),
+    paymentProvider: monobankPayment?.provider ?? null,
+    paymentStatus: monobankPayment?.status ?? null,
+    publicToken: order.publicToken,
+    publicTokenExpiresAt: order.publicTokenExpiresAt,
+    status: order.status,
+    totalMinor: order.totalMinor,
+  };
+
+  if (order.status === "SENT_TO_CUSTOMER") {
+    return {
+      available: true,
+      order: {
+        ...publicOrderBase,
+        state: "review",
+        status: "SENT_TO_CUSTOMER",
+      },
+    };
+  }
+
   return {
     available: true,
     order: {
-      canRetryMonobankPayment: monobankPayment
-        ? canCreateMonobankInvoiceForPayment(order.status, monobankPayment)
-        : false,
-      currency: order.currency,
-      items: order.items.map((item) => ({
-        lineTotalMinor: item.lineTotalMinor,
-        productImageUrlsSnapshot: item.productImageUrlsSnapshot,
-        productNameSnapshot: item.productNameSnapshot,
-        productSkuSnapshot: item.productSkuSnapshot,
-        quantity: item.quantity,
-        unitPriceMinor: item.unitPriceMinor,
-      })),
-      paymentProvider: monobankPayment?.provider ?? null,
-      paymentStatus: monobankPayment?.status ?? null,
-      publicToken: order.publicToken,
-      publicTokenExpiresAt: order.publicTokenExpiresAt,
-      status: order.status,
-      totalMinor: order.totalMinor,
+      ...publicOrderBase,
+      displayNumber: formatOrderDisplayNumber(order.id),
+      state: "status",
+      statusLabel: orderStatusLabels[order.status],
+      statusMessage: getPublicOrderStatusMessage(order.status),
     },
   };
 }

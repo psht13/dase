@@ -56,9 +56,34 @@ describe("PublicDeliveryPage", () => {
       `/o/${validToken}`,
     );
   });
+
+  it("renders the status page instead of the form after confirmation", async () => {
+    vi.mocked(getOrderRepository).mockReturnValue({
+      findByPublicToken: vi.fn(async () =>
+        createOrder({
+          confirmedAt: new Date("2026-04-30T11:00:00.000Z"),
+          customerId: "customer-1",
+          id: "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
+          status: "CONFIRMED_BY_CUSTOMER",
+        }),
+      ),
+    } as never);
+
+    render(
+      await PublicDeliveryPage({
+        params: Promise.resolve({ token: validToken }),
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Замовлення #55e143f7" }),
+    ).toBeVisible();
+    expect(screen.getByText("Ваше замовлення обробляється.")).toBeVisible();
+    expect(screen.queryByLabelText("Повне ім’я")).not.toBeInTheDocument();
+  });
 });
 
-function createOrder(): PersistedOrder {
+function createOrder(input: Partial<PersistedOrder> = {}): PersistedOrder {
   const now = new Date("2026-04-30T10:00:00.000Z");
 
   return {
@@ -75,5 +100,6 @@ function createOrder(): PersistedOrder {
     status: "SENT_TO_CUSTOMER",
     totalMinor: 0,
     updatedAt: now,
+    ...input,
   };
 }

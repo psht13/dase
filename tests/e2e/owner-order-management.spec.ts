@@ -55,8 +55,9 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();
   await expect(
-    page.getByText("Замовлення підтверджено. Оплата при отриманні."),
+    page.getByRole("heading", { name: /Замовлення #/ }),
   ).toBeVisible();
+  await expect(page.getByText(/Ваше замовлення обробляється/)).toBeVisible();
 
   await page.goto("/dashboard/orders");
   await expect(page.getByRole("heading", { name: "Замовлення" })).toBeVisible();

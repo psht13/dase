@@ -87,6 +87,29 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();
 
   await expect(
-    page.getByText("Замовлення підтверджено. Оплата при отриманні."),
+    page.getByRole("heading", { name: /Замовлення #/ }),
   ).toBeVisible();
+  await expect(page.getByText(/Ваше замовлення обробляється/)).toBeVisible();
+  await expect(
+    page.getByText("Якщо маєте питання, зверніться до продавця в чаті."),
+  ).toBeVisible();
+  await expect(page.getByText(productName)).toBeVisible();
+  await expect(page.getByText("Разом")).toBeVisible();
+  await expect(page.getByLabel("Повне ім’я")).not.toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.goto(publicUrl);
+  await expect(
+    page.getByRole("heading", { name: /Замовлення #/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Перейти до доставки й оплати" }),
+  ).not.toBeVisible();
+  await expect(page.getByLabel("Повне ім’я")).not.toBeVisible();
+
+  await page.goto(`${publicUrl}/delivery`);
+  await expect(
+    page.getByRole("heading", { name: /Замовлення #/ }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Повне ім’я")).not.toBeVisible();
 });

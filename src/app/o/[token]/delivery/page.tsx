@@ -3,8 +3,12 @@ import { lookupPublicOrderUseCase } from "@/modules/orders/application/lookup-pu
 import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
 import { confirmDeliveryAction } from "@/modules/orders/ui/delivery-actions";
 import { DeliveryForm } from "@/modules/orders/ui/delivery-form";
-import { PublicOrderUnavailable } from "@/modules/orders/ui/public-order-review";
+import {
+  PublicOrderStatus,
+  PublicOrderUnavailable,
+} from "@/modules/orders/ui/public-order-review";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
+import { retryPublicMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
 import { PageHeader, PageShell } from "@/shared/ui/page-layout";
@@ -31,6 +35,18 @@ export default async function PublicDeliveryPage({
 
   if (!result.available) {
     return <PublicOrderUnavailable />;
+  }
+
+  if (result.order.state === "status") {
+    return (
+      <PublicOrderStatus
+        order={result.order}
+        paymentRetryAction={retryPublicMonobankPaymentAction.bind(
+          null,
+          result.order.publicToken,
+        )}
+      />
+    );
   }
 
   return (

@@ -1,9 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import {
   PublicOrderReview,
+  PublicOrderStatus,
   PublicOrderUnavailable,
 } from "@/modules/orders/ui/public-order-review";
-import type { PublicOrderReview as PublicOrderReviewData } from "@/modules/orders/application/lookup-public-order";
+import type {
+  PublicOrderReview as PublicOrderReviewData,
+  PublicOrderStatus as PublicOrderStatusData,
+} from "@/modules/orders/application/lookup-public-order";
 
 describe("PublicOrderReview", () => {
   it("renders public order snapshots with Ukrainian labels", () => {
@@ -40,9 +44,8 @@ describe("PublicOrderReview", () => {
 
   it("renders Ukrainian MonoPay status messages", () => {
     render(
-      <PublicOrderReview
-        deliveryHref="/o/public-token/delivery"
-        order={createPublicOrder({
+      <PublicOrderStatus
+        order={createPublicOrderStatus({
           paymentProvider: "MONOBANK",
           paymentStatus: "PENDING",
           status: "PAYMENT_PENDING",
@@ -57,9 +60,8 @@ describe("PublicOrderReview", () => {
 
   it("renders a Ukrainian MonoPay retry action when retry is available", () => {
     render(
-      <PublicOrderReview
-        deliveryHref="/o/public-token/delivery"
-        order={createPublicOrder({
+      <PublicOrderStatus
+        order={createPublicOrderStatus({
           canRetryMonobankPayment: true,
           paymentProvider: "MONOBANK",
           paymentStatus: "FAILED",
@@ -72,6 +74,26 @@ describe("PublicOrderReview", () => {
     expect(
       screen.getByRole("button", { name: "Повторити оплату" }),
     ).toBeVisible();
+  });
+
+  it("renders a compact Ukrainian status page after confirmation", () => {
+    render(<PublicOrderStatus order={createPublicOrderStatus()} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Замовлення #55e143f7" }),
+    ).toBeVisible();
+    expect(screen.getByText("Поточний статус")).toBeVisible();
+    expect(screen.getByText("Підтверджено клієнтом")).toBeVisible();
+    expect(screen.getByText("Ваше замовлення обробляється.")).toBeVisible();
+    expect(
+      screen.getByText("Якщо маєте питання, зверніться до продавця в чаті."),
+    ).toBeVisible();
+    expect(screen.getByText("Товари у замовленні")).toBeVisible();
+    expect(screen.getByText("Каблучка")).toBeVisible();
+    expect(screen.getByText("Разом")).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: "Перейти до доставки й оплати" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -95,7 +117,38 @@ function createPublicOrder(
     paymentStatus: null,
     publicToken: "public-token",
     publicTokenExpiresAt: new Date("2026-05-14T10:00:00.000Z"),
+    state: "review",
     status: "SENT_TO_CUSTOMER",
+    totalMinor: 2_400_00,
+    ...input,
+  };
+}
+
+function createPublicOrderStatus(
+  input: Partial<PublicOrderStatusData> = {},
+): PublicOrderStatusData {
+  return {
+    canRetryMonobankPayment: false,
+    currency: "UAH",
+    displayNumber: "#55e143f7",
+    items: [
+      {
+        lineTotalMinor: 2_400_00,
+        productImageUrlsSnapshot: ["https://example.com/ring.jpg"],
+        productNameSnapshot: "Каблучка",
+        productSkuSnapshot: "RING-1",
+        quantity: 2,
+        unitPriceMinor: 1_200_00,
+      },
+    ],
+    paymentProvider: null,
+    paymentStatus: null,
+    publicToken: "public-token",
+    publicTokenExpiresAt: new Date("2026-05-14T10:00:00.000Z"),
+    state: "status",
+    status: "CONFIRMED_BY_CUSTOMER",
+    statusLabel: "Підтверджено клієнтом",
+    statusMessage: "Ваше замовлення обробляється.",
     totalMinor: 2_400_00,
     ...input,
   };

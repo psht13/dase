@@ -3,6 +3,7 @@ import { getOrderRepository } from "@/modules/orders/infrastructure/order-reposi
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import {
   PublicOrderReview,
+  PublicOrderStatus,
   PublicOrderUnavailable,
 } from "@/modules/orders/ui/public-order-review";
 import { retryPublicMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
@@ -27,6 +28,18 @@ export default async function PublicOrderPage({ params }: PublicOrderPageProps) 
 
   if (!result.available) {
     return <PublicOrderUnavailable />;
+  }
+
+  if (result.order.state === "status") {
+    return (
+      <PublicOrderStatus
+        order={result.order}
+        paymentRetryAction={retryPublicMonobankPaymentAction.bind(
+          null,
+          result.order.publicToken,
+        )}
+      />
+    );
   }
 
   return (

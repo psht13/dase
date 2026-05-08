@@ -38,6 +38,7 @@ export type DeliveryActionResult =
       message: string;
       ok: true;
       paymentRedirectUrl?: string;
+      statusPageUrl: string;
     };
 
 export async function confirmDeliveryAction(
@@ -101,6 +102,7 @@ export async function confirmDeliveryAction(
       : "Замовлення підтверджено. Оплата при отриманні.",
     ok: true,
     paymentRedirectUrl,
+    statusPageUrl: `/o/${publicToken}`,
   };
 }
 

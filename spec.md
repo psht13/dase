@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -163,7 +163,7 @@ Release candidate hardening update on 2026-04-30:
 - Worker error logging now formats errors through a safe logger that redacts credentialed URLs and sensitive environment assignments before printing.
 - Environment documentation now includes every app/tooling variable read by the repository, including `PLAYWRIGHT_BASE_URL`, `NODE_ENV`, and `CI`.
 - External API adapters remain covered by MSW contract tests and fixture adapters; CI does not call live Monobank or Nova Post APIs.
-- Public order routes still expose only token-scoped public order review/payment status data and do not expose internal order IDs.
+- Public order routes expose only token-scoped public order review/payment status data and do not expose full internal order IDs.
 - Owner dashboard routes continue to require an authenticated `owner`; `user` role sessions are redirected away from `/dashboard`.
 - Railway MCP was attempted again during Prompt 11 with `check_railway_status`, but live Railway configuration was initially blocked by invalid or expired Railway authentication.
 
@@ -267,7 +267,7 @@ Final responsive QA update on 2026-05-08:
 - Added `tests/e2e/final-responsive-qa.spec.ts` to cover all critical routes requested for final QA: `/`, `/login`, `/setup`, `/dashboard`, `/dashboard/products`, `/dashboard/products/new`, `/dashboard/products/[productId]/edit`, `/dashboard/orders/new`, `/dashboard/orders`, `/dashboard/orders/[orderId]`, `/o/[token]`, and `/o/[token]/delivery`.
 - The final Playwright QA coverage verifies mobile public order review, mobile customer delivery steps, mobile product creation steps, mobile owner order-builder steps, mobile product/order list card views, mobile order details sections, and desktop dashboard navigation.
 - Keyboard basics are covered for the global Ukrainian skip link, mobile dashboard nav, product/order stepper controls, order filters, and product action links. Focusable controls keep visible focus styles and accessible Ukrainian labels.
-- Delivery loading, empty, and success states are covered with mocked carrier responses: `Пошук міст…`, `Місто не знайдено`, `Пошук відділень…`, and the existing successful cash-on-delivery confirmation message.
+- Delivery loading, empty, and post-submit states are covered with mocked carrier responses: `Пошук міст…`, `Місто не знайдено`, `Пошук відділень…`, and the public status page after successful cash-on-delivery confirmation.
 - Added a small local SVG app icon and metadata link so browser QA no longer produces a missing favicon request during normal page loads.
 - No business logic, database schema, role model, product image strategy, payment behavior, shipping behavior, or object storage behavior changed in the final responsive QA milestone.
 - Focused verification passed with `pnpm test:e2e tests/e2e/final-responsive-qa.spec.ts`.
@@ -277,8 +277,9 @@ Final responsive QA update on 2026-05-08:
 Audit scope: public order pages under `/o/[token]`, the customer delivery/payment form, owner product form, owner order builder, owner orders list, owner order details, dashboard shell, payment modules, Monobank provider/webhook code, shipping enqueue/job flow, and migrations through `drizzle/0003_kind_deathstrike.sql`.
 
 Current active behavior:
-- Public order lookup accepts any non-cancelled and non-expired token. `/o/[token]` always renders the review CTA to `/o/[token]/delivery`, and `/o/[token]/delivery` still renders the delivery form after an order is already confirmed. The submit use case blocks a second confirmation because it only accepts `SENT_TO_CUSTOMER`, but the UI still lets customers reopen the form and hit the error path.
-- Public order review does not expose a customer-facing order number. It shows product snapshots, total, optional MonoPay status copy, optional MonoPay retry, and the delivery/payment CTA.
+- Public order lookup distinguishes unavailable links, review state, and post-confirmation status state. `/o/[token]` renders the delivery CTA only while the order is `SENT_TO_CUSTOMER`; confirmed, payment, shipment, completed, returned, and failed-payment states render a Ukrainian status page.
+- `/o/[token]/delivery` renders the delivery form only for `SENT_TO_CUSTOMER`. After confirmation it renders the same public status state, so customers cannot resubmit delivery data or create duplicate customer, payment, or shipment rows through the UI. The submit use case still rejects duplicate confirmation because it only accepts `SENT_TO_CUSTOMER`.
+- The public status page shows a stable customer-facing display number using the first 8 characters of the order UUID, for example `#55e143f7`; it does not expose the full internal UUID. It also shows Ukrainian status labels, processing/payment guidance, seller-chat instruction, selected products, and total.
 - Customer contact data currently collects and persists only full name and phone. `customers.email` exists but the public form does not use it. There is no Instagram nickname field in `DeliveryFormValues`, `ConfirmPublicOrderInput`, `CustomerRecord`, or `customers`.
 - Customer payment defaults to `MONOBANK`. The active payment choices are MonoPay and `Післяплата`; choosing MonoPay creates a Monobank invoice in `confirmDeliveryAction`, redirects to the provider page, and keeps public/owner retry actions active.
 - Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `MONOBANK` and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` are Monobank-specific but nullable.
@@ -291,7 +292,7 @@ Planned functional changes:
 - Replace the active customer MonoPay choice with `Оплата картою онлайн`. This should be a manual card transfer flow: after customer confirmation, show owner-configured visible card/requisite records and tell the customer in Ukrainian to send the receipt in the Instagram chat.
 - Keep Monobank adapter, webhook, and historical payment records readable for existing data, but remove MonoPay from the active customer flow and default form value. MonoPay retry should stop appearing for new manual-card customer flows.
 - Add Instagram nickname to the public contact step, server validation, confirmation use case input, customer persistence, owner order list/detail read models, and UI tests with Ukrainian labels.
-- After a successful confirmation, reopening `/o/[token]` or `/o/[token]/delivery` must show a Ukrainian status page instead of another submit form. The page should include a customer-safe order number, current Ukrainian status, and guidance that the order is being processed or is waiting for manual card payment and that the receipt should be sent in Instagram chat.
+- Extend the new public status page with owner-configured manual-card requisites once the manual-card payment provider and owner settings are implemented.
 - Add owner order search matching for full order UUID and the displayed short order ID in `matchesSearch(...)`; update the filter placeholder from `Телефон або ТТН` to include order number.
 - Add owner payment settings under the dashboard, with Ukrainian labels for creating, editing, ordering, enabling, and disabling visible card/requisite records.
 
@@ -305,8 +306,15 @@ UI refactor plan:
 - Preserve the mobile-first stepper and card work, but rebalance desktop layouts so forms and detail pages do not feel sparse at `lg`/`xl`: constrain overly wide text, give form content a stronger primary column, and use two-column desktop layouts only where the side content has enough weight.
 - Standardize action rows across product forms, order builder, delivery form, details panels, tables, and public pages: stable button height, predictable primary/secondary alignment, full-width buttons only on mobile, and consistent widths for table row actions.
 - Keep desktop product/order tables compact and scannable while adding the new Instagram and payment-provider information selectively. Avoid stuffing every field into list rows; put full details on the order details page.
-- Convert the public post-confirmation view into a status-oriented page with clear hierarchy rather than reusing the pre-confirmation review CTA.
-- Add focused component and Playwright coverage for the new status page, manual-card payment copy, owner settings form, Instagram labels, order search, and desktop button/table alignment.
+- Add focused component and Playwright coverage for manual-card payment copy, owner settings form, Instagram labels, order search, and desktop button/table alignment.
+
+Public order status page update on 2026-05-08:
+- Added `formatOrderDisplayNumber(orderId)` for stable customer-facing order numbers such as `#55e143f7`, backed by unit tests.
+- Public order lookup now returns `review` only for `SENT_TO_CUSTOMER` and `status` for valid post-confirmation/payment/shipment/completion states. Cancelled, expired, malformed, and missing links remain unavailable.
+- `/o/[token]` shows the pre-confirmation review CTA only before confirmation. After confirmation it shows `Замовлення #...`, the Ukrainian status label, status guidance such as `Ваше замовлення обробляється` or `Очікуємо оплату картою`, the seller-chat instruction, selected products, and total.
+- `/o/[token]/delivery` no longer renders the form after confirmation; it renders the same status state and leaves duplicate confirmation blocked in `confirmPublicOrderUseCase`.
+- Successful cash-on-delivery confirmation returns the customer to `/o/[token]`. MonoPay confirmation still redirects to the existing provider URL and returns to the same public status page.
+- Tests cover display-number formatting, public lookup review/status/unavailable states, duplicate-confirmation rejection without extra customer/payment/shipment writes, Ukrainian status UI copy, delivery-page status rendering, and the Playwright revisit contract.
 
 Risks:
 - PostgreSQL enum migrations must be forward-compatible and tested against Railway PostgreSQL before production promotion.
@@ -446,9 +454,9 @@ Audit result:
 - The delivery step keeps carrier, city, and warehouse lookup through `/api/carriers/cities` and `/api/carriers/warehouses`; it does not call Nova Post directly from UI and still renders Nova Post as the only active MVP carrier.
 - City and warehouse results render as full-width mobile-friendly result cards with loading, empty, and error states in Ukrainian. Selected city and warehouse states are shown clearly with `Змінити місто` and `Змінити відділення` reset actions.
 - The payment step uses two explicit Ukrainian radio-card options: MonoPay with an online redirect explanation and `Післяплата` with a payment-on-receipt explanation.
-- The review step shows separate contact, delivery, and payment summaries before the unchanged `confirmDeliveryAction` submit runs.
-- Final submit is guarded against accidental double submit. MonoPay still redirects when the existing action returns `paymentRedirectUrl`; cash on delivery still shows the existing confirmation message.
-- Focused UI tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, MonoPay redirect wiring, cash-on-delivery confirmation, and Ukrainian labels. Playwright customer delivery E2E now follows the step flow and checks mobile overflow during the public delivery path.
+- The review step shows separate contact, delivery, and payment summaries before `confirmDeliveryAction` submits and returns the status page URL.
+- Final submit is guarded against accidental double submit. MonoPay still redirects when the existing action returns `paymentRedirectUrl`; cash on delivery now navigates back to `/o/[token]` to show the public status page.
+- Focused UI tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, MonoPay redirect wiring, cash-on-delivery status navigation, and Ukrainian labels. Playwright customer delivery E2E now follows the step flow, checks mobile overflow during the public delivery path, revisits the public link, and verifies the delivery form is no longer shown after confirmation.
 
 ## Core flows
 
@@ -490,6 +498,7 @@ Audit result:
    - cash on delivery
 7. Customer opens `Перевірка`, reviews contact, delivery, and payment summaries, and submits the form.
 8. App saves confirmation data, sets the order to `CONFIRMED_BY_CUSTOMER`, and prepares pending payment/shipment records.
+9. Customer lands on the public status page for the same token. Reopening `/o/[token]` or `/o/[token]/delivery` shows the status summary instead of the delivery form.
 
 ### Payment
 

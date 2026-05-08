@@ -78,7 +78,7 @@ export function getCustomerPaymentStatusMessage(
     status: null,
   },
 ): string | null {
-  if (payment.provider !== "MONOBANK" && orderStatus !== "PAYMENT_PENDING") {
+  if (payment.provider !== "MONOBANK") {
     return null;
   }
 

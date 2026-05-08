@@ -124,12 +124,20 @@ describe("confirmPublicOrderUseCase", () => {
   });
 
   it("rejects orders that are not waiting for customer confirmation", async () => {
+    const dependencies = createDependencies(
+      createOrder({ status: "PAYMENT_PENDING" }),
+    );
+
     await expect(
       confirmPublicOrderUseCase(createInput(), {
-        ...createDependencies(createOrder({ status: "PAYMENT_PENDING" })),
+        ...dependencies,
         now: () => now,
       }),
     ).rejects.toBeInstanceOf(PublicOrderCannotBeConfirmedError);
+
+    expect(dependencies.customerRepository.save).not.toHaveBeenCalled();
+    expect(dependencies.paymentRepository.save).not.toHaveBeenCalled();
+    expect(dependencies.shipmentRepository.save).not.toHaveBeenCalled();
   });
 });
 

@@ -11,7 +11,7 @@ import type {
 const validToken = "secure_public_token_123456789012345";
 
 describe("lookupPublicOrderUseCase", () => {
-  it("returns a public review model without internal order id", async () => {
+  it("returns a review state for orders sent to customers", async () => {
     const result = await lookupPublicOrderUseCase(
       {
         now: new Date("2026-04-30T10:00:00.000Z"),
@@ -37,10 +37,72 @@ describe("lookupPublicOrderUseCase", () => {
         paymentProvider: "MONOBANK",
         paymentStatus: "PAID",
         publicToken: validToken,
+        state: "review",
+        status: "SENT_TO_CUSTOMER",
         totalMinor: 2_400_00,
       },
     });
-    expect(JSON.stringify(result)).not.toContain("order-1");
+    expect(JSON.stringify(result)).not.toContain(
+      "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
+    );
+  });
+
+  it("returns a status state for confirmed orders", async () => {
+    const result = await lookupPublicOrderUseCase(
+      {
+        now: new Date("2026-04-30T10:00:00.000Z"),
+        publicToken: validToken,
+      },
+      {
+        orderRepository: createOrderRepository(
+          createOrder({ status: "CONFIRMED_BY_CUSTOMER" }),
+        ),
+        paymentRepository: createPaymentRepository({
+          providerInvoiceId: null,
+          status: "PENDING",
+        }),
+      },
+    );
+
+    expect(result).toMatchObject({
+      available: true,
+      order: {
+        displayNumber: "#55e143f7",
+        state: "status",
+        status: "CONFIRMED_BY_CUSTOMER",
+        statusLabel: "Підтверджено клієнтом",
+        statusMessage: "Ваше замовлення обробляється.",
+      },
+    });
+  });
+
+  it("returns a status state for payment-pending orders", async () => {
+    const result = await lookupPublicOrderUseCase(
+      {
+        now: new Date("2026-04-30T10:00:00.000Z"),
+        publicToken: validToken,
+      },
+      {
+        orderRepository: createOrderRepository(
+          createOrder({ status: "PAYMENT_PENDING" }),
+        ),
+        paymentRepository: createPaymentRepository({
+          providerInvoiceId: "invoice-1",
+          status: "PENDING",
+        }),
+      },
+    );
+
+    expect(result).toMatchObject({
+      available: true,
+      order: {
+        displayNumber: "#55e143f7",
+        state: "status",
+        status: "PAYMENT_PENDING",
+        statusLabel: "Очікує оплату",
+        statusMessage: "Очікуємо оплату картою.",
+      },
+    });
   });
 
   it("returns unavailable for expired order links", async () => {
@@ -137,13 +199,13 @@ function createOrder(
     createdAt: now,
     currency: "UAH",
     customerId: null,
-    id: "order-1",
+    id: "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
     items: [
       {
         createdAt: now,
         id: "item-1",
         lineTotalMinor: 2_400_00,
-        orderId: "order-1",
+        orderId: "55e143f7-1f01-4bd9-9bcb-4c7417db75bb",
         productId: "product-1",
         productImageUrlsSnapshot: ["https://example.com/ring.jpg"],
         productNameSnapshot: "Каблучка",

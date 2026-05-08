@@ -36,6 +36,12 @@ In production, set `OWNER_SETUP_TOKEN` as a secure environment variable and ente
 
 After the first owner is created, `/setup` becomes unavailable and owner access starts from `/login`.
 
+## Public Order Links
+
+Customers open `/o/[token]` to review selected products and continue to delivery while the order is waiting for confirmation.
+
+After a customer submits delivery/payment details, the same public link becomes a Ukrainian status page with `Замовлення #...`, current status, seller-chat instruction, selected products, and total. Reopening `/o/[token]/delivery` after confirmation shows the status page instead of the delivery form, so the customer cannot submit the same order twice.
+
 ## Shipping Demo Modes
 
 Use `SHIPPING_LABEL_CREATION_MODE=disabled` for demos and staging when Nova Post sender settings are not complete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.

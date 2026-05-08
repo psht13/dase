@@ -73,9 +73,13 @@ describe("payment status mapping", () => {
   });
 
   it("returns Ukrainian customer-facing payment messages", () => {
-    expect(getCustomerPaymentStatusMessage("PAYMENT_PENDING")).toBe(
-      "Очікуємо підтвердження оплати MonoPay.",
-    );
+    expect(getCustomerPaymentStatusMessage("PAYMENT_PENDING")).toBeNull();
+    expect(
+      getCustomerPaymentStatusMessage("PAYMENT_PENDING", {
+        provider: "MONOBANK",
+        status: "PENDING",
+      }),
+    ).toBe("Очікуємо підтвердження оплати MonoPay.");
     expect(
       getCustomerPaymentStatusMessage("PAID", {
         provider: "MONOBANK",

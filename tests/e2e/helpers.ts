@@ -184,8 +184,9 @@ export async function confirmPublicOrderDelivery(
   await page.getByRole("button", { name: "Далі" }).click();
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();
   await expect(
-    page.getByText("Замовлення підтверджено. Оплата при отриманні."),
+    page.getByRole("heading", { name: /Замовлення #/ }),
   ).toBeVisible();
+  await expect(page.getByText(/Ваше замовлення обробляється/)).toBeVisible();
 }
 
 export async function createConfirmedOrder(

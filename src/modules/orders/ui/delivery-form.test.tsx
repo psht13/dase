@@ -3,14 +3,18 @@ import userEvent from "@testing-library/user-event";
 import type { DeliveryActionResult } from "@/modules/orders/ui/delivery-actions";
 import { DeliveryForm } from "@/modules/orders/ui/delivery-form";
 
+const router = vi.hoisted(() => ({
+  push: vi.fn(),
+  refresh: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    refresh: vi.fn(),
-  }),
+  useRouter: () => router,
 }));
 
 describe("DeliveryForm", () => {
   afterEach(() => {
+    vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -94,6 +98,7 @@ describe("DeliveryForm", () => {
         return {
           message: "Замовлення підтверджено. Оплата при отриманні.",
           ok: true,
+          statusPageUrl: "/o/public-token",
         };
       },
     );
@@ -131,6 +136,7 @@ describe("DeliveryForm", () => {
     expect(
       await screen.findByText("Замовлення підтверджено. Оплата при отриманні."),
     ).toBeVisible();
+    expect(router.push).toHaveBeenCalledWith("/o/public-token");
   });
 
   it("redirects to MonoPay when the existing action returns a payment URL", async () => {
@@ -145,6 +151,7 @@ describe("DeliveryForm", () => {
           message: "Замовлення підтверджено. Переходимо до оплати MonoPay.",
           ok: true,
           paymentRedirectUrl: "https://pay.example.test/invoice-1",
+          statusPageUrl: "/o/public-token",
         };
       },
     );

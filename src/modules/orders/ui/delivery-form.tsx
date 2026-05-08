@@ -225,7 +225,6 @@ export function DeliveryForm({
 
         if (result.ok) {
           setIsConfirmed(true);
-          router.refresh();
 
           if (result.paymentRedirectUrl) {
             if (navigateToPayment) {
@@ -233,8 +232,11 @@ export function DeliveryForm({
             } else {
               window.location.assign(result.paymentRedirectUrl);
             }
+
+            return;
           }
 
+          router.push(result.statusPageUrl);
           return;
         }
 

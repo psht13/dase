@@ -168,6 +168,7 @@ describe("confirmDeliveryAction", () => {
     ).resolves.toEqual({
       message: "Замовлення підтверджено. Оплата при отриманні.",
       ok: true,
+      statusPageUrl: `/o/${validToken}`,
     });
     expect(revalidatePath).toHaveBeenCalledWith(`/o/${validToken}`);
     expect(revalidatePath).toHaveBeenCalledWith(`/o/${validToken}/delivery`);
@@ -224,6 +225,7 @@ describe("confirmDeliveryAction", () => {
       message: "Замовлення підтверджено. Переходимо до оплати MonoPay.",
       ok: true,
       paymentRedirectUrl: "https://pay.test/invoice-1",
+      statusPageUrl: `/o/${validToken}`,
     });
     expect(paymentProvider.createInvoice).toHaveBeenCalledWith(
       expect.objectContaining({
