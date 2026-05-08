@@ -35,8 +35,10 @@ describe("NewOrderPage", () => {
     expect(screen.getByText("Каблучка")).toBeVisible();
     expect(screen.queryByText("Ланцюжок")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Створити посилання" }),
+      screen.getByRole("heading", { name: "Вибір товарів" }),
     ).toBeVisible();
+    expect(screen.getByLabelText("Пошук товарів")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Далі" })).toBeVisible();
   });
 });
 

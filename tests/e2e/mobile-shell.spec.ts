@@ -132,10 +132,16 @@ async function createPublicOrderLink(page: Page) {
 
   await page.goto("/dashboard/orders/new");
   await page.getByLabel(`Додати ${productName}`).check();
-  await page.getByLabel(`Кількість для ${productName}`).fill("1");
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page
+    .getByRole("spinbutton", { name: `Кількість для ${productName}` })
+    .fill("1");
+  await page.getByRole("button", { name: "Далі" }).click();
   await page.getByRole("button", { name: "Створити посилання" }).click();
 
-  return page.getByLabel("Публічне посилання").inputValue();
+  return page
+    .getByRole("textbox", { name: "Публічне посилання" })
+    .inputValue();
 }
 
 async function createProduct(

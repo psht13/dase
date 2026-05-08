@@ -26,9 +26,15 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
 
   await page.goto("/dashboard/orders/new");
   await page.getByLabel(`Додати ${productName}`).check();
-  await page.getByLabel(`Кількість для ${productName}`).fill("1");
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page
+    .getByRole("spinbutton", { name: `Кількість для ${productName}` })
+    .fill("1");
+  await page.getByRole("button", { name: "Далі" }).click();
   await page.getByRole("button", { name: "Створити посилання" }).click();
-  const publicUrl = await page.getByLabel("Публічне посилання").inputValue();
+  const publicUrl = await page
+    .getByRole("textbox", { name: "Публічне посилання" })
+    .inputValue();
 
   await page.goto(publicUrl);
   await page

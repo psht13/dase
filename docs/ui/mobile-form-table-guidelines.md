@@ -56,6 +56,7 @@ Rules:
 - Each step has one clear `h2`, a concise Ukrainian label, and one primary action.
 - Back/next buttons are real buttons. Cancel/back navigation remains a `Link`.
 - The final step summarizes the submitted data before the server action runs.
+- A post-submit result step is acceptable for flows such as order-link creation, but it must display returned data only after the unchanged server action succeeds.
 - Preserve submitted values when moving between steps.
 - If server validation fails, focus or reveal the step containing the first invalid field.
 - Async success/error messages use `aria-live`.
@@ -67,9 +68,10 @@ Recommended step groups:
   - `Зображення`: external image URLs and previews.
   - `Перевірка`: summary, save, and cancel.
 - Order builder:
-  - `Товари`: card list with selectable products.
+  - `Вибір товарів`: searchable card list with selectable active products.
   - `Кількість`: quantity controls for selected products.
-  - `Підсумок`: total, public link creation, copy link result.
+  - `Перевірка`: compact summary, total, and public link creation.
+  - `Посилання`: generated token URL, copy action, and quick open action.
 - Public delivery:
   - `Контакти`: name and phone.
   - `Доставка`: carrier, city, warehouse.
@@ -114,7 +116,7 @@ Rules:
 
 Component targets:
 - `ProductTable`: render product cards on mobile; keep table on wide screens.
-- `OrderBuilderForm`: replace the mobile table with selectable product cards and large quantity controls.
+- `OrderBuilderForm`: implemented as a four-step flow with selectable product cards, large quantity controls, review summary, and link result.
 - `OwnerOrdersTable`: render order summary cards on mobile; keep the table for wide screens.
 - `OwnerOrderDetailsView`: convert product and audit tables into mobile cards or a timeline.
 
@@ -252,18 +254,19 @@ Remaining plan:
 
 ### `/dashboard/orders/new`
 
-Current state:
-- Order-builder table has `min-w-[820px]`.
-- Page-level horizontal overflow was observed at 360, 390, 430, and 768 px.
-- Checkbox hit target is visually 16 px.
-- The total panel and submit button are below the wide table.
+Current state after 2026-05-08 order-builder stepper refactor:
+- The wide `min-w-[820px]` order-builder table was removed.
+- The page now uses four Ukrainian steps: `Вибір товарів`, `Кількість`, `Перевірка`, and `Посилання`.
+- Product selection is searchable and card-based; each product card is a large selectable target and the input list contains active products only from the existing application use case.
+- The quantity step shows selected products only, with 44 px plus/minus controls, numeric inputs, inline validation messages, and line totals.
+- The review step keeps the total and create-link action close to the selected-item summary.
+- The link step displays the generated token-based public URL with copy and quick-open actions.
+- The existing order creation server action, use case, product snapshot behavior, and public-token URL behavior are unchanged.
+- Focused unit coverage checks product selection/search, quantity validation, summary review, link display, and Ukrainian labels.
+- Playwright E2E creates a multi-product owner order link at 390 px and asserts no page-level horizontal overflow through the builder steps.
 
-Plan:
-- Replace the mobile table with selectable product cards.
-- Make each card label a large tap target for selection.
-- Use quantity steppers or a 44 px numeric input for selected products.
-- Keep the total and create-link action sticky or immediately after selected items on mobile.
-- Keep existing order creation use case and server action unchanged.
+Remaining plan:
+- Keep monitoring long product names, SKUs, and generated URLs in mobile screenshots as more catalog/order pages move to card layouts.
 
 ### `/dashboard/orders`
 

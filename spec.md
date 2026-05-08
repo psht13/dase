@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, customer delivery confirmation, MonoPay / Monobank payment flow and retry, shipment worker automation, owner order management, UI polish, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -348,6 +348,16 @@ Audit result:
 - Playwright E2E product creation now follows the multi-step flow. Mobile E2E checks cover product create and edit forms at 360 px with no page-level horizontal overflow, including the image preview step.
 - Playwright MCP inspected `/dashboard/products/new` and `/dashboard/products/[productId]/edit` at a 360x740 viewport with E2E-safe owner data.
 
+## Owner order builder stepper adoption on 2026-05-08
+
+- `/dashboard/orders/new` now uses a four-step owner flow: `Вибір товарів`, `Кількість`, `Перевірка`, and `Посилання`.
+- The product selection step is searchable, shows active products as mobile-friendly selectable cards, and no longer depends on a wide order-builder table.
+- The quantity step shows only selected products, touch-sized plus/minus buttons, clear numeric inputs, inline Ukrainian validation messages, and line totals.
+- The review step shows a compact summary with selected products, quantities, line totals, and total amount before the existing create-link submit runs.
+- The link step shows the generated token-based public URL, copy action, and quick open action. Internal order ids are still not exposed in public URLs.
+- The order creation server action, `createOrderDraftUseCase`, form-data contract, product snapshots, public token generation, and public order review behavior remain unchanged.
+- Unit tests cover product selection/search, quantity validation, summary review, generated-link display, and Ukrainian labels. Playwright owner order-link creation now creates a multi-product link at 390 px and asserts no page-level horizontal overflow through the owner builder steps.
+
 ## Core flows
 
 ### Product management
@@ -359,11 +369,12 @@ Audit result:
 
 ### Owner order creation
 
-1. Owner selects products and quantities.
-2. App calculates total.
-3. Owner creates order draft.
-4. App creates secure public token.
-5. Owner sends public link to customer.
+1. Owner opens the searchable `Вибір товарів` step and selects active products.
+2. Owner opens `Кількість`, sets quantities for selected products, and reviews line totals.
+3. Owner opens `Перевірка` and reviews the compact order summary and total.
+4. Owner creates the order link through the existing server action.
+5. App creates a secure public token and shows the token-based public URL on `Посилання`.
+6. Owner copies or opens the public link and sends it to the customer.
 
 ### Owner order management
 
@@ -654,6 +665,14 @@ Latest local quality status on 2026-05-08 after the product form stepper adoptio
 - `pnpm test:coverage` passed with 88.97% statements, 80.37% branches, 91.1% functions, and 88.97% lines across the configured coverage scope.
 - `pnpm test:e2e` passed with Chromium: 14 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
+
+Latest local quality status on 2026-05-08 after the owner order builder stepper adoption:
+- `pnpm lint` passed.
+- `pnpm typecheck` passed.
+- `pnpm test:coverage` passed with 89.19% statements, 80.48% branches, 90.73% functions, and 89.19% lines across the configured coverage scope.
+- `pnpm test:e2e` passed with Chromium: 14 tests passed and the opt-in production auth smoke spec skipped by default.
+- `pnpm build` passed.
+- Playwright MCP inspected `/dashboard/orders/new` at 390x844 and 1440x900 with E2E-safe owner/product data. The only console error was the existing missing `/favicon.ico` dev request.
 
 ## Commands
 
