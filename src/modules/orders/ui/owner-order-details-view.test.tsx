@@ -55,6 +55,10 @@ describe("OwnerOrderDetailsView", () => {
     );
 
     expect(screen.getByRole("heading", { name: /Замовлення #order-1/i })).toBeVisible();
+    expect(screen.getByTestId("owner-order-details-header")).toBeVisible();
+    expect(screen.getByTestId("owner-order-details-layout")).toBeVisible();
+    expect(screen.getByTestId("owner-order-primary-column")).toBeVisible();
+    expect(screen.getByTestId("owner-order-side-column")).toBeVisible();
     expect(screen.getByText("Поточний статус: Готується відправлення")).toBeVisible();
     expect(screen.getAllByText("Олена Петренко")[0]).toBeVisible();
     expect(screen.getAllByText("@olena.shop")[0]).toBeVisible();
@@ -98,6 +102,24 @@ describe("OwnerOrderDetailsView", () => {
     expect(screen.getByTestId("owner-order-products-list")).toBeVisible();
     expect(screen.getByTestId("owner-order-audit-list")).toBeVisible();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("renders order details without customer data", () => {
+    render(
+      <OwnerOrderDetailsView
+        availableTags={[]}
+        order={createOrderDetails({
+          confirmedAt: null,
+          customer: null,
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: /Замовлення #order-1/i })).toBeVisible();
+    expect(screen.getAllByText("Клієнт ще не вказаний")[0]).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Клієнт" })).toBeVisible();
+    expect(screen.getAllByText("Не вказано").length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByText("@olena.shop")).not.toBeInTheDocument();
   });
 
   it("keeps audit events visible in the compact audit section", () => {
@@ -180,6 +202,7 @@ describe("OwnerOrderDetailsView", () => {
 
     expect(screen.getByText("Оплата картою онлайн")).toBeVisible();
     expect(screen.getByText("Очікує підтвердження")).toBeVisible();
+    expect(screen.getByTestId("owner-order-manual-payment-action")).toBeVisible();
     await user.click(
       screen.getByRole("button", { name: "Позначити оплату отриманою" }),
     );

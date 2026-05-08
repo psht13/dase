@@ -83,46 +83,62 @@ export function OwnerOrderDetailsView({
 
   return (
     <div className="grid min-w-0 gap-6">
-      <div className="grid min-w-0 gap-4">
-        <ActionBar align="between" size="compact">
-          <Button asChild size="sm" variant="outline">
-            <Link href="/dashboard/orders">
-              <ArrowLeft aria-hidden="true" className="size-4" />
-              До списку замовлень
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href={publicUrl}>
-              <ExternalLink aria-hidden="true" className="size-4" />
-              Публічна сторінка
-            </Link>
-          </Button>
-        </ActionBar>
-        <div className="min-w-0">
-          <h1 className="break-words font-display text-2xl font-semibold sm:text-3xl">
-            Замовлення {displayOrderNumber(order.id)}
-          </h1>
-          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-sm">
-            <span className="inline-flex rounded-md bg-secondary px-2 py-1 font-medium">
-              {orderStatusLabels[order.status]}
-            </span>
-            <span className="min-w-0 break-words text-muted-foreground">
-              {customerName}
-            </span>
-            {customerInstagram ? (
-              <span className="break-words text-muted-foreground">
-                {customerInstagram}
+      <header
+        className="grid min-w-0 gap-4"
+        data-testid="owner-order-details-header"
+      >
+        <Button asChild className="w-fit" size="sm" variant="outline">
+          <Link href="/dashboard/orders">
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            До списку замовлень
+          </Link>
+        </Button>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="min-w-0">
+            <h1 className="break-words font-display text-2xl font-semibold sm:text-3xl">
+              Замовлення {displayOrderNumber(order.id)}
+            </h1>
+            <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-sm">
+              <span className="inline-flex rounded-md bg-secondary px-2 py-1 font-medium">
+                {orderStatusLabels[order.status]}
               </span>
-            ) : null}
+              <span className="min-w-0 break-words text-muted-foreground">
+                {customerName}
+              </span>
+              {customerInstagram ? (
+                <span className="break-words text-muted-foreground">
+                  {customerInstagram}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Поточний статус: {orderStatusLabels[order.status]}
+            </p>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Поточний статус: {orderStatusLabels[order.status]}
-          </p>
+          <ActionBar
+            align="end"
+            className="lg:justify-end"
+            mobile="row"
+            size="compact"
+          >
+            <Button asChild size="sm" variant="outline">
+              <Link href={publicUrl}>
+                <ExternalLink aria-hidden="true" className="size-4" />
+                Публічна сторінка
+              </Link>
+            </Button>
+          </ActionBar>
         </div>
-      </div>
+      </header>
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:items-start">
-        <div className="grid min-w-0 gap-6 xl:col-start-2 xl:row-start-1">
+      <div
+        className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:items-start"
+        data-testid="owner-order-details-layout"
+      >
+        <div
+          className="grid min-w-0 gap-5 lg:col-start-2 lg:row-start-1"
+          data-testid="owner-order-side-column"
+        >
           <DetailSection testId="overview" title="Огляд">
             <dl className="grid min-w-0 gap-3 text-sm">
               <InfoRow label="Статус" value={orderStatusLabels[order.status]} />
@@ -208,6 +224,14 @@ export function OwnerOrderDetailsView({
           </DetailSection>
 
           <DetailSection testId="payment" title="Оплата">
+            {canMarkManualCardPaymentPaid ? (
+              <div data-testid="owner-order-manual-payment-action">
+                <OwnerOrderManualPaymentForm
+                  action={markManualCardPaymentPaidAction.bind(null, order.id)}
+                />
+              </div>
+            ) : null}
+
             {order.payments.length ? (
               <div className="grid min-w-0 gap-4">
                 {order.payments.map((payment) => (
@@ -244,12 +268,6 @@ export function OwnerOrderDetailsView({
             ) : (
               <EmptyInlineState message="Оплата ще не створена. Після підтвердження клієнтом тут буде спосіб оплати та статус рахунку." />
             )}
-
-            {canMarkManualCardPaymentPaid ? (
-              <OwnerOrderManualPaymentForm
-                action={markManualCardPaymentPaidAction.bind(null, order.id)}
-              />
-            ) : null}
 
             {hasHistoricalMonobankPayment ? (
               <div className="grid min-w-0 gap-3">
@@ -291,7 +309,10 @@ export function OwnerOrderDetailsView({
           </DetailSection>
         </div>
 
-        <div className="grid min-w-0 gap-6 xl:col-start-1 xl:row-start-1">
+        <div
+          className="grid min-w-0 gap-5 lg:col-start-1 lg:row-start-1"
+          data-testid="owner-order-primary-column"
+        >
           <DetailSection testId="products" title="Товари">
             {order.items.length ? (
               <>

@@ -14,20 +14,22 @@ describe("ProductTable", () => {
     const table = within(screen.getByTestId("product-desktop-table"));
 
     expect(table.getByRole("columnheader", { name: "Товар" })).toBeVisible();
-    expect(
-      table.getByRole("columnheader", { name: "Ціна і залишок" }),
-    ).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Ціна" })).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Залишок" })).toBeVisible();
     expect(table.getByRole("columnheader", { name: "Стан" })).toBeVisible();
     expect(table.getByRole("columnheader", { name: "Дії" })).toBeVisible();
     expect(
       table.queryByRole("columnheader", { name: "Фото" }),
     ).not.toBeInTheDocument();
     expect(
+      table.queryByRole("columnheader", { name: "Ціна і залишок" }),
+    ).not.toBeInTheDocument();
+    expect(
       table.queryByRole("columnheader", { name: "Артикул" }),
     ).not.toBeInTheDocument();
     expect(table.getByText("Каблучка")).toBeVisible();
     expect(table.getByText("Артикул: RING-1")).toBeVisible();
-    expect(table.getByText("Залишок: 3")).toBeVisible();
+    expect(table.getByText("3")).toBeVisible();
     expect(table.getByText("Активний")).toBeVisible();
     expect(table.getByRole("link", { name: /Редагувати/i })).toBeVisible();
     expect(table.getByRole("button", { name: /Вимкнути/i })).toBeVisible();

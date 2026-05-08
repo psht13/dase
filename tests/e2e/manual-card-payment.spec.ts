@@ -81,10 +81,15 @@ test("owner creates payment requisites and customer sees online card payment", a
   await expectNoHorizontalOverflow(page);
 
   await page.goto(`/dashboard/orders?search=${encodeURIComponent(customerPhone)}`);
-  await expect(
-    page.getByTestId("owner-orders-mobile-card").getByText(customerPhone),
-  ).toBeVisible();
-  await page.getByRole("link", { name: "Відкрити" }).first().click();
+  const orderCard = page
+    .getByTestId("owner-orders-mobile-card")
+    .filter({ hasText: customerInstagram })
+    .first();
+  await expect(orderCard).toBeVisible();
+  await expect(orderCard.getByText(customerPhone)).toBeHidden();
+  await expect(orderCard.getByText("Оплата: Оплата картою онлайн")).toBeVisible();
+  await expect(orderCard.getByText("Доставка: Нова пошта")).toBeVisible();
+  await orderCard.getByRole("link", { name: "Відкрити" }).click();
   await expect(page.getByRole("heading", { name: /Оплата/ })).toBeVisible();
   await expect(page.getByText("Оплата картою онлайн")).toBeVisible();
   await expect(page.getByText("Очікує підтвердження")).toBeVisible();

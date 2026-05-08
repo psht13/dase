@@ -70,7 +70,7 @@ describe("owner orders UI", () => {
     ).toBeVisible();
   });
 
-  it("renders compact desktop table hierarchy", () => {
+  it("renders compact desktop table hierarchy with one primary action", () => {
     render(
       <OwnerOrdersTable hasActiveFilters orders={[createOrderSummary()]} />,
     );
@@ -78,40 +78,43 @@ describe("owner orders UI", () => {
     const table = within(screen.getByTestId("owner-orders-desktop-table"));
 
     expect(table.getByRole("columnheader", { name: "Замовлення" })).toBeVisible();
-    expect(table.getByRole("columnheader", { name: "Дії" })).toBeVisible();
-    expect(
-      table.queryByRole("columnheader", { name: "Клієнт" }),
-    ).not.toBeInTheDocument();
-    expect(
-      table.queryByRole("columnheader", { name: "Статус" }),
-    ).not.toBeInTheDocument();
+    expect(table.getByRole("columnheader", { name: "Клієнт" })).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Оплата" })).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Доставка" })).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Сума" })).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Дата" })).toBeVisible();
+    expect(table.getByRole("columnheader", { name: "Дія" })).toBeVisible();
     expect(
       table.queryByRole("columnheader", { name: "Телефон" }),
     ).not.toBeInTheDocument();
-    expect(
-      table.queryByRole("columnheader", { name: "Доставка" }),
-    ).not.toBeInTheDocument();
-    expect(table.getByText(/Олена Петренко.*@olena\.shop/i)).toBeVisible();
+    expect(table.getByText("Олена Петренко")).toBeVisible();
+    expect(table.getByText("@olena.shop")).toBeVisible();
     expect(table.queryByText("+380671234567")).not.toBeInTheDocument();
     expect(table.getByText("Готується відправлення")).toBeVisible();
-    expect(table.queryByText("Нова пошта · Післяплата")).not.toBeInTheDocument();
-    expect(table.getByText("Подарунок")).toBeVisible();
+    expect(table.getByText("Післяплата")).toBeVisible();
+    expect(table.getByText("Очікує підтвердження")).toBeVisible();
+    expect(table.getByText("Нова пошта")).toBeVisible();
+    expect(table.getByText("Очікує створення")).toBeVisible();
+    expect(table.getByText("ТТН: TTN-001")).toBeVisible();
+    expect(table.queryByText("Подарунок")).not.toBeInTheDocument();
+    expect(table.getAllByRole("link", { name: "Відкрити" })).toHaveLength(1);
   });
 
-  it("renders mobile order cards with customer, status, amount, tags, and action", () => {
+  it("renders mobile order cards with compact payment and delivery summary", () => {
     render(<OwnerOrdersTable orders={[createOrderSummary()]} />);
 
     const card = within(screen.getByTestId("owner-orders-mobile-card"));
 
     expect(card.getByRole("heading", { name: /Замовлення #order-1/i })).toBeVisible();
     expect(card.getByText("Олена Петренко")).toBeVisible();
-    expect(card.getByText("+380671234567")).toBeVisible();
+    expect(card.queryByText("+380671234567")).not.toBeInTheDocument();
     expect(card.getByText("@olena.shop")).toBeVisible();
     expect(card.getByText("Готується відправлення")).toBeVisible();
     expect(card.getByText(/2\s?400,00/)).toBeVisible();
-    expect(card.queryByText("Нова пошта")).not.toBeInTheDocument();
-    expect(card.queryByText("Оплата: Післяплата")).not.toBeInTheDocument();
-    expect(card.getByText("Подарунок")).toBeVisible();
+    expect(card.getByText("Оплата: Післяплата")).toBeVisible();
+    expect(card.getByText("Доставка: Нова пошта")).toBeVisible();
+    expect(card.getByText("ТТН: TTN-001")).toBeVisible();
+    expect(card.queryByText("Подарунок")).not.toBeInTheDocument();
     expect(card.getByRole("link", { name: "Відкрити" })).toBeVisible();
   });
 

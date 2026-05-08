@@ -35,7 +35,10 @@ test("owner product and order lists use desktop tables and mobile cards", async 
     productTable.getByRole("columnheader", { name: "Товар" }),
   ).toBeVisible();
   await expect(
-    productTable.getByRole("columnheader", { name: "Ціна і залишок" }),
+    productTable.getByRole("columnheader", { name: "Ціна" }),
+  ).toBeVisible();
+  await expect(
+    productTable.getByRole("columnheader", { name: "Залишок" }),
   ).toBeVisible();
   await expect(productTable.getByText(productName)).toBeVisible();
   await expect(productTable.getByText(`Артикул: ${sku}`)).toBeVisible();
@@ -72,13 +75,21 @@ test("owner product and order lists use desktop tables and mobile cards", async 
     ordersTable.getByRole("columnheader", { name: "Замовлення" }),
   ).toBeVisible();
   await expect(
-    ordersTable.getByRole("columnheader", { name: "Дії" }),
+    ordersTable.getByRole("columnheader", { name: "Оплата" }),
+  ).toBeVisible();
+  await expect(
+    ordersTable.getByRole("columnheader", { name: "Доставка" }),
+  ).toBeVisible();
+  await expect(
+    ordersTable.getByRole("columnheader", { name: "Дія" }),
   ).toBeVisible();
   const orderRow = ordersTable.getByRole("row", {
     name: new RegExp(customerName),
   });
   await expect(orderRow).toBeVisible();
   await expect(orderRow.getByText("Готується відправлення")).toBeVisible();
+  await expect(orderRow.getByText("Післяплата")).toBeVisible();
+  await expect(orderRow.getByText("Нова пошта")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.setViewportSize({ height: 844, width: 390 });
@@ -90,8 +101,10 @@ test("owner product and order lists use desktop tables and mobile cards", async 
     .filter({ hasText: customerName })
     .first();
   await expect(orderCard).toBeVisible();
-  await expect(orderCard.getByText(customerPhone)).toBeVisible();
+  await expect(orderCard.getByText(customerPhone)).toBeHidden();
   await expect(orderCard.getByText("Готується відправлення")).toBeVisible();
+  await expect(orderCard.getByText("Оплата: Післяплата")).toBeVisible();
+  await expect(orderCard.getByText("Доставка: Нова пошта")).toBeVisible();
   await expect(orderCard.getByText(/1\s?590,00/)).toBeVisible();
   await expect(orderCard.getByRole("link", { name: "Відкрити" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -185,5 +198,25 @@ test("owner order details use mobile sections and keep owner actions visible", a
   await expectNoHorizontalOverflow(page);
 
   await page.setViewportSize({ height: 740, width: 360 });
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ height: 900, width: 1440 });
+  await expect(page.getByTestId("owner-order-details-layout")).toBeVisible();
+  const primaryBox = await page
+    .getByTestId("owner-order-primary-column")
+    .boundingBox();
+  const sideBox = await page.getByTestId("owner-order-side-column").boundingBox();
+
+  expect(primaryBox?.width ?? 0).toBeGreaterThan(sideBox?.width ?? 0);
+  await expect(
+    page
+      .getByTestId("owner-order-primary-column")
+      .getByRole("heading", { name: "Товари" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByTestId("owner-order-side-column")
+      .getByRole("heading", { name: "Оплата" }),
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

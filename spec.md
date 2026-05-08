@@ -261,6 +261,14 @@ Dashboard filter, empty-state, and feedback polish update on 2026-05-08:
 - Tag updates, manual status updates, MonoPay retry, and shipment retry now share live-region feedback for pending, successful, and failed action states where applicable.
 - Component tests cover mobile filter panel behavior, active summaries, clear filters, Ukrainian empty states, and action feedback messages. Playwright E2E now exercises the owner order filter panel and active-summary behavior after filtering.
 
+Owner order view declutter update on 2026-05-08:
+- `/dashboard/orders` now uses a compact desktop table with one primary row action and explicit summary columns for order number/status, customer/Instagram, payment method/status, delivery status/tracking, total, and date.
+- Mobile order cards now show only the required scan fields: order number, status, customer/Instagram, payment summary, delivery summary, total, and the details action. Secondary phone and tag details stay on the order details page or behind filters.
+- `/dashboard/products` now uses a cleaner desktop table with separate `Товар`, `Ціна`, `Залишок`, `Стан`, and compact action columns. Mobile product cards keep name, SKU, price, stock, active badge, and edit/toggle actions without showing image URLs or image previews in list rows.
+- `/dashboard/orders/[orderId]` keeps collapsible Ukrainian detail sections and now exposes testable primary/sidebar desktop columns. Products, status history, and audit remain in the wider primary column, while overview, customer, delivery, payment, and tags stay in compact side panels.
+- The manual card transfer action `Позначити оплату отриманою` now appears first inside the payment section when a pending manual-card payment exists, before lower-priority payment metadata.
+- Focused UI tests cover simplified owner order list labels, product list columns/cards, and order details with and without customer data. Playwright E2E covers owner search by short order number, opening details, mobile no-overflow details, and desktop primary/sidebar panel balance.
+
 Final responsive QA update on 2026-05-08:
 - Playwright MCP inspected the critical product, order-builder, public review, customer delivery, order list, and order-details flows against the local E2E-safe dev server. No page-level horizontal overflow was found in that walkthrough across 390x844 plus the final matrix checks for 360x740, 430x932, 768x1024, 1024x768, and 1440x900 on representative owner and public pages.
 - Added shared Playwright E2E helpers in `tests/e2e/helpers.ts`, including `expectNoHorizontalOverflow(...)` with page-level overflow diagnostics and the final viewport matrix.

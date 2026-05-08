@@ -56,9 +56,12 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await page.getByRole("button", { name: "Далі" }).click();
   await expect(page.getByRole("heading", { name: "Перевірка" })).toBeVisible();
   await page.getByRole("button", { name: "Підтвердити замовлення" }).click();
-  await expect(
-    page.getByRole("heading", { name: /Замовлення #/ }),
-  ).toBeVisible();
+  const publicOrderHeading = page.getByRole("heading", { name: /Замовлення #/ });
+  await expect(publicOrderHeading).toBeVisible();
+  const publicOrderHeadingText = await publicOrderHeading.textContent();
+  const shortOrderNumber = publicOrderHeadingText?.match(/#[^\s]+/)?.[0] ?? "";
+  expect(shortOrderNumber).toMatch(/^#\S+/);
+  const shortOrderSearch = shortOrderNumber.replace(/^#/, "");
   await expect(page.getByText(/Ваше замовлення обробляється/)).toBeVisible();
 
   await page.goto("/dashboard/orders");
@@ -66,6 +69,14 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   await expect(
     page.getByTestId("owner-orders-desktop-table").getByText(customerName),
   ).toBeVisible();
+
+  await page.getByLabel("Пошук").fill(shortOrderSearch);
+  await page.getByRole("button", { name: "Застосувати фільтри" }).click();
+  await expect(
+    page.getByLabel("Активні фільтри").getByText(`Пошук: ${shortOrderSearch}`),
+  ).toBeVisible();
+  await expect(page.getByRole("row", { name: new RegExp(customerName) })).toBeVisible();
+
   await page.getByLabel("Пошук").fill(customerPhone.replace(/\D/g, ""));
   await page.getByLabel("Служба доставки").selectOption("NOVA_POSHTA");
   await page.getByLabel("Спосіб оплати").selectOption("CASH_ON_DELIVERY");
@@ -127,7 +138,7 @@ test("owner filters an order, manages tags, updates status, and sees audit histo
   ).toBeVisible();
   const taggedOrderRow = page.getByRole("row", { name: new RegExp(customerName) });
   await expect(taggedOrderRow).toBeVisible();
-  await expect(taggedOrderRow.getByText(tagName)).toBeVisible();
+  await expect(taggedOrderRow.getByText(tagName)).toBeHidden();
 });
 
 async function createProduct(

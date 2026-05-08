@@ -51,35 +51,29 @@ export function ProductTable({ products, toggleAction }: ProductTableProps) {
         <table className="w-full table-fixed border-collapse text-left text-sm">
           <thead className="bg-muted text-muted-foreground">
             <tr>
-              <th className="w-[44%] px-4 py-3 font-medium">Товар</th>
-              <th className="w-[22%] px-4 py-3 font-medium">
-                Ціна і залишок
+              <th className="w-[36%] px-4 py-3 font-medium">Товар</th>
+              <th className="w-[16%] px-4 py-3 text-right font-medium">Ціна</th>
+              <th className="w-[12%] px-4 py-3 text-right font-medium">
+                Залишок
               </th>
-              <th className="w-[14%] px-4 py-3 font-medium">Стан</th>
-              <th className="w-[20%] px-4 py-3 text-right font-medium">Дії</th>
+              <th className="w-[12%] px-4 py-3 font-medium">Стан</th>
+              <th className="w-[24%] px-4 py-3 text-right font-medium">Дії</th>
             </tr>
           </thead>
           <tbody>
             {products.map((product) => (
               <tr className="border-t align-middle" key={product.id}>
                 <td className="min-w-0 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <ProductImage product={product} />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{product.name}</p>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">
-                        Артикул: {product.sku}
-                      </p>
-                    </div>
-                  </div>
+                  <p className="truncate font-medium">{product.name}</p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    Артикул: {product.sku}
+                  </p>
                 </td>
-                <td className="px-4 py-3">
-                  <p className="font-medium tabular-nums">
-                    {formatMoneyMinor(product.priceMinor, product.currency)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Залишок: {product.stockQuantity}
-                  </p>
+                <td className="px-4 py-3 text-right font-medium tabular-nums">
+                  {formatMoneyMinor(product.priceMinor, product.currency)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {product.stockQuantity}
                 </td>
                 <td className="px-4 py-3">
                   <ProductStatusBadge isActive={product.isActive} />
@@ -113,19 +107,16 @@ function ProductCard({
       className="grid min-w-0 gap-4 rounded-md border bg-card p-4"
       data-testid="product-mobile-card"
     >
-      <div className="flex min-w-0 items-start gap-3">
-        <ProductImage product={product} />
+      <div className="flex min-w-0 flex-wrap items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-start gap-2">
-            <h2 className="min-w-0 flex-1 break-words text-base font-semibold">
-              {product.name}
-            </h2>
-            <ProductStatusBadge isActive={product.isActive} />
-          </div>
+          <h2 className="break-words text-base font-semibold">
+            {product.name}
+          </h2>
           <p className="mt-1 break-words text-sm text-muted-foreground">
             Артикул: {product.sku}
           </p>
         </div>
+        <ProductStatusBadge isActive={product.isActive} />
       </div>
 
       <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -213,29 +204,5 @@ function ProductStatusBadge({ isActive }: { isActive: boolean }) {
     >
       {isActive ? "Активний" : "Неактивний"}
     </span>
-  );
-}
-
-function ProductImage({ product }: { product: ProductRecord }) {
-  const image = product.images[0];
-
-  if (!image) {
-    return (
-      <div className="flex size-14 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
-        Немає
-      </div>
-    );
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      alt={image.altText ?? product.name}
-      className="size-14 rounded-md object-cover"
-      height="56"
-      loading="lazy"
-      src={image.url}
-      width="56"
-    />
   );
 }
