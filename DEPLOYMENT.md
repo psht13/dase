@@ -173,18 +173,20 @@ Railway authentication was refreshed and Railway MCP was retried on 2026-04-30.
 
 Completed live setup:
 - Railway project `dase` was created and linked: https://railway.com/project/42c716e7-674c-4ca6-bafc-2bc59fabb79a
-- Services exist in the `production` environment: `web`, `worker`, and `Postgres`.
+- Services exist in the `production` environment: `web`, `worker`, `Postgres-1P5k`, and `Postgres`.
+- `Postgres-1P5k` is the production PostgreSQL service after DB-01; `Postgres` is retained as the test/staging database service.
 - No S3, R2, Railway Storage Bucket, or object storage service was created.
 - `web` and `worker` are connected to GitHub repository `psht13/dase` on branch `main`.
 - GitHub autodeploy is enabled for both `web` and `worker`.
 - `web` uses `/railway.json`, `pnpm build`, `pnpm db:migrate`, `pnpm start`, and `/api/health`.
 - `worker` uses `/railway.worker.json`, `pnpm build`, and `pnpm worker:start`.
-- Required runtime variables were set securely in Railway variables, including `DATABASE_URL` as a Railway reference to `Postgres`.
+- Required runtime variables were set securely in Railway variables, including `DATABASE_URL` as a Railway reference to `Postgres-1P5k` for production `web` and `worker`.
 - `OWNER_SETUP_TOKEN` was configured securely on 2026-04-30 with deploy triggering skipped; current runtime validation requires it only for the production `web` first-owner setup path. The `worker` no longer requires login/setup-only secrets. Do not expose the value in logs or commits.
 - Railway web domain: https://web-production-26609.up.railway.app
 - Web health check verified: `/api/health` returns `status: ok`.
 - Worker runtime verified: deployment logs include `Shipment worker is ready.`
 - Railway PostgreSQL connectivity and migrations were verified with a read-only table count check through the Railway public database proxy.
+- The new production database is empty of owners after DB-01; create the first owner through `/setup` with `OWNER_SETUP_TOKEN`.
 
 Remaining manual production verification:
 - Configure real Monobank credentials in Railway variables only if historical MonoPay retry/webhook verification is intentionally needed; no Monobank variable is required for the active customer payment flow.
@@ -203,8 +205,8 @@ Prompt 09 production smoke on 2026-05-08:
 Поточний безпечний стан:
 - Проєкт Railway: `dase`; середовище: `production`.
 - Production сервіси: `web`, `worker` і `Postgres`.
-- Поточний сервіс бази даних: `Postgres` (`aff72341-fa9c-4151-b783-88f178c3cb4d`), позначка для розділення: `test/staging candidate`.
-- `web` (`663cb97a-8878-40b8-b4bf-818fbb4b998f`) і `worker` (`93354d69-7b1f-4cd3-8e64-1eb4a072e9b1`) зараз резолвлять `DATABASE_URL` у приватний Railway Postgres endpoint поточного сервісу `Postgres`.
+- Поточний сервіс бази даних: `Postgres` (`aff7...cb4d`), позначка для розділення: `test/staging candidate`.
+- `web` (`663c...998f`) і `worker` (`9335...e9b1`) зараз резолвлять `DATABASE_URL` у приватний Railway Postgres endpoint поточного сервісу `Postgres`.
 - Останні успішні деплої `web` і `worker` використовують GitHub `main` коміт `2f252b83a32c755f390f5a9a72ee8f8fa7b04809` (`Add tasks for railway DB split`).
 - `web` запускає `pnpm db:migrate` перед `pnpm start`; це має залишатися production воротами міграції до того, як `worker` почне використовувати нову базу.
 - `worker` стартує через `pnpm worker:start` і не повинен отримувати нову production базу, доки deploy `web` з міграціями не завершиться успішно.
@@ -222,3 +224,26 @@ Prompt 09 production smoke on 2026-05-08:
 7. Поточний/test `DATABASE_PUBLIC_URL` тримати тільки в локальному `.env` для development або staging перевірки.
 8. Production значення тримати тільки в локальному `.env.production.local` або `.env.production` для швидкого перемикання; ці файли не комітити.
 9. Коли нова production база буде live, відкрити `/setup`, ввести `OWNER_SETUP_TOKEN` в українське поле setup-token, створити першого `owner`, потім перевірити, що `/setup` недоступний, а `/login` відкриває `/dashboard` для цього owner.
+
+## DB-01 production PostgreSQL split
+
+Виконано 2026-05-09.
+
+Pre-switch audit:
+- Railway MCP confirmed production services `web`, `worker`, and `Postgres`.
+- Existing `web` (`663c...998f`) and `worker` (`9335...e9b1`) `DATABASE_URL` values resolved to the same redacted private Railway PostgreSQL endpoint as current `Postgres` (`aff7...cb4d`) before the switch.
+- Current `Postgres` has volume `postgres-volume` (`c4f...a598`) mounted at `/var/lib/postgresql/data`.
+- Available Railway MCP/CLI commands can list volumes but do not expose backup creation. Before deleting, mutating, or repurposing the current DB, create a manual Railway backup in the dashboard: open project `dase` -> environment `production` -> service `Postgres` -> `Backups` tab -> create a manual backup for `postgres-volume` and verify the backup timestamp. The current DB must remain untouched as test/staging.
+
+Result:
+- Created new Railway PostgreSQL service `Postgres-1P5k` (`f7fd...3271`) for production. Railway generated this service name; the available MCP/CLI commands do not expose service renaming.
+- Retained old/current `Postgres` (`aff7...cb4d`) as the test/staging database service. It was not deleted, mutated, or repurposed.
+- Set production `web` `DATABASE_URL` to the `Postgres-1P5k` Railway reference first. The `worker` remained on the old DB until web migration verification passed.
+- Redeployed `web`; deployment `5265...5bcd` succeeded, `pnpm db:migrate` reported migrations applied successfully, and `/api/health` returned `status: ok`.
+- Read-only schema verification through the new production database public proxy returned 17 public tables, all 16 expected app tables present, and zero owners.
+- Set production `worker` `DATABASE_URL` to the same `Postgres-1P5k` Railway reference only after web verification passed.
+- Redeployed `worker`; deployment `a0be...3271` succeeded and deploy logs include `Shipment worker is ready.`
+- Final redacted variable comparison showed production `web` and `worker` resolve to the new production database fingerprint and no longer resolve to the old `Postgres` fingerprint.
+- The first production owner must be created in the new empty DB through `/setup` with `OWNER_SETUP_TOKEN`.
+- No object storage service was created.
+- Local verification after the documentation update passed: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:e2e`, and `pnpm build`.

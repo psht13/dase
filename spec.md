@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, historical MonoPay / Monobank payment flow and retry support, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, and final production-readiness audit implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, historical MonoPay / Monobank payment flow and retry support, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, final production-readiness audit, and production PostgreSQL split implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -892,8 +892,8 @@ Prompt 10 recovery on 2026-05-08:
 Поточний Railway стан:
 - Проєкт Railway: `dase`, середовище: `production`.
 - Сервіси: `web`, `worker`, `Postgres`.
-- Поточний PostgreSQL: сервіс `Postgres` (`aff72341-fa9c-4151-b783-88f178c3cb4d`), позначка: `test/staging candidate`.
-- `web` (`663cb97a-8878-40b8-b4bf-818fbb4b998f`) і `worker` (`93354d69-7b1f-4cd3-8e64-1eb4a072e9b1`) зараз використовують `DATABASE_URL`, який резолвиться до приватного Railway хоста поточного `Postgres`.
+- Поточний PostgreSQL: сервіс `Postgres` (`aff7...cb4d`), позначка: `test/staging candidate`.
+- `web` (`663c...998f`) і `worker` (`9335...e9b1`) зараз використовують `DATABASE_URL`, який резолвиться до приватного Railway хоста поточного `Postgres`.
 - Останні успішні деплої `web` і `worker` створені з GitHub `main` коміта `2f252b83a32c755f390f5a9a72ee8f8fa7b04809` (`Add tasks for railway DB split`).
 - `web` використовує `/railway.json` з `pnpm db:migrate` перед стартом `pnpm start`.
 - `worker` використовує `/railway.worker.json` і стартує через `pnpm worker:start` без окремої pre-deploy міграції.
@@ -909,6 +909,28 @@ Prompt 10 recovery on 2026-05-08:
 5. Лише після успішного `web` deploy і міграцій перемкнути production `worker` `DATABASE_URL` на нову production PostgreSQL.
 6. Додати поточну/test базу в локальний `.env` через `DATABASE_PUBLIC_URL` із `Postgres`, а production значення тримати в локальному `.env.production.local` або `.env.production`; ці файли не комітити.
 7. Після запуску нової production бази відкрити `/setup`, ввести `OWNER_SETUP_TOKEN` у форму українською мовою, створити першого `owner`, після цього перевірити `/login`, `/dashboard` і недоступність `/setup`.
+
+## DB-01 production database split on 2026-05-09
+
+Railway MCP confirmed the production project services before changes. The current `web` (`663c...998f`) and `worker` (`9335...e9b1`) `DATABASE_URL` values matched the old `Postgres` (`aff7...cb4d`) database endpoint before the switch, without printing credentials.
+
+Backup status:
+- The current `Postgres` volume `postgres-volume` (`c4f...a598`) remains attached at `/var/lib/postgresql/data`.
+- The available Railway MCP/CLI commands can list volumes but do not expose backup creation or backup schedules.
+- Before deleting, mutating, or repurposing the old/current DB, create a manual Railway backup in the dashboard: project `dase` -> environment `production` -> service `Postgres` -> `Backups` tab -> create a manual backup for `postgres-volume` and verify its timestamp.
+- DB-01 did not delete, mutate, or repurpose the old/current DB.
+
+Production DB result:
+- Created new Railway PostgreSQL service `Postgres-1P5k` (`f7fd...3271`) for production. Railway generated the name; available MCP/CLI commands do not expose service renaming.
+- Retained `Postgres` (`aff7...cb4d`) as the test/staging database service.
+- Set production `web` `DATABASE_URL` to the new `Postgres-1P5k` Railway reference first, leaving `worker` on the old DB until web verification passed.
+- Redeployed `web`; deployment `5265...5bcd` succeeded, Drizzle migrations reported success, `/api/health` returned `status: ok`, and a read-only schema check returned 17 public tables with all 16 expected app tables present.
+- The new production DB had zero owners after migration, so the first `owner` must be created through `/setup` with `OWNER_SETUP_TOKEN`.
+- After web migration and health verification, set production `worker` `DATABASE_URL` to the same `Postgres-1P5k` Railway reference.
+- Redeployed `worker`; deployment `a0be...3271` succeeded and logs include `Shipment worker is ready.`
+- Final redacted variable comparison confirmed production `web` and `worker` resolve to the new production DB and no longer resolve to the old `Postgres` service.
+- No object storage service was created.
+- Local verification after the documentation update passed: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage` with 88.99% statements/lines, 81.44% branches, and 89.76% functions, `pnpm test:e2e` with 22 passed and the opt-in production smoke skipped, and `pnpm build`.
 
 ## Commands
 
