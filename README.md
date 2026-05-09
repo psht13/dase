@@ -28,13 +28,27 @@ Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_H
 
 Nova Post secrets should be set only for the live flows that use them. MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option or production startup. Keep Railway values in secure service variables or variable references.
 
-## First Owner Setup
+## Створення першого owner у production
 
-Before any owner exists, open `/setup` and create the first owner.
+Поки в production базі немає жодного `owner`, створіть першого власника тільки через production-процес налаштування:
 
-In production, set `OWNER_SETUP_TOKEN` as a secure environment variable and enter it in the Ukrainian token field on the `/setup` form. Do not place `OWNER_SETUP_TOKEN` in URLs, redirects, logs, query strings, or client-side state.
+1. Відкрийте `https://web-production-26609.up.railway.app/setup` або `/setup` на власному домені.
+2. Якщо форма просить токен, введіть значення зі змінної Railway `OWNER_SETUP_TOKEN`. Не вставляйте токен в URL, перенаправлення, логи, рядок запиту або клієнтський стан.
+3. Створіть `owner` з ім’ям, email і паролем.
+4. Після перенаправлення на `/login` увійдіть під щойно створеним `owner`.
+5. Відкрийте `/dashboard` і перевірте, що кабінет завантажується.
+6. Знову відкрийте `/setup` і перевірте, що сторінка налаштування більше недоступна після створення `owner`.
+7. Після створення першого `owner` змініть або видаліть `OWNER_SETUP_TOKEN`, якщо застосунок більше не потребує його для процесу налаштування.
 
-After the first owner is created, `/setup` becomes unavailable and owner access starts from `/login`.
+Опційна перевірка кількості `owner` тільки для читання, без публікації облікових даних бази даних:
+
+```bash
+psql "$DATABASE_PUBLIC_URL" <<'SQL'
+BEGIN READ ONLY;
+SELECT count(*)::int AS owner_count FROM users WHERE role = 'owner';
+ROLLBACK;
+SQL
+```
 
 ## Public Order Links
 

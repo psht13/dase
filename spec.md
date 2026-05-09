@@ -960,6 +960,21 @@ Verification passed after the E2E harness isolation update:
 - `pnpm test:e2e` with 22 passed and the opt-in production smoke skipped.
 - `pnpm build`
 
+## DB-03 перевірка production setup першого owner на 2026-05-09
+
+Виконано без створення production `owner`, бо цей запуск не мав явного дозволу створити реального першого власника.
+
+Поточний production стан:
+- Railway MCP підтвердив сервіси `web`, `worker`, `Postgres-1P5k` і `Postgres` у production-проєкті.
+- Останні production деплої `web` (`5265...5bcd`) і `worker` (`a0be...3271`) мають статус `SUCCESS`.
+- Перевірка змінних Railway з редагуванням секретних значень підтвердила, що production `web` `DATABASE_URL` вказує на `Postgres-1P5k`, `BETTER_AUTH_URL=https://web-production-26609.up.railway.app`, `BETTER_AUTH_SECRET`, `OWNER_SETUP_TOKEN` і `NODE_ENV=production` присутні. Значення секретів не друкувалися.
+- Запит тільки для читання проти `Postgres-1P5k` через публічний proxy повернув 17 `public` таблиць і `owner_count=0`.
+- Сторінка `/setup` у production відкриває українську форму `Створення першого власника` з полями токена, імені, email, пароля і кнопкою відправлення.
+- Недійсний токен налаштування показує українську помилку і не створює `owner`; повторний запит тільки для читання після спроби з недійсним токеном повернув `owner_count=0`.
+- Створення через дійсний токен, `/login`, `/dashboard` і недоступна `/setup` після створення owner залишаються ручними кроками для користувача, доки він не дозволить створити production `owner`.
+
+Ручну інструкцію додано до `README.md` і `DEPLOYMENT.md` у розділі `Створення першого owner у production`: відкрити `https://web-production-26609.up.railway.app/setup` або `/setup` на власному домені, ввести `OWNER_SETUP_TOKEN`, якщо форма просить токен, створити `owner` з ім’ям/email/паролем, увійти після перенаправлення на `/login`, відкрити `/dashboard`, перевірити недоступність `/setup`, потім змінити або видалити `OWNER_SETUP_TOKEN`, якщо він більше не потрібен.
+
 ## Commands
 
 Configured commands:

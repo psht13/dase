@@ -198,6 +198,28 @@ pnpm test:e2e:prod
 
 The smoke test opens the Railway production URL, signs in, verifies `/dashboard`, `/dashboard/products`, and `/dashboard/orders`, logs out through the POST logout button, asserts the browser ends at `https://web-production-26609.up.railway.app/login?logout=1`, and fails if any browser request targets `https://localhost:8080`.
 
+## Створення першого owner у production
+
+Поки в новій production базі немає жодного `owner`, створюйте першого власника тільки через production-процес налаштування:
+
+1. Відкрийте `https://web-production-26609.up.railway.app/setup` або `/setup` на власному домені.
+2. Якщо форма просить токен, введіть значення зі змінної Railway `OWNER_SETUP_TOKEN`. Не вставляйте токен в URL, перенаправлення, логи, рядок запиту або клієнтський стан.
+3. Створіть `owner` з ім’ям, email і паролем.
+4. Після перенаправлення на `/login` увійдіть під щойно створеним `owner`.
+5. Відкрийте `/dashboard` і перевірте, що кабінет завантажується.
+6. Знову відкрийте `/setup` і перевірте, що сторінка налаштування більше недоступна після створення `owner`.
+7. Після створення першого `owner` змініть або видаліть `OWNER_SETUP_TOKEN`, якщо застосунок більше не потребує його для процесу налаштування.
+
+Опційна перевірка кількості `owner` тільки для читання, без публікації облікових даних бази даних:
+
+```bash
+psql "$DATABASE_PUBLIC_URL" <<'SQL'
+BEGIN READ ONLY;
+SELECT count(*)::int AS owner_count FROM users WHERE role = 'owner';
+ROLLBACK;
+SQL
+```
+
 ## Current Railway Status
 
 Railway authentication was refreshed and Railway MCP was retried on 2026-04-30.
@@ -217,7 +239,7 @@ Completed live setup:
 - Web health check verified: `/api/health` returns `status: ok`.
 - Worker runtime verified: deployment logs include `Shipment worker is ready.`
 - Railway PostgreSQL connectivity and migrations were verified with a read-only table count check through the Railway public database proxy.
-- The new production database is empty of owners after DB-01; create the first owner through `/setup` with `OWNER_SETUP_TOKEN`.
+- Нова production база досі не має жодного `owner` після DB-03 перевірки; створіть першого власника через `/setup` з `OWNER_SETUP_TOKEN`.
 
 Remaining manual production verification:
 - Configure real Monobank credentials in Railway variables only if historical MonoPay retry/webhook verification is intentionally needed; no Monobank variable is required for the active customer payment flow.
@@ -278,3 +300,17 @@ Result:
 - The first production owner must be created in the new empty DB through `/setup` with `OWNER_SETUP_TOKEN`.
 - No object storage service was created.
 - Local verification after the documentation update passed: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:e2e`, and `pnpm build`.
+
+## DB-03 перевірка production setup першого owner
+
+Виконано 2026-05-09 без створення production `owner`.
+
+Перевірка:
+- Railway MCP підтвердив production сервіси `web`, `worker`, `Postgres-1P5k` і `Postgres`; останні production деплої `web` і `worker` успішні.
+- Перевірка змінних Railway з редагуванням секретних значень підтвердила, що production `web` має `DATABASE_URL` як посилання на `Postgres-1P5k`, `BETTER_AUTH_URL=https://web-production-26609.up.railway.app`, `BETTER_AUTH_SECRET`, `OWNER_SETUP_TOKEN` і `NODE_ENV=production`. Значення секретів не друкувалися.
+- Запит тільки для читання проти `Postgres-1P5k` через публічний proxy повернув 17 `public` таблиць і `owner_count=0`.
+- `/setup` відкриває українську форму `Створення першого власника` з полями `Токен налаштування`, `Ім’я власника`, `Електронна пошта`, `Пароль` і кнопкою `Створити власника`.
+- Спроба з недійсним токеном налаштування показала українську помилку `Токен налаштування недійсний або відсутній`, а повторний запит тільки для читання підтвердив `owner_count=0`.
+- Створення через дійсний токен, `/login`, `/dashboard` і стан недоступності після створення owner не виконувалися, бо в цьому запуску не було явного дозволу створити production `owner`.
+
+Ручні кроки створення задокументовані вище в розділі `Створення першого owner у production`.
