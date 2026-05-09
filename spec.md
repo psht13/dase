@@ -932,6 +932,34 @@ Production DB result:
 - No object storage service was created.
 - Local verification after the documentation update passed: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage` with 88.99% statements/lines, 81.44% branches, and 89.76% functions, `pnpm test:e2e` with 22 passed and the opt-in production smoke skipped, and `pnpm build`.
 
+## DB-02 local environment switching on 2026-05-09
+
+Local secret env files were created on the trusted local machine and remain untracked:
+- `.env` for local development and test checks against the old/current Railway `Postgres` test/staging database through its public proxy.
+- `.env.test.local` for restoring the same test/staging values.
+- `.env.production.local` for emergency local production checks against the new production `Postgres-1P5k` database through its public proxy.
+
+Secret handling:
+- `.gitignore` was verified to ignore `.env`, `.env.*`, `.env.local`, `.env.test.local`, `.env.production`, and `.env.production.local`, while keeping `.env.example` tracked.
+- The local env files were set to mode `600`.
+- Railway variables were inspected only for presence, shape, and redacted host summaries in tracked documentation. Full secret values are not stored in the repository.
+- The test/staging database uses a public proxy host on `switchyard.proxy.rlwy.net`; the production database uses a public proxy host on `monorail.proxy.rlwy.net`.
+- `.env.production.local` uses production web auth values from Railway, production `BETTER_AUTH_URL=https://web-production-26609.up.railway.app`, and `SHIPPING_LABEL_CREATION_MODE=disabled`.
+- Production payment and shipping API secrets were not copied into local env files.
+- Playwright local E2E now explicitly blanks `DATABASE_URL` and `DATABASE_URL_TEST` for the dev server while `PLAYWRIGHT_E2E=1`, so browser tests keep using isolated in-memory repositories even when local ignored env files contain Railway database URLs.
+
+Documentation:
+- `.env.example` contains only non-secret placeholders and local-safe defaults.
+- `DEPLOYMENT.md` documents in Ukrainian how to use `.env` for local/test, temporarily copy `.env.production.local` to `.env`, restore `.env` back to test/staging, and avoid committing secrets.
+
+Verification passed after the E2E harness isolation update:
+- `git status --ignored` showed `.env`, `.env.test.local`, and `.env.production.local` under ignored files.
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm test:coverage` with 404 tests passed and 88.99% statements/lines, 81.44% branches, and 89.76% functions.
+- `pnpm test:e2e` with 22 passed and the opt-in production smoke skipped.
+- `pnpm build`
+
 ## Commands
 
 Configured commands:

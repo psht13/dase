@@ -9,6 +9,8 @@ const devServerPort =
   parsedBaseURL.port || (parsedBaseURL.protocol === "https:" ? "443" : "80");
 const webServerCommand = [
   "PLAYWRIGHT_E2E=1",
+  "DATABASE_URL=",
+  "DATABASE_URL_TEST=",
   "SHIPPING_LABEL_CREATION_MODE=disabled",
   `BETTER_AUTH_URL=${baseURL}`,
   "pnpm dev",

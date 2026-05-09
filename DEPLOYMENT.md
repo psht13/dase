@@ -101,6 +101,37 @@ Tooling-managed CI variable:
 
 `DATABASE_URL` must be available to both `web` and `worker`. The `postgres` service should expose it through Railway variable references rather than copied plaintext credentials.
 
+## Локальне перемикання середовищ
+
+Локальні файли з секретами не комітяться. `.gitignore` має покривати `.env`, `.env.*`, `.env.local`, `.env.test.local`, `.env.production`, і `.env.production.local`, але залишати `.env.example` відстежуваним.
+
+Поточна схема після DB-01:
+- `.env` - швидкий локальний файл для розробки та тестових перевірок. Він має використовувати стару/current Railway PostgreSQL базу `Postgres` через `DATABASE_PUBLIC_URL` або локальну PostgreSQL базу.
+- `.env.test.local` - запасний локальний тестовий файл із тим самим test/staging підключенням.
+- `.env.production.local` - локальний файл тільки для emergency production checks на довіреній машині. Він має використовувати нову production Railway PostgreSQL базу `Postgres-1P5k` через `DATABASE_PUBLIC_URL`, production `BETTER_AUTH_URL`, production `BETTER_AUTH_SECRET`, і production `OWNER_SETUP_TOKEN`.
+
+Для звичайної локальної роботи тримайте test/staging значення в `.env`:
+
+```bash
+cp .env.test.local .env
+```
+
+Для короткої production-перевірки на довіреній локальній машині тимчасово скопіюйте production файл у `.env`:
+
+```bash
+cp .env.production.local .env
+```
+
+Після production-перевірки одразу поверніть `.env` на test/staging:
+
+```bash
+cp .env.test.local .env
+```
+
+Ніколи не комітьте локальні env файли або значення секретів. Не вставляйте приватні Railway runtime URL з `postgres.railway.internal` у локальний `.env`, якщо локальна машина не підключена через Railway CLI/proxy; для звичайного локального доступу використовуйте тільки `DATABASE_PUBLIC_URL`.
+
+Локальний `pnpm test:e2e` запускає dev server із `PLAYWRIGHT_E2E=1` і навмисно очищає `DATABASE_URL` / `DATABASE_URL_TEST`, щоб браузерні тести працювали на ізольованих in-memory адаптерах і не змінювали Railway бази з локальних env файлів.
+
 ## Deployment Flow
 
 1. Connect the GitHub repository `psht13/dase` to Railway.
