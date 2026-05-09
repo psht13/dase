@@ -975,6 +975,32 @@ Verification passed after the E2E harness isolation update:
 
 Ручну інструкцію додано до `README.md` і `DEPLOYMENT.md` у розділі `Створення першого owner у production`: відкрити `https://web-production-26609.up.railway.app/setup` або `/setup` на власному домені, ввести `OWNER_SETUP_TOKEN`, якщо форма просить токен, створити `owner` з ім’ям/email/паролем, увійти після перенаправлення на `/login`, відкрити `/dashboard`, перевірити недоступність `/setup`, потім змінити або видалити `OWNER_SETUP_TOKEN`, якщо він більше не потрібен.
 
+## DB-04 database split recovery audit on 2026-05-09
+
+Recovery review found no active broken deployment after the production/test database split. No database service was deleted, no destructive migration was run, no production data was mutated, and no Railway variable correction or redeploy was required.
+
+Railway production state:
+- Services present: `web`, `worker`, `Postgres-1P5k`, and `Postgres`.
+- `Postgres-1P5k` remains the production database service. `Postgres` remains retained as the test/staging database service.
+- Latest successful `web` deployment is `5265...5bcd`, created from GitHub `main` commit `2f252b83a32c755f390f5a9a72ee8f8fa7b04809` with `/railway.json`, `pnpm db:migrate`, and `pnpm start`.
+- Latest successful `worker` deployment is `a0be...3271`, created from the same commit with `/railway.worker.json` and `pnpm worker:start`.
+- Production `web` and `worker` `DATABASE_URL` values resolve to the new production database host `postgres-1p5k.railway.internal:5432/<db>`, while the retained test/staging database resolves to `postgres.railway.internal:5432/<db>`.
+
+Recovery checks:
+- `web` deploy logs show `pnpm db:migrate` completed with `migrations applied successfully`; no migration failure, auth environment validation failure, `DATABASE_URL` error, or owner setup error was found in filtered deploy logs.
+- `worker` deploy logs show `Shipment worker is ready.`; no `DATABASE_URL`, pg-boss startup, migration, missing-table, or relation error was found in filtered deploy logs.
+- Read-only production database verification through the Railway public proxy returned 17 `public` tables, no missing expected app tables, `owner_count=0`, and 7 pg-boss tables.
+- Production `/api/health` returned `status: ok`.
+- Production `/logout` returned a `307` redirect to `https://web-production-26609.up.railway.app/login?logout=1`; the response used secure Better Auth cookies and did not redirect to localhost.
+- Production `/setup` returned the Ukrainian first-owner setup form, so setup is available because the new production database still has no `owner`.
+- Production `BETTER_AUTH_URL` is the public Railway web origin and `BETTER_AUTH_SECRET` is present. No localhost cookie configuration was found in the production response.
+
+Resolution:
+- The intended DB split is intact: `web` migrated and serves the production database first, then `worker` runs against the same production database.
+- Because the active deployment and database checks passed, no rollback, variable change, manual migration command, or worker stop/redeploy was needed.
+- The remaining owner setup status is unchanged from DB-03: the first production `owner` still needs to be created through `/setup` with `OWNER_SETUP_TOKEN`.
+- Local verification after the DB-04 documentation update passed: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage` with 404 tests passed and 88.99% statements/lines, 81.44% branches, and 89.76% functions, `pnpm test:e2e` with 22 passed and the opt-in production smoke skipped, and `pnpm build`.
+
 ## Commands
 
 Configured commands:

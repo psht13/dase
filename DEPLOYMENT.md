@@ -314,3 +314,34 @@ Result:
 - Створення через дійсний токен, `/login`, `/dashboard` і стан недоступності після створення owner не виконувалися, бо в цьому запуску не було явного дозволу створити production `owner`.
 
 Ручні кроки створення задокументовані вище в розділі `Створення першого owner у production`.
+
+## DB-04 recovery audit after database split
+
+Виконано 2026-05-09 без видалення сервісів бази даних, без destructive міграцій, без зміни production даних і без публікації секретів.
+
+Root cause status:
+- Активної поломки після розділення production/test баз не знайдено.
+- Потенційний ризик був у тому, що `web` або `worker` могли залишитися на старій test/staging базі, але перевірка показала, що обидва production сервіси зараз резолвлять `DATABASE_URL` у нову production базу `Postgres-1P5k`.
+
+Railway стан:
+- Production сервіси існують: `web`, `worker`, `Postgres-1P5k`, `Postgres`.
+- `Postgres-1P5k` - production PostgreSQL. `Postgres` - retained test/staging PostgreSQL.
+- Останній успішний `web` deploy: `5265...5bcd`, GitHub commit `2f252b83a32c755f390f5a9a72ee8f8fa7b04809`, config `/railway.json`.
+- Останній успішний `worker` deploy: `a0be...3271`, той самий GitHub commit, config `/railway.worker.json`.
+- `web` і `worker` `DATABASE_URL` резолвляться в `postgres-1p5k.railway.internal:5432/<db>`.
+- Test/staging `Postgres` резолвиться в `postgres.railway.internal:5432/<db>` і не використовується production `web` або `worker`.
+
+Логи та перевірки:
+- `web` deploy logs: `pnpm db:migrate` завершився з `migrations applied successfully`; у фільтрованих логах не знайдено migration failure, auth env validation failure, `DATABASE_URL` errors або owner setup errors.
+- `worker` deploy logs: є `Shipment worker is ready.`; у фільтрованих логах не знайдено `DATABASE_URL` errors, pg-boss startup errors, migration/table-missing errors або relation errors.
+- Read-only запит до `Postgres-1P5k` через public proxy повернув 17 `public` таблиць, жодної відсутньої expected app table, `owner_count=0`, і 7 pg-boss таблиць.
+- `https://web-production-26609.up.railway.app/api/health` повертає `status: ok`.
+- `/logout` повертає `307` на `https://web-production-26609.up.railway.app/login?logout=1`, не на localhost, і встановлює secure Better Auth cookie cleanup headers.
+- `/setup` доступний і показує українську форму першого owner, бо production база ще має `owner_count=0`.
+
+Resolution:
+- Runtime змінні не виправлялися, бо `web` і `worker` вже використовують правильну production базу.
+- `worker` не зупинявся і не redeploy-ився, бо `web` migration gate вже успішний, health check зелений, а worker ready.
+- Додатковий `pnpm db:migrate` не запускався вручну, бо production база вже має таблиці і Railway `web` pre-deploy migration завершився успішно.
+- Owner setup статус незмінний: першого production `owner` треба створити через `/setup` з `OWNER_SETUP_TOKEN`, коли буде явний дозвіл створити реальний production акаунт.
+- Local verification після DB-04 документації пройшла: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:e2e`, і `pnpm build`.
