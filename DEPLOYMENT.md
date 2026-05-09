@@ -51,7 +51,7 @@ Required for production `worker`:
 The production `worker` does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, or `OWNER_SETUP_TOKEN`.
 
 Shared shipping mode:
-- `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Production defaults to `disabled` when omitted. Use `disabled` for production/demo deployments until Nova Post sender settings are complete. `mock` is rejected in production and is only for local/e2e.
+- `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Current Railway `web` and `worker` runtime variables set this to `live` against the Nova Post stage/test API. Use `disabled` only when Nova Post sender settings are intentionally incomplete. `mock` is rejected in production and is only for local fixture runs.
 
 Required only for historical MonoPay / Monobank retry or webhook verification. These are not required for `web` startup, `worker` startup, or the active manual online card transfer customer flow:
 - `MONOBANK_TOKEN`
@@ -243,7 +243,7 @@ Completed live setup:
 
 Remaining manual production verification:
 - Configure real Monobank credentials in Railway variables only if historical MonoPay retry/webhook verification is intentionally needed; no Monobank variable is required for the active customer payment flow.
-- Nova Post stage directory lookup variables are configured on `web`, but live shipment creation still requires `SHIPPING_LABEL_CREATION_MODE=live` and complete Nova Post API, sender, payer, and parcel variables on `worker`.
+- Nova Post stage/test API variables and live shipment creation mode are configured on both `web` and `worker`. Run a low-risk shipment smoke test after creating the first `owner`.
 - Do not configure Ukrposhta for the active MVP; re-enable a future carrier only through the central carrier registry and updated deployment docs.
 - Run the external API checklist above with low-risk production test data.
 
@@ -345,3 +345,13 @@ Resolution:
 - Додатковий `pnpm db:migrate` не запускався вручну, бо production база вже має таблиці і Railway `web` pre-deploy migration завершився успішно.
 - Owner setup статус незмінний: першого production `owner` треба створити через `/setup` з `OWNER_SETUP_TOKEN`, коли буде явний дозвіл створити реальний production акаунт.
 - Local verification після DB-04 документації пройшла: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:e2e`, і `pnpm build`.
+
+## Shipping creation mode enabled for Nova Post stage/test
+
+Оновлено 2026-05-09 після підтвердження, що інтеграція Nova Post використовує stage/test API.
+
+- Railway production `web` і `worker` отримали `SHIPPING_LABEL_CREATION_MODE=live`.
+- На обох сервісах налаштовано Nova Post stage/test API host, sender country, test sender division/name/phone, payer type `Recipient`, and parcel dimension/weight defaults.
+- Локальні ignored файли `.env`, `.env.test.local`, and `.env.production.local` також переведені на `SHIPPING_LABEL_CREATION_MODE=live` з тими самими test sender/payer/parcel defaults.
+- Значення `NOVA_POST_API_KEY`, database URLs, auth secrets, and owner setup token не друкувалися і не додавалися у tracked files.
+- Playwright e2e залишається ізольованим: `playwright.config.ts` явно задає `SHIPPING_LABEL_CREATION_MODE=disabled`, тому автоматизовані тести не викликають live Nova Post API.

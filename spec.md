@@ -948,6 +948,11 @@ Secret handling:
 - Production payment and shipping API secrets were not copied into local env files.
 - Playwright local E2E now explicitly blanks `DATABASE_URL` and `DATABASE_URL_TEST` for the dev server while `PLAYWRIGHT_E2E=1`, so browser tests keep using isolated in-memory repositories even when local ignored env files contain Railway database URLs.
 
+Shipping creation update on 2026-05-09:
+- `.env`, `.env.test.local`, and `.env.production.local` now use `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API.
+- The local ignored env files include non-secret test sender, payer, and parcel defaults required by live shipment validation. Secret values remain ignored and were not printed.
+- Playwright local E2E still overrides the dev server to `SHIPPING_LABEL_CREATION_MODE=disabled`, so automated browser tests do not call Nova Post.
+
 Documentation:
 - `.env.example` contains only non-secret placeholders and local-safe defaults.
 - `DEPLOYMENT.md` documents in Ukrainian how to use `.env` for local/test, temporarily copy `.env.production.local` to `.env`, restore `.env` back to test/staging, and avoid committing secrets.
@@ -1043,15 +1048,15 @@ MONOBANK_API_URL=
 MONOBANK_PUBLIC_KEY=
 MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
 
-SHIPPING_LABEL_CREATION_MODE=mock
+SHIPPING_LABEL_CREATION_MODE=live
 
 NOVA_POST_API_KEY=
-NOVA_POST_API_URL=https://api.novapost.com/v.1.0/
+NOVA_POST_API_URL=https://api-stage.novapost.pl/v.1.0/
 NOVA_POST_AUTH_URL=
 NOVA_POST_SENDER_COUNTRY_CODE=UA
-NOVA_POST_SENDER_DIVISION_ID=
-NOVA_POST_SENDER_NAME=
-NOVA_POST_SENDER_PHONE=
+NOVA_POST_SENDER_DIVISION_ID=11759
+NOVA_POST_SENDER_NAME=Test Sender
+NOVA_POST_SENDER_PHONE=380007654321
 NOVA_POST_SENDER_EMAIL=
 NOVA_POST_SENDER_COMPANY_TIN=
 NOVA_POST_SENDER_COMPANY_NAME=
@@ -1257,8 +1262,8 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Open questions
 
 - Historical MonoPay credentials, public key, and final callback domain are needed only if historical MonoPay retry/webhook verification is intentionally exercised; they are not required for the active customer payment flow.
-- Nova Post stage directory lookup variables are present on the production `web` service, but live shipment values must still be supplied to the production `worker` before live shipment smoke tests: API key and URL, sender division id, sender name/phone, optional company fields, payer settings, and parcel dimension/weight defaults. Missing required sender config now blocks shipment creation before a live provider call.
-- Production shipping label creation remains disabled by default through `SHIPPING_LABEL_CREATION_MODE=disabled`; switch to `live` only after Nova Post sender, payer, and parcel settings are configured securely.
+- Nova Post stage/test API variables and live shipment values are configured on production `web` and `worker`: API key and URL, sender division id, sender name/phone, payer setting, and parcel dimension/weight defaults. Missing required sender config still blocks shipment creation before a live provider call.
+- Production shipping label creation is currently enabled through `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API; switch to the production Nova Post API only after a deliberate production shipping cutover.
 - Future Ukrposhta reintroduction requires practical test/production API access, sender/client/address workflow confirmation, shipment/package details, payer settings, label decisions, and enabling the carrier through the central registry.
 - Whether to reserve stock when order link is created or only after customer confirms.
 - Cash on delivery now enqueues shipment creation after customer confirmation.
@@ -1267,7 +1272,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Known limitations
 
 - Authenticated production smoke testing requires temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` values. They were not present during Prompt 09 final QA, so only unauthenticated production health was verified live on 2026-05-08.
-- Real Monobank production credentials are not required for active customer payments and are not currently needed for production startup. They remain necessary only for historical MonoPay retry/webhook verification. Nova Post stage directory lookup is configured on `web`, but Nova Post label creation stays disabled until `SHIPPING_LABEL_CREATION_MODE=live` is explicitly configured on `worker` with complete API, sender, payer, and parcel settings.
+- Real Monobank production credentials are not required for active customer payments and are not currently needed for production startup. They remain necessary only for historical MonoPay retry/webhook verification. Nova Post label creation is enabled with `SHIPPING_LABEL_CREATION_MODE=live` on both `web` and `worker` against the Nova Post stage/test API.
 - Production external API credentials and Nova Post sender settings are not present in the repository and must be configured only as Railway variables.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.

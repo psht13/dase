@@ -72,13 +72,13 @@ If no active requisites exist, the owner dashboard shows a warning and the publi
 
 When the seller receives and verifies the transfer, the owner order details page provides `Позначити оплату отриманою`. This marks the manual-card payment paid and only then schedules shipment preparation.
 
-## Shipping Demo Modes
+## Shipping Creation Mode
 
-Use `SHIPPING_LABEL_CREATION_MODE=disabled` for demos and staging when Nova Post sender settings are not complete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.
+Current Railway `web` and `worker` envs, plus local `.env`, `.env.test.local`, and `.env.production.local`, use `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API.
 
-Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local development and Playwright e2e. This keeps carrier directory data and shipment numbers deterministic without Nova Post live calls.
+Use `SHIPPING_LABEL_CREATION_MODE=disabled` only when Nova Post sender settings are intentionally incomplete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.
 
-To enable live Nova Post later, set `SHIPPING_LABEL_CREATION_MODE=live` and configure the required `NOVA_POST_*` sender, payer, parcel, and API variables from `.env.example` in secure environment variables.
+Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local fixture-based development. Playwright e2e forces shipping creation to `disabled` in its dev server command so automated tests never call the live Nova Post API.
 
 ## Verification
 
