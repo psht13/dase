@@ -885,6 +885,31 @@ Prompt 10 recovery on 2026-05-08:
 - E2E seeded-auth cookie defaults and environment documentation were aligned to the 3100 default.
 - Recovery verification passed with `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage` at 88.99% statements, 81.44% branches, 89.76% functions, and 88.99% lines, `pnpm test:e2e` with 22 passed and the production smoke skipped, and `pnpm build`.
 
+## DB-00 аудит розділення баз даних на 2026-05-09
+
+Мета наступного етапу: відокремити нову production PostgreSQL від поточної Railway PostgreSQL без руйнівних дій. У цьому кроці бази даних не створювалися, змінні Railway не перемикалися, сервіси не перейменовувалися, а секретні значення не записувалися в репозиторій.
+
+Поточний Railway стан:
+- Проєкт Railway: `dase`, середовище: `production`.
+- Сервіси: `web`, `worker`, `Postgres`.
+- Поточний PostgreSQL: сервіс `Postgres` (`aff72341-fa9c-4151-b783-88f178c3cb4d`), позначка: `test/staging candidate`.
+- `web` (`663cb97a-8878-40b8-b4bf-818fbb4b998f`) і `worker` (`93354d69-7b1f-4cd3-8e64-1eb4a072e9b1`) зараз використовують `DATABASE_URL`, який резолвиться до приватного Railway хоста поточного `Postgres`.
+- Останні успішні деплої `web` і `worker` створені з GitHub `main` коміта `2f252b83a32c755f390f5a9a72ee8f8fa7b04809` (`Add tasks for railway DB split`).
+- `web` використовує `/railway.json` з `pnpm db:migrate` перед стартом `pnpm start`.
+- `worker` використовує `/railway.worker.json` і стартує через `pnpm worker:start` без окремої pre-deploy міграції.
+- Поточний `Postgres` має volume `postgres-volume` на `/var/lib/postgresql/data`. Railway підтримує backup/snapshot для volume-сервісів, але доступні MCP/CLI команди під час цього аудиту показали volume і не повернули список наявних backup-записів або розкладів.
+- Для локального підключення до поточної/test бази можна використати `DATABASE_PUBLIC_URL` із сервісу `Postgres`; повний URL треба зберігати тільки в локальних `.env` файлах, які ігноруються Git. Приватний `DATABASE_URL` із `postgres.railway.internal` підходить для Railway runtime, але напряму з локальної машини не резолвиться без Railway CLI/proxy.
+- У робочій копії немає локальних `.env`, `.env.production.local` або `.env.production`; `.gitignore` ігнорує `.env` та `.env.*`, але залишає `.env.example` відстежуваним.
+
+План розділення:
+1. Створити новий Railway PostgreSQL сервіс для production і не перейменовувати поточний `Postgres`, доки всі посилання `DATABASE_URL` не будуть перевірені.
+2. Перед перемиканням створити manual backup/snapshot або інший безпечний export поточного `Postgres`; якщо список backup-записів недоступний через CLI/MCP, перевірити вкладку Backups у Railway UI перед змінами.
+3. Перенести production `web` `DATABASE_URL` на нову production PostgreSQL змінну або Railway reference, залишивши поточний `Postgres` як `test/staging candidate`.
+4. Запустити міграції проти нової production PostgreSQL через `web` pre-deploy (`pnpm db:migrate`) і переконатися, що міграції завершилися успішно до старту `worker`.
+5. Лише після успішного `web` deploy і міграцій перемкнути production `worker` `DATABASE_URL` на нову production PostgreSQL.
+6. Додати поточну/test базу в локальний `.env` через `DATABASE_PUBLIC_URL` із `Postgres`, а production значення тримати в локальному `.env.production.local` або `.env.production`; ці файли не комітити.
+7. Після запуску нової production бази відкрити `/setup`, ввести `OWNER_SETUP_TOKEN` у форму українською мовою, створити першого `owner`, після цього перевірити `/login`, `/dashboard` і недоступність `/setup`.
+
 ## Commands
 
 Configured commands:

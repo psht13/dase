@@ -195,3 +195,30 @@ Remaining manual production verification:
 Prompt 09 production smoke on 2026-05-08:
 - Unauthenticated production health passed at `https://web-production-26609.up.railway.app/api/health` with `status: ok`.
 - Authenticated production smoke was not run because temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` were not set in the shell. Do not configure these values in Railway runtime variables or commit them to repository files.
+
+## DB-00 план розділення Railway PostgreSQL
+
+Аудит виконано 2026-05-09 без створення нових баз, без перемикання змінних і без перейменування сервісів.
+
+Поточний безпечний стан:
+- Проєкт Railway: `dase`; середовище: `production`.
+- Production сервіси: `web`, `worker` і `Postgres`.
+- Поточний сервіс бази даних: `Postgres` (`aff72341-fa9c-4151-b783-88f178c3cb4d`), позначка для розділення: `test/staging candidate`.
+- `web` (`663cb97a-8878-40b8-b4bf-818fbb4b998f`) і `worker` (`93354d69-7b1f-4cd3-8e64-1eb4a072e9b1`) зараз резолвлять `DATABASE_URL` у приватний Railway Postgres endpoint поточного сервісу `Postgres`.
+- Останні успішні деплої `web` і `worker` використовують GitHub `main` коміт `2f252b83a32c755f390f5a9a72ee8f8fa7b04809` (`Add tasks for railway DB split`).
+- `web` запускає `pnpm db:migrate` перед `pnpm start`; це має залишатися production воротами міграції до того, як `worker` почне використовувати нову базу.
+- `worker` стартує через `pnpm worker:start` і не повинен отримувати нову production базу, доки deploy `web` з міграціями не завершиться успішно.
+- Поточний `Postgres` має `postgres-volume`, змонтований у `/var/lib/postgresql/data`. Railway volume backups/snapshots підтримуються для сервісів із volume, але доступний MCP/CLI аудит показав volume і не відкрив список наявних backup-записів або розкладів.
+- Поточний `Postgres` надає приватну Railway мережу для runtime сервісів і `DATABASE_PUBLIC_URL` для локального доступу через Railway public proxy. Використовуйте `DATABASE_PUBLIC_URL` у локальному `.env`, коли поточна база стане test/staging; ніколи не вставляйте повне значення у відстежувані файли.
+- Локальні `.env`, `.env.production.local` і `.env.production` відсутні в перевіреній робочій копії. Вони покриті `.gitignore` і мають залишатися невідстежуваними.
+
+Послідовність production розділення:
+1. Створити новий Railway PostgreSQL сервіс для production.
+2. Перед будь-яким перемиканням створити або перевірити manual backup/snapshot/export поточного сервісу `Postgres`.
+3. Залишити поточний `Postgres` як `test/staging candidate`; не перейменовувати його, доки кожне посилання `DATABASE_URL` не буде перевірене.
+4. Встановити production `web` `DATABASE_URL` на новий production PostgreSQL reference.
+5. Спочатку задеплоїти `web`, щоб `pnpm db:migrate` міг мігрувати нову production базу.
+6. Після успішного `web` deploy і health check встановити production `worker` `DATABASE_URL` на той самий новий production PostgreSQL reference і задеплоїти або перезапустити `worker`.
+7. Поточний/test `DATABASE_PUBLIC_URL` тримати тільки в локальному `.env` для development або staging перевірки.
+8. Production значення тримати тільки в локальному `.env.production.local` або `.env.production` для швидкого перемикання; ці файли не комітити.
+9. Коли нова production база буде live, відкрити `/setup`, ввести `OWNER_SETUP_TOKEN` в українське поле setup-token, створити першого `owner`, потім перевірити, що `/setup` недоступний, а `/login` відкриває `/dashboard` для цього owner.
