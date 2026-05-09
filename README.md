@@ -78,7 +78,7 @@ Current Railway `web` and `worker` envs, plus local `.env`, `.env.test.local`, a
 
 Use `SHIPPING_LABEL_CREATION_MODE=disabled` only when Nova Post sender settings are intentionally incomplete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.
 
-Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local fixture-based development. Playwright e2e forces shipping creation to `disabled` in its dev server command so automated tests never call the live Nova Post API.
+Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local fixture-based development. Keep `USE_MOCK_SHIPPING_CARRIERS` blank when `SHIPPING_LABEL_CREATION_MODE=live` should use Nova Post stage/test credentials. Playwright e2e forces shipping creation to `disabled` in its dev server command so automated tests never call the live Nova Post API.
 
 ## Verification
 

@@ -951,6 +951,7 @@ Secret handling:
 Shipping creation update on 2026-05-09:
 - `.env`, `.env.test.local`, and `.env.production.local` now use `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API.
 - The local ignored env files include non-secret test sender, payer, and parcel defaults required by live shipment validation. Secret values remain ignored and were not printed.
+- Explicit `SHIPPING_LABEL_CREATION_MODE=live` overrides local mock-carrier flags, so local city/warehouse search uses the Nova Post adapter instead of fixture data.
 - Playwright local E2E still overrides the dev server to `SHIPPING_LABEL_CREATION_MODE=disabled`, so automated browser tests do not call Nova Post.
 
 Documentation:

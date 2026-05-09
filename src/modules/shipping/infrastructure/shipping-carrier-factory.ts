@@ -121,6 +121,10 @@ export function getMissingNovaPostLiveShipmentConfigKeys(
 }
 
 function isFixtureCarrierEnabled(env: ServerEnv): boolean {
+  if (env.SHIPPING_LABEL_CREATION_MODE === "live") {
+    return false;
+  }
+
   return (
     env.SHIPPING_LABEL_CREATION_MODE === "mock" ||
     (env.NODE_ENV !== "production" &&

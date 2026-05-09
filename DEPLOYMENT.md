@@ -353,5 +353,6 @@ Resolution:
 - Railway production `web` і `worker` отримали `SHIPPING_LABEL_CREATION_MODE=live`.
 - На обох сервісах налаштовано Nova Post stage/test API host, sender country, test sender division/name/phone, payer type `Recipient`, and parcel dimension/weight defaults.
 - Локальні ignored файли `.env`, `.env.test.local`, and `.env.production.local` також переведені на `SHIPPING_LABEL_CREATION_MODE=live` з тими самими test sender/payer/parcel defaults.
+- Для локального live режиму `USE_MOCK_SHIPPING_CARRIERS` має бути порожнім; explicit `SHIPPING_LABEL_CREATION_MODE=live` використовує Nova Post adapter, а не fixture carrier.
 - Значення `NOVA_POST_API_KEY`, database URLs, auth secrets, and owner setup token не друкувалися і не додавалися у tracked files.
 - Playwright e2e залишається ізольованим: `playwright.config.ts` явно задає `SHIPPING_LABEL_CREATION_MODE=disabled`, тому автоматизовані тести не викликають live Nova Post API.

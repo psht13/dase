@@ -34,6 +34,18 @@ describe("getShippingCarrier", () => {
     );
   });
 
+  it("lets explicit live mode override local mock carrier flags", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SHIPPING_LABEL_CREATION_MODE", "live");
+    vi.stubEnv("USE_MOCK_SHIPPING_CARRIERS", "1");
+    vi.stubEnv("NOVA_POST_API_KEY", "nova-key");
+    stubCompleteNovaPostLiveConfig();
+
+    expect(getShippingCarrier("NOVA_POSHTA")).toBeInstanceOf(
+      NovaPostShippingCarrier,
+    );
+  });
+
   it("rejects disabled carriers even when mock mode is enabled", () => {
     vi.stubEnv("PLAYWRIGHT_E2E", "1");
     vi.stubEnv("NODE_ENV", "development");
