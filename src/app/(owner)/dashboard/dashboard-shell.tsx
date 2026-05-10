@@ -48,7 +48,7 @@ const navigationItems: NavigationItem[] = [
     shortLabel: "Створити",
   },
   {
-    href: "/dashboard/settings/payment",
+    href: "/dashboard/settings",
     icon: Settings,
     label: "Налаштування",
     shortLabel: "Налашт.",

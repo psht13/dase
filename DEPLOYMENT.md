@@ -63,10 +63,11 @@ Required only for historical MonoPay / Monobank retry or webhook verification. T
 - `MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY`
 
 Owner-managed Nova Post settings:
-- Owners configure the Nova Post API environment, custom API URL when needed, API key, optional auth URL override, sender data, payer data, parcel defaults, and per-owner shipping creation flag in application settings.
+- Owners configure the Nova Post API environment, custom API URL when needed, API key, optional auth URL override, sender data, payer data, parcel defaults, and per-owner shipping creation flag in the dashboard under `/dashboard/settings/shipping`.
+- Nova Post API keys and sender settings must be configured from the dashboard, not from env variables or tracked files. Existing env-backed Nova Post runtime variables are transitional until the later owner-settings carrier switchover is deployed.
 - The API key is encrypted in `owner_shipping_settings.api_key_encrypted`; read models expose only `api_key_preview`, for example the last four characters with masking.
 - The supported API environments are stage/test `https://api-stage.novapost.pl/v.1.0/`, production global `https://api.novapost.com/v.1.0/`, production Ukraine `https://api.novaposhta.ua/v.1.0/`, and custom HTTPS URL.
-- ENV-01 adds the encrypted database model and application repositories. The `/dashboard/settings/shipping` UI route, public lookup token scoping, worker/carrier runtime switchover, and Railway/local variable cleanup are intentionally left for later ENV prompts.
+- ENV-01 added the encrypted database model and application repositories. ENV-02 adds the owner UI and dashboard connection test. Public lookup token scoping, worker/carrier runtime switchover, and Railway/local variable cleanup are intentionally left for later ENV prompts.
 - Official Nova Post references:
   - https://api-portal.novapost.com/en/about-api/general/
   - https://api-portal.novapost.com/en/api-nova-post/start/api-keys/
@@ -166,7 +167,7 @@ If the worker causes shipment or tracking errors, stop or roll back the `worker`
 Do not call live external APIs in CI. After production variables are configured, verify manually in Railway using a low-risk test order:
 - Open `/setup` before any owner exists, enter `OWNER_SETUP_TOKEN` into the Ukrainian setup-token field, create the first owner, then confirm `/setup` shows the Ukrainian unavailable state. Do not put `OWNER_SETUP_TOKEN` in the URL.
 - Confirm `/login` accepts the owner credentials, `/logout` ends the session, and a `user` role cannot access `/dashboard`.
-- Before saving Nova Post owner settings, configure `APP_ENCRYPTION_KEY` as a secure Railway variable. After the shipping settings UI lands, save a test API key and confirm the UI shows only the masked preview, not the decrypted key.
+- Before saving Nova Post owner settings, configure `APP_ENCRYPTION_KEY` as a secure Railway variable. Open `/dashboard/settings/shipping`, save a test API key and sender settings from the dashboard, then confirm the UI shows only the masked preview, not the decrypted key.
 - With `SHIPPING_LABEL_CREATION_MODE=disabled`, confirm the owner order details page shows the Ukrainian disabled-shipping notice and no live Nova Post shipment is created.
 - Owner payment settings allow creating active requisites under `/dashboard/settings/payment`, and the public customer payment step shows only active requisites for `Оплата картою онлайн`.
 - If no active requisites exist, confirm the owner dashboard warning appears and the public customer payment step does not offer online card payment.

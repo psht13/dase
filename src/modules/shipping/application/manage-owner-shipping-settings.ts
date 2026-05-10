@@ -95,6 +95,9 @@ export async function saveOwnerShippingSettingsUseCase(
   return toOwnerShippingSettingsReadModel(savedSettings);
 }
 
+export const updateOwnerShippingSettingsUseCase =
+  saveOwnerShippingSettingsUseCase;
+
 async function resolveEncryptedApiKey(
   input: OwnerShippingSettingsInput,
   existingEncryptedApiKey: string | null,

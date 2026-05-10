@@ -34,6 +34,9 @@ describe("DashboardLayout", () => {
     expect(
       screen.getAllByRole("link", { name: /Налаштування/i })[0],
     ).toBeVisible();
+    expect(
+      screen.getAllByRole("link", { name: /Налаштування/i })[0],
+    ).toHaveAttribute("href", "/dashboard/settings");
     expect(screen.getByText("Роль: власник")).toBeVisible();
     expect(screen.getByTestId("mobile-dashboard-nav")).toHaveClass(
       "grid-cols-5",

@@ -232,6 +232,17 @@ Owner Nova Post settings model update on 2026-05-10:
   - https://api-portal.novapost.com/en/api-nova-post/start/token-usage/
 - Focused tests cover encryption/decryption, invalid encryption keys when saving API keys, API key preview/read-model safety, endpoint/custom URL validation, sender/parcel/payer validation, and repository save/update/list behavior.
 
+Owner Nova Post settings UI update on 2026-05-10:
+- Added `/dashboard/settings` as the settings landing page with Ukrainian cards for `Реквізити для оплати` and `Доставка`; dashboard navigation now points to `/dashboard/settings` instead of payment-only settings.
+- Added `/dashboard/settings/shipping` for authenticated `owner` users. The page renders a responsive Ukrainian multi-step form: `API доступ`, `Відправник`, `Параметри посилки`, and `Перевірка`.
+- New owners default to `Тестове середовище` with `https://api-stage.novapost.pl/v.1.0/`. The UI supports `Production global`, `Production Україна`, and `Власний URL`, shows the resolved URL preview, and validates custom URLs through the application settings schema.
+- Existing API keys are never sent back to the form. The owner sees `API ключ збережено` plus a masked preview and must opt in before replacing the key.
+- The form stores sender identity, branch/division ID, optional company data, payer type/contract number, default parcel dimensions/weights, and `Створення відправлень увімкнено`.
+- Added a thin owner server action for `Перевірити підключення`. It resolves saved encrypted settings server-side, decrypts only inside server code, exchanges the API key for a Nova Post JWT, and performs a harmless small directory lookup without creating a shipment or logging the key. Playwright/mock mode uses a fixture tester.
+- The UI and actions use shipping application use cases and infrastructure repositories; encryption logic remains outside React components.
+- README and DEPLOYMENT now document dashboard-based Nova Post configuration. ENV-03 still owns public lookup token scoping, worker/carrier runtime switchover, deprecated env cleanup, and Railway/local variable cleanup.
+- Tests cover Ukrainian form labels, stage endpoint default, custom HTTPS URL handling, masked saved key display, key replacement, enabled state, connection-test action behavior, owner/user access, and the requested Playwright save-and-return flow.
+
 Runtime-aware environment validation update on 2026-05-07:
 - `src/shared/config/env.ts` now exposes `getWebEnv()`, `getWorkerEnv()`, and `getTestEnv()` alongside a documented safe `getServerEnv()` base parser for shared infrastructure.
 - Production `web` validation requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`. It requires `OWNER_SETUP_TOKEN` only when the first-owner setup path is enabled and does not force worker-only settings.

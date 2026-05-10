@@ -17,6 +17,7 @@ const webServerEnv = isAuthSmoke
     ]
   : [
       "PLAYWRIGHT_E2E=1",
+      "APP_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       "DATABASE_URL=",
       "DATABASE_URL_TEST=",
       "SHIPPING_LABEL_CREATION_MODE=disabled",
