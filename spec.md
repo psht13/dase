@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, final production-readiness audit, production PostgreSQL split, owner-based Nova Post settings, deprecated env cleanup, and optional local/test shipping env migration helper implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, final production-readiness audit, production PostgreSQL split, owner-based Nova Post settings, deprecated env cleanup, optional local/test shipping env migration helper, and ENV-07 final verification implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -233,7 +233,7 @@ Owner Nova Post settings model update on 2026-05-10:
 Owner Nova Post settings UI update on 2026-05-10:
 - Added `/dashboard/settings` as the settings landing page with Ukrainian cards for `Реквізити для оплати` and `Доставка`; dashboard navigation now points to `/dashboard/settings` instead of payment-only settings.
 - Added `/dashboard/settings/shipping` for authenticated `owner` users. The page renders a responsive Ukrainian multi-step form: `API доступ`, `Відправник`, `Параметри посилки`, and `Перевірка`.
-- New owners default to `Тестове середовище` with `https://api-stage.novapost.pl/v.1.0/`. The UI supports `Production global`, `Production Україна`, and `Власний URL`, shows the resolved URL preview, and validates custom URLs through the application settings schema.
+- New owners default to `Тестове середовище` with `https://api-stage.novapost.pl/v.1.0/`. The UI supports `Виробниче середовище global`, `Виробниче середовище Україна`, and `Власний URL`, shows the resolved URL preview, and validates custom URLs through the application settings schema.
 - Existing API keys are never sent back to the form. The owner sees `API ключ збережено` plus a masked preview and must opt in before replacing the key.
 - The form stores sender identity, branch/division ID, optional company data, payer type/contract number, default parcel dimensions/weights, and `Створення відправлень увімкнено`.
 - Added a thin owner server action for `Перевірити підключення`. It resolves saved encrypted settings server-side, decrypts only inside server code, exchanges the API key for a Nova Post JWT, and performs a harmless small directory lookup without creating a shipment or logging the key. Playwright/mock mode uses a fixture tester.
@@ -1102,6 +1102,27 @@ Behavior:
 - Refuses `NODE_ENV=production` unless `--allow-production` is passed after explicit approval. The normal production path remains manual setup through `/dashboard/settings/shipping`.
 
 Deprecated env keys remain deprecated because they are process-global, not owner-scoped, and cannot safely represent multiple sellers. Runtime public lookup and worker shipment creation continue to resolve encrypted owner settings from order context.
+
+## ENV-07 final owner-managed shipping verification on 2026-05-10
+
+Completed the final QA pass after moving Nova Post configuration to owner settings and cleaning deprecated env keys.
+
+Verification result:
+- Code search found no active runtime reads of deprecated `MONOBANK_*`, `NOVA_POSHTA_*`, `NOVA_POST_API_*`, `NOVA_POST_AUTH_URL`, `NOVA_POST_SENDER_*`, `NOVA_POST_PAYER_*`, or `NOVA_POST_DEFAULT_*` env names. Remaining matches are historical schema/migration compatibility, explicit env-stripping tests, audit/task docs, or the one-time local/test migration helper.
+- `.env.example` lists only current infrastructure/runtime, test, and smoke variables. Nova Post API keys, sender data, payer data, and parcel defaults remain owner-managed through `/dashboard/settings/shipping`.
+- README and DEPLOYMENT describe owner shipping settings UI, masked API-key display, encrypted storage, and the requirement that Railway app services must not keep deprecated shipping/payment variable names.
+- Railway MCP confirmed production services `web`, `worker`, `Postgres`, and `Postgres-1P5k`; current `web` and `worker` deployments are successful from GitHub commit `74e82b487e7d0182df4f0179d005890034ab959d`.
+- Key-only Railway variable inspection confirmed deprecated payment/shipping env names are absent from both `web` and `worker`, while `APP_ENCRYPTION_KEY` and the expected runtime keys are present by name. Secret values were not printed.
+- Production `/api/health` returned `status: ok`; filtered startup logs did not mention missing Nova Post env keys; worker deploy logs included `Shipment worker is ready.`
+- Authenticated production UI smoke was not completed because no temporary `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` were present in the local shell. Production Nova Post test-key smoke was also not run because no test key was present in local env.
+- Local Playwright coverage continues to verify `/dashboard/settings`, `/dashboard/settings/shipping`, default stage/test environment, API-key masking, sender settings, connection-test action behavior, shipping creation toggle, public delivery lookup through the order owner's settings, safe missing-settings Ukrainian copy, manual online card payment, cash on delivery, and absence of active MonoPay/Monobank UI copy.
+
+Manual owner steps that remain:
+- Create the first production `owner` through `/setup` if the production database is still empty.
+- Sign in as that owner, open `/dashboard/settings/payment`, and add active public payment requisites if online manual card transfer should be available to customers.
+- Open `/dashboard/settings/shipping`, save a Nova Post stage/test API key and sender settings, confirm only the masked preview is shown, and run `Перевірити підключення`.
+- Keep `SHIPPING_LABEL_CREATION_MODE=disabled` until a deliberate low-risk live-shipping cutover is approved; switch to `live` only after owner settings are verified.
+- Create a low-risk public order and verify the delivery page offers only available carriers and does not expose settings details.
 
 ## Commands
 

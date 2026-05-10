@@ -13,7 +13,7 @@ test.describe("authenticated owner smoke", () => {
     "Set RUN_AUTH_SMOKE=1 or RUN_PROD_SMOKE=1 to run the authenticated smoke test.",
   );
 
-  test("owner session survives dashboard navigation and logout stays public-origin", async ({
+  test("owner session survives dashboard navigation, shipping settings, and logout stays public-origin", async ({
     page,
   }) => {
     const email = isProductionSmoke
@@ -72,6 +72,84 @@ test.describe("authenticated owner smoke", () => {
     await expect(
       page.getByRole("heading", { exact: true, name: "Замовлення" }),
     ).toBeVisible();
+
+    await navigation
+      .getByRole("link", { exact: true, name: "Налаштування" })
+      .click();
+    await expect(page).toHaveURL(`${baseUrl}/dashboard/settings`);
+    await expect(
+      page.getByRole("heading", { name: "Налаштування" }),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: /Доставка/ }).click();
+    await expect(page).toHaveURL(`${baseUrl}/dashboard/settings/shipping`);
+    await expect(page.getByRole("heading", { name: "Доставка" })).toBeVisible();
+    await expect(page.getByLabel("Середовище API")).toBeVisible();
+    await expect(
+      page.locator('select[name="apiEnvironment"] option[value="stage"]'),
+    ).toHaveText("Тестове середовище");
+    await expect(page.getByLabel("ПІБ відправника")).toBeVisible();
+    await expect(
+      page.getByLabel("Створення відправлень увімкнено"),
+    ).toBeVisible();
+
+    const fullNovaPostApiKey = process.env.E2E_PROD_SHIPPING_API_KEY;
+
+    if (fullNovaPostApiKey) {
+      const replaceApiKey = page.getByLabel("Замінити API ключ");
+
+      if (await replaceApiKey.isVisible()) {
+        await replaceApiKey.check();
+      }
+
+      await page.getByLabel("API ключ Nova Post").fill(fullNovaPostApiKey);
+      await page.getByLabel("ПІБ відправника").fill("Тестовий Відправник");
+      await page.getByLabel("Телефон відправника").fill("+380671234567");
+      await page.getByLabel("Код країни").fill("UA");
+      await page
+        .getByLabel("ID відділення або філії")
+        .fill(process.env.E2E_PROD_SHIPPING_SENDER_DIVISION_ID ?? "11759");
+      await page.getByRole("button", { name: "Зберегти налаштування" }).click();
+      await expect(
+        page.getByText("Налаштування доставки збережено"),
+      ).toBeVisible();
+      await expect(page.getByText("API ключ збережено")).toBeVisible();
+      const fullApiKeyIsVisible = await page.locator("body").evaluate(
+        (body, apiKey) => (body.textContent ?? "").includes(apiKey),
+        fullNovaPostApiKey,
+      );
+      expect(fullApiKeyIsVisible).toBe(false);
+    }
+
+    await page.getByRole("button", { name: "Перевірити підключення" }).click();
+    await expect(
+      page.getByText(
+        /Спочатку збережіть налаштування доставки|Збережіть API ключ Nova Post перед перевіркою|Налаштуйте APP_ENCRYPTION_KEY перед перевіркою підключення|Не вдалося перевірити підключення|Підключення працює/,
+      ),
+    ).toBeVisible();
+
+    const publicOrderUrl = process.env.E2E_PROD_PUBLIC_ORDER_URL;
+
+    if (publicOrderUrl) {
+      const normalizedPublicOrderUrl = publicOrderUrl.replace(/\/$/, "");
+      const deliveryUrl = normalizedPublicOrderUrl.endsWith("/delivery")
+        ? normalizedPublicOrderUrl
+        : `${normalizedPublicOrderUrl}/delivery`;
+
+      await page.goto(deliveryUrl);
+      await expect(
+        page.getByRole("heading", { name: "Доставка та оплата" }),
+      ).toBeVisible();
+      await expect(page.getByLabel("Служба доставки")).toHaveValue(
+        "NOVA_POSHTA",
+      );
+      await expect(page.locator("#delivery-carrier option")).toHaveText([
+        "Нова пошта",
+      ]);
+      await expect(page.getByText(/MonoPay|Monobank|Монобанк/i)).toHaveCount(0);
+      await expect(page.getByText("Укрпошта")).toHaveCount(0);
+      await page.goto("/dashboard");
+    }
 
     await page.getByRole("button", { name: "Вийти" }).click();
     await expect(page).toHaveURL(`${baseUrl}/login?logout=1`);

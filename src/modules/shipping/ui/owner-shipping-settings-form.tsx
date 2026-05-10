@@ -47,8 +47,8 @@ const endpointOptions: Array<{
   value: NovaPostApiEnvironment;
 }> = [
   { label: "Тестове середовище", value: "stage" },
-  { label: "Production global", value: "production_global" },
-  { label: "Production Україна", value: "production_ukraine" },
+  { label: "Виробниче середовище global", value: "production_global" },
+  { label: "Виробниче середовище Україна", value: "production_ukraine" },
   { label: "Власний URL", value: "custom" },
 ];
 
@@ -183,7 +183,7 @@ function ShippingSettingsFields({
           <div className="mt-4">
             <FormField
               error={state.fieldErrors.authUrl?.[0]}
-              label="Auth URL override"
+              label="URL авторизації"
               name="authUrl"
               placeholder="https://api-stage.novapost.pl/v.1.0/clients/authorization"
               type="url"

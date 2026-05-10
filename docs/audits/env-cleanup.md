@@ -366,3 +366,43 @@ Completed on 2026-05-10 for local/test migration support only.
 - It requires `APP_ENCRYPTION_KEY`, encrypts the migrated API key before saving, and prints only a masked preview such as `****7890`.
 - It refuses `NODE_ENV=production` unless `--allow-production` is passed after explicit approval. Production Nova Post setup remains a manual dashboard action through `/dashboard/settings/shipping`.
 - No production migration was run and no secret value was written to tracked documentation.
+
+## ENV-07 Final Verification Result
+
+Completed on 2026-05-10 after owner-managed shipping settings, tracked env cleanup, operational Railway cleanup, and optional local/test migration helper work.
+
+Code search:
+- No active runtime code reads deprecated `MONOBANK_*` env variables.
+- No active runtime code reads deprecated `NOVA_POSHTA_*` env variables.
+- No active runtime code reads deprecated `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, or `NOVA_POST_AUTH_URL` env variables.
+- No active runtime code reads deprecated `NOVA_POST_SENDER_*`, `NOVA_POST_PAYER_*`, or `NOVA_POST_DEFAULT_*` env variables.
+- Remaining tracked matches are historical migrations/schema snapshots, explicit env-stripping or compatibility tests, this audit/TASKS history, or the ENV-06 one-time local/test migration helper. The helper is not part of the active web or worker runtime.
+
+Docs:
+- `.env.example` lists current runtime and test/smoke keys only.
+- README documents `/dashboard/settings/shipping`, encrypted owner Nova Post settings, masked API-key preview, and owner payment requisites.
+- DEPLOYMENT says Railway `web` and `worker` must not keep deprecated payment or owner-managed Nova Post API, sender, payer, or parcel variables.
+- `spec.md` now records the ENV-07 final verification status.
+
+Railway:
+- Railway MCP confirmed services `web`, `worker`, `Postgres`, and `Postgres-1P5k`.
+- Current production deployments are successful for `web` (`b6dd81bd-8c5e-4a12-9e37-fa5905ddd18e`) and `worker` (`3eaa4437-f2ac-49f9-b458-4ffbac9eadec`) from GitHub commit `74e82b487e7d0182df4f0179d005890034ab959d`.
+- Key-only variable inspection found no deprecated payment or owner-managed shipping variable names on `web` or `worker`.
+- `web` has required variables by name: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `OWNER_SETUP_TOKEN`, `APP_ENCRYPTION_KEY`, and `SHIPPING_LABEL_CREATION_MODE`.
+- `worker` has required variables by name: `DATABASE_URL`, `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`, `APP_ENCRYPTION_KEY`, and `SHIPPING_LABEL_CREATION_MODE`.
+- Production health returned `status: ok`; filtered startup logs did not mention missing Nova Post env keys; worker logs included `Shipment worker is ready.`
+
+UI and payment:
+- Local Playwright coverage verifies the owner settings landing page, `/dashboard/settings/shipping`, stage/test default, API-key entry and masked preview, sender settings, connection-test action, and shipping creation toggle.
+- Public delivery lookup resolves the order owner before building Nova Post settings and returns the Ukrainian safe unavailable message when owner settings are missing.
+- Public customer payment UI offers manual online card transfer only when active owner requisites exist, always offers cash on delivery, and does not show active MonoPay/Monobank copy.
+- Owner payment requisites remain available under `/dashboard/settings/payment`.
+
+Production smoke:
+- Authenticated production owner smoke was not completed in ENV-07 because no temporary `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` were present in the local shell. No production credentials were invented.
+- No Nova Post test API key was present in the local shell, so the production UI key-save and connection-test path was not run.
+- The authenticated smoke spec now includes `/dashboard/settings`, `/dashboard/settings/shipping`, safe connection-test messaging, and an optional public delivery-page check when a temporary public order URL is supplied through local env.
+
+Secret handling:
+- Secret values were not printed in terminal output, tracked docs, or committed files.
+- Railway variables were reported by key name/status only.

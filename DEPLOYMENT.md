@@ -92,6 +92,9 @@ Manual authenticated smoke-test variables that must be set only in the local she
 - `RUN_PROD_SMOKE`
 - `E2E_PROD_EMAIL`
 - `E2E_PROD_PASSWORD`
+- `E2E_PROD_SHIPPING_API_KEY` - optional Nova Post stage/test key for the owner shipping settings smoke only.
+- `E2E_PROD_SHIPPING_SENDER_DIVISION_ID` - optional sender division id used with the test key.
+- `E2E_PROD_PUBLIC_ORDER_URL` - optional existing public order URL for checking the production delivery page.
 
 Tooling-managed CI variable:
 - `CI` - set by GitHub Actions and used by Playwright for retry/reporting behavior.
@@ -191,6 +194,8 @@ pnpm test:e2e:prod
 ```
 
 The smoke test opens the Railway production URL, signs in, verifies `/dashboard`, `/dashboard/products`, and `/dashboard/orders`, logs out through the POST logout button, asserts the browser ends at `https://web-production-26609.up.railway.app/login?logout=1`, and fails if any browser request targets `https://localhost:8080`.
+
+The same smoke also opens `/dashboard/settings`, `/dashboard/settings/shipping`, verifies the owner shipping settings form, and runs the Ukrainian connection-test path. If `E2E_PROD_SHIPPING_API_KEY` is present in the local shell, it saves that key through the UI and verifies the full value is not visible after save. If `E2E_PROD_PUBLIC_ORDER_URL` is present, it opens the delivery page and verifies unavailable carriers and inactive acquiring copy are not exposed.
 
 For a DB-backed local or test environment, store the account only in an ignored
 env file such as `.env.test.local`:

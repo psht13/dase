@@ -130,7 +130,7 @@ E2E_PROD_PASSWORD='temporary-password' \
 pnpm test:e2e:prod
 ```
 
-Do not commit or store the production smoke credentials in repo files or Railway runtime variables.
+Do not commit or store the production smoke credentials in repo files or Railway runtime variables. Optional local-only variables `E2E_PROD_SHIPPING_API_KEY`, `E2E_PROD_SHIPPING_SENDER_DIVISION_ID`, and `E2E_PROD_PUBLIC_ORDER_URL` extend that smoke to save a Nova Post test key through the owner UI and check an existing public delivery page without printing the key.
 
 For a DB-backed local/test environment, put the owner account only in an ignored
 env file such as `.env.test.local`:

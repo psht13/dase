@@ -32,6 +32,14 @@ describe("OwnerShippingSettingsForm", () => {
       screen.getByText("https://api-stage.novapost.pl/v.1.0/"),
     ).toBeVisible();
     expect(
+      screen.getByRole("option", { name: "Виробниче середовище global" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Виробниче середовище Україна" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("URL авторизації")).toBeInTheDocument();
+    expect(screen.queryByText("Auth URL override")).not.toBeInTheDocument();
+    expect(
       screen.getByLabelText(/Створення відправлень увімкнено/),
     ).not.toBeChecked();
   });
