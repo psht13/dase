@@ -17,11 +17,15 @@ describe("runtime environment validation", () => {
 
   it("defaults development and test settings without requiring secrets", () => {
     const devEnv = validateServerEnv({
+      APP_ENCRYPTION_KEY: Buffer.from("a".repeat(32)).toString("base64"),
       NODE_ENV: "development",
     });
     const testEnv = validateTestEnv({});
 
     expect(devEnv.AUTO_COMPLETE_AFTER_DELIVERED_HOURS).toBe(24);
+    expect(devEnv.APP_ENCRYPTION_KEY).toBe(
+      Buffer.from("a".repeat(32)).toString("base64"),
+    );
     expect(devEnv.DATABASE_URL).toBeUndefined();
     expect(devEnv.SHIPPING_LABEL_CREATION_MODE).toBe("mock");
     expect(testEnv.NODE_ENV).toBe("test");

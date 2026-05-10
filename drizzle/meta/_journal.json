@@ -43,6 +43,13 @@
       "when": 1778255976597,
       "tag": "0005_wonderful_preak",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778401989939,
+      "tag": "0006_skinny_lockheed",
+      "breakpoints": true
     }
   ]
 }

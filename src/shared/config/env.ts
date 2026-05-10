@@ -33,6 +33,7 @@ export const serverEnvSchema = z
       .int()
       .positive()
       .default(24),
+    APP_ENCRYPTION_KEY: optionalString,
     BETTER_AUTH_SECRET: optionalSecret,
     BETTER_AUTH_URL: optionalUrl,
     DATABASE_URL: optionalUrl,

@@ -43,6 +43,9 @@ Required for production `web`:
 Required only when first-owner setup is available in production `web`:
 - `OWNER_SETUP_TOKEN` - at least 32 characters. The `web` service validates it only for the first-owner setup path before an owner exists. Never place this token in URLs, redirects, logs, query strings, or client-side state.
 
+Required before owner Nova Post API keys can be saved or decrypted:
+- `APP_ENCRYPTION_KEY` - base64 or hex encoded key material with at least 32 decoded bytes. Configure it through secure Railway variables, do not reuse `BETTER_AUTH_SECRET`, and do not print it in logs. The ENV-01 settings model uses AES-256-GCM and stores only encrypted API keys plus a safe preview.
+
 Required for production `worker`:
 - `DATABASE_URL` - Railway PostgreSQL private connection string or Railway variable reference.
 - `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` - positive integer such as `24`.
@@ -51,7 +54,7 @@ Required for production `worker`:
 The production `worker` does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, or `OWNER_SETUP_TOKEN`.
 
 Shared shipping mode:
-- `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Current Railway `web` and `worker` runtime variables set this to `live` against the Nova Post stage/test API. Use `disabled` only when Nova Post sender settings are intentionally incomplete. `mock` is rejected in production and is only for local fixture runs.
+- `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. Current Railway `web` and `worker` runtime variables set this to `live` against the Nova Post stage/test API until later ENV prompts switch carrier resolution to owner-scoped settings. Use `disabled` only when Nova Post sender settings are intentionally incomplete. `mock` is rejected in production and is only for local fixture runs.
 
 Required only for historical MonoPay / Monobank retry or webhook verification. These are not required for `web` startup, `worker` startup, or the active manual online card transfer customer flow:
 - `MONOBANK_TOKEN`
@@ -59,31 +62,20 @@ Required only for historical MonoPay / Monobank retry or webhook verification. T
 - `MONOBANK_PUBLIC_KEY`
 - `MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY`
 
-Required only when `SHIPPING_LABEL_CREATION_MODE=live` for Nova Post production shipment flow:
-- `NOVA_POST_API_KEY` - secret API key used only server-side to generate temporary JWT tokens.
-- `NOVA_POST_API_URL` - default `https://api.novapost.com/v.1.0/`; use `https://api-stage.novapost.pl/v.1.0/` for stage/test verification.
-- `NOVA_POST_AUTH_URL` - optional override for the authorization endpoint when it cannot be derived from `NOVA_POST_API_URL`; by default the app calls `/clients/authorization`.
-- `NOVA_POST_SENDER_COUNTRY_CODE` - normally `UA`.
-- `NOVA_POST_SENDER_DIVISION_ID` - sender branch/division id from Nova Post.
-- `NOVA_POST_SENDER_NAME`
-- `NOVA_POST_SENDER_PHONE`
-- `NOVA_POST_SENDER_EMAIL` - optional.
-- `NOVA_POST_SENDER_COMPANY_TIN` - optional.
-- `NOVA_POST_SENDER_COMPANY_NAME` - optional.
-- `NOVA_POST_PAYER_TYPE` - `Recipient`, `Sender`, or `ThirdPerson`; default `Recipient`.
-- `NOVA_POST_PAYER_CONTRACT_NUMBER` - required by Nova Post for some non-cash or third-person payer scenarios.
-- `NOVA_POST_DEFAULT_WIDTH_MM`, `NOVA_POST_DEFAULT_LENGTH_MM`, `NOVA_POST_DEFAULT_HEIGHT_MM`
-- `NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS`, `NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS`
+Owner-managed Nova Post settings:
+- Owners configure the Nova Post API environment, custom API URL when needed, API key, optional auth URL override, sender data, payer data, parcel defaults, and per-owner shipping creation flag in application settings.
+- The API key is encrypted in `owner_shipping_settings.api_key_encrypted`; read models expose only `api_key_preview`, for example the last four characters with masking.
+- The supported API environments are stage/test `https://api-stage.novapost.pl/v.1.0/`, production global `https://api.novapost.com/v.1.0/`, production Ukraine `https://api.novaposhta.ua/v.1.0/`, and custom HTTPS URL.
+- ENV-01 adds the encrypted database model and application repositories. The `/dashboard/settings/shipping` UI route, public lookup token scoping, worker/carrier runtime switchover, and Railway/local variable cleanup are intentionally left for later ENV prompts.
+- Official Nova Post references:
+  - https://api-portal.novapost.com/en/about-api/general/
+  - https://api-portal.novapost.com/en/api-nova-post/start/api-keys/
+  - https://api-portal.novapost.com/en/api-nova-post/start/endpoints/
+  - https://api-portal.novapost.com/en/api-nova-post/start/token-usage/
 
-`NOVA_POST_PAYMENT_METHOD`, legacy sender contact ids, and Ukrposhta variables are not required for the current Nova Post v.1.0 integration. The live request model is built from the official sender/recipient, payer, and parcel fields in the infrastructure adapter. Recipient counterparty data comes from the confirmed customer delivery form for each order.
+`NOVA_POST_PAYMENT_METHOD`, legacy sender contact ids, and Ukrposhta variables are not required for the current Nova Post v.1.0 integration. Recipient counterparty data comes from the confirmed customer delivery form for each order.
 
 Nova Post authenticated API calls use the generated JWT as the raw `Authorization` header value. Do not prefix the JWT with `Bearer`.
-
-Deprecated compatibility names:
-- `NOVA_POSHTA_API_KEY`
-- `NOVA_POSHTA_API_URL`
-
-Prefer the `NOVA_POST_*` names for all new Railway variables. The compatibility names are accepted temporarily only to avoid breaking existing environments during rollout.
 
 Test-only variables that must not be enabled in production:
 - `PLAYWRIGHT_E2E`
@@ -157,6 +149,7 @@ Run migrations against development or staging PostgreSQL first. Do not run destr
 Current forward-only app migration:
 - `drizzle/0004_cute_veda.sql` adds nullable `customers.instagram_username` for optional customer Instagram nicknames. Existing customer rows remain valid and no secret or environment variable is involved.
 - `drizzle/0005_wonderful_preak.sql` adds `MANUAL_CARD_TRANSFER` to `payment_provider` and creates owner-scoped `payment_requisites` for active manual online card transfer details. No new environment variable is involved.
+- `drizzle/0006_skinny_lockheed.sql` creates owner-scoped `owner_shipping_settings` plus dedicated Nova Post settings enums. It does not rename the existing `shipment_carrier` enum value `NOVA_POSHTA`, because historical shipment rows and current worker/runtime code still depend on that database value until the later owner-settings carrier switchover.
 
 If a migration fails during Railway pre-deploy, Railway should not promote that web deployment. Fix the migration locally, verify it against a safe database, then redeploy.
 
@@ -173,6 +166,7 @@ If the worker causes shipment or tracking errors, stop or roll back the `worker`
 Do not call live external APIs in CI. After production variables are configured, verify manually in Railway using a low-risk test order:
 - Open `/setup` before any owner exists, enter `OWNER_SETUP_TOKEN` into the Ukrainian setup-token field, create the first owner, then confirm `/setup` shows the Ukrainian unavailable state. Do not put `OWNER_SETUP_TOKEN` in the URL.
 - Confirm `/login` accepts the owner credentials, `/logout` ends the session, and a `user` role cannot access `/dashboard`.
+- Before saving Nova Post owner settings, configure `APP_ENCRYPTION_KEY` as a secure Railway variable. After the shipping settings UI lands, save a test API key and confirm the UI shows only the masked preview, not the decrypted key.
 - With `SHIPPING_LABEL_CREATION_MODE=disabled`, confirm the owner order details page shows the Ukrainian disabled-shipping notice and no live Nova Post shipment is created.
 - Owner payment settings allow creating active requisites under `/dashboard/settings/payment`, and the public customer payment step shows only active requisites for `Оплата картою онлайн`.
 - If no active requisites exist, confirm the owner dashboard warning appears and the public customer payment step does not offer online card payment.
@@ -183,7 +177,7 @@ Do not call live external APIs in CI. After production variables are configured,
 - Duplicate Monobank webhooks are idempotent.
 - Stale Monobank webhook events do not overwrite newer payment state.
 - Nova Post city and warehouse search works for a known city through mocked CI tests and a low-risk manual production check.
-- Nova Post shipment creation returns a tracking number for a test shipment only after `SHIPPING_LABEL_CREATION_MODE=live` and the full sender/payer/parcel config are present.
+- Nova Post shipment creation returns a tracking number for a test shipment only after `SHIPPING_LABEL_CREATION_MODE=live`, owner Nova Post settings are present, and later runtime switchover work resolves those settings by order owner.
 - Nova Post tracking sync maps provider status codes into Ukrainian dashboard shipment statuses.
 - The stored label reference points to Nova Post `/shipments/print`; downloading/serving labels requires a server-side authorized request because the provider endpoint requires JWT authorization.
 - Ukrposhta is not shown in the public customer form during the Nova Post MVP; historical records are labeled `Укрпошта (вимкнено)`.

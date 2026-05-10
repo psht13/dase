@@ -26,7 +26,11 @@ Production `web` requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH
 
 Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`. It does not require login or setup secrets.
 
-Nova Post secrets should be set only for the live flows that use them. MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option or production startup. Keep Railway values in secure service variables or variable references.
+`APP_ENCRYPTION_KEY` is required before an owner can save a Nova Post API key. Use a base64 or hex encoded value with at least 32 decoded bytes and do not reuse `BETTER_AUTH_SECRET`.
+
+Nova Post API keys, endpoint choice, sender, payer, and parcel defaults are owner shipping settings stored in `owner_shipping_settings`; the API key is encrypted in the database and read models expose only a safe preview. The ENV-01 milestone adds the secure model and persistence; the owner UI route and runtime carrier switchover are handled by later ENV prompts.
+
+MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option or production startup. Keep Railway values in secure service variables or variable references.
 
 ## Створення першого owner у production
 
@@ -74,11 +78,17 @@ When the seller receives and verifies the transfer, the owner order details page
 
 ## Shipping Creation Mode
 
-Current Railway `web` and `worker` envs, plus local `.env`, `.env.test.local`, and `.env.production.local`, use `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API.
+Current Railway `web` and `worker` envs, plus local `.env`, `.env.test.local`, and `.env.production.local`, use `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API until the later runtime switchover reads owner settings by order context.
 
 Use `SHIPPING_LABEL_CREATION_MODE=disabled` only when Nova Post sender settings are intentionally incomplete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.
 
 Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local fixture-based development. Keep `USE_MOCK_SHIPPING_CARRIERS` blank when `SHIPPING_LABEL_CREATION_MODE=live` should use Nova Post stage/test credentials. Playwright e2e forces shipping creation to `disabled` in its dev server command so automated tests never call the live Nova Post API.
+
+Official Nova Post references for owner settings:
+- https://api-portal.novapost.com/en/about-api/general/
+- https://api-portal.novapost.com/en/api-nova-post/start/api-keys/
+- https://api-portal.novapost.com/en/api-nova-post/start/endpoints/
+- https://api-portal.novapost.com/en/api-nova-post/start/token-usage/
 
 ## Verification
 

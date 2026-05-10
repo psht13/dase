@@ -66,6 +66,20 @@ export const webhookProvider = pgEnum("webhook_provider", [
   "NOVA_POSHTA",
   "UKRPOSHTA",
 ]);
+export const ownerShippingCarrier = pgEnum("owner_shipping_carrier", [
+  "NOVA_POST",
+]);
+export const novaPostApiEnvironment = pgEnum("nova_post_api_environment", [
+  "stage",
+  "production_global",
+  "production_ukraine",
+  "custom",
+]);
+export const novaPostPayerType = pgEnum("nova_post_payer_type", [
+  "Recipient",
+  "Sender",
+  "ThirdPerson",
+]);
 
 export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -365,6 +379,120 @@ export const paymentRequisites = pgTable(
   ],
 );
 
+export const ownerShippingSettings = pgTable(
+  "owner_shipping_settings",
+  {
+    apiBaseUrl: text("api_base_url").notNull(),
+    apiEnvironment: novaPostApiEnvironment("api_environment").notNull(),
+    apiKeyEncrypted: text("api_key_encrypted"),
+    apiKeyPreview: text("api_key_preview"),
+    authUrl: text("auth_url"),
+    carrier: ownerShippingCarrier("carrier").default("NOVA_POST").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    defaultActualWeightGrams: integer("default_actual_weight_grams").notNull(),
+    defaultHeightMm: integer("default_height_mm").notNull(),
+    defaultLengthMm: integer("default_length_mm").notNull(),
+    defaultVolumetricWeightGrams: integer(
+      "default_volumetric_weight_grams",
+    ).notNull(),
+    defaultWidthMm: integer("default_width_mm").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    isEnabled: boolean("is_enabled").default(false).notNull(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    payerContractNumber: text("payer_contract_number"),
+    payerType: novaPostPayerType("payer_type").notNull(),
+    senderCompanyName: text("sender_company_name"),
+    senderCompanyTin: text("sender_company_tin"),
+    senderCountryCode: text("sender_country_code").notNull(),
+    senderDivisionId: text("sender_division_id").notNull(),
+    senderEmail: text("sender_email"),
+    senderName: text("sender_name").notNull(),
+    senderPhone: text("sender_phone").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check(
+      "owner_shipping_settings_api_base_url_length",
+      sql`char_length(${table.apiBaseUrl}) <= 500`,
+    ),
+    check(
+      "owner_shipping_settings_auth_url_length",
+      sql`${table.authUrl} IS NULL OR char_length(${table.authUrl}) <= 500`,
+    ),
+    check(
+      "owner_shipping_settings_api_key_preview_length",
+      sql`${table.apiKeyPreview} IS NULL OR char_length(${table.apiKeyPreview}) <= 32`,
+    ),
+    check(
+      "owner_shipping_settings_sender_country_code_length",
+      sql`char_length(${table.senderCountryCode}) = 2`,
+    ),
+    check(
+      "owner_shipping_settings_sender_division_id_length",
+      sql`char_length(${table.senderDivisionId}) <= 80`,
+    ),
+    check(
+      "owner_shipping_settings_sender_name_length",
+      sql`char_length(${table.senderName}) <= 160`,
+    ),
+    check(
+      "owner_shipping_settings_sender_phone_length",
+      sql`char_length(${table.senderPhone}) <= 32`,
+    ),
+    check(
+      "owner_shipping_settings_sender_email_length",
+      sql`${table.senderEmail} IS NULL OR char_length(${table.senderEmail}) <= 160`,
+    ),
+    check(
+      "owner_shipping_settings_sender_company_tin_length",
+      sql`${table.senderCompanyTin} IS NULL OR char_length(${table.senderCompanyTin}) <= 64`,
+    ),
+    check(
+      "owner_shipping_settings_sender_company_name_length",
+      sql`${table.senderCompanyName} IS NULL OR char_length(${table.senderCompanyName}) <= 160`,
+    ),
+    check(
+      "owner_shipping_settings_payer_contract_number_length",
+      sql`${table.payerContractNumber} IS NULL OR char_length(${table.payerContractNumber}) <= 80`,
+    ),
+    check(
+      "owner_shipping_settings_width_positive",
+      sql`${table.defaultWidthMm} > 0`,
+    ),
+    check(
+      "owner_shipping_settings_length_positive",
+      sql`${table.defaultLengthMm} > 0`,
+    ),
+    check(
+      "owner_shipping_settings_height_positive",
+      sql`${table.defaultHeightMm} > 0`,
+    ),
+    check(
+      "owner_shipping_settings_actual_weight_positive",
+      sql`${table.defaultActualWeightGrams} > 0`,
+    ),
+    check(
+      "owner_shipping_settings_volumetric_weight_positive",
+      sql`${table.defaultVolumetricWeightGrams} > 0`,
+    ),
+    check(
+      "owner_shipping_settings_third_person_contract",
+      sql`${table.payerType} <> 'ThirdPerson' OR ${table.payerContractNumber} IS NOT NULL`,
+    ),
+    uniqueIndex("owner_shipping_settings_owner_id_unique").on(table.ownerId),
+    index("owner_shipping_settings_owner_carrier_idx").on(
+      table.ownerId,
+      table.carrier,
+    ),
+  ],
+);
+
 export const shipments = pgTable(
   "shipments",
   {
@@ -533,6 +661,8 @@ export type CustomerRecord = typeof customers.$inferSelect;
 export type OrderRecord = typeof orders.$inferSelect;
 export type OrderItemRecord = typeof orderItems.$inferSelect;
 export type PaymentRecord = typeof payments.$inferSelect;
+export type OwnerShippingSettingsRecord =
+  typeof ownerShippingSettings.$inferSelect;
 export type ShipmentRecord = typeof shipments.$inferSelect;
 export type OrderTagRecord = typeof orderTags.$inferSelect;
 export type AuditEventRecord = typeof auditEvents.$inferSelect;
