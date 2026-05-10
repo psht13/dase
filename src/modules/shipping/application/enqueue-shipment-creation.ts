@@ -181,8 +181,7 @@ function isOrderReadyForShipment(
 
   const hasPaidOnlinePayment = payments.some(
     (payment) =>
-      (payment.provider === "MONOBANK" ||
-        payment.provider === "MANUAL_CARD_TRANSFER") &&
+      payment.provider === "MANUAL_CARD_TRANSFER" &&
       payment.status === "PAID",
   );
   const hasCashOnDelivery = payments.some(

@@ -73,7 +73,7 @@ describe("retryShipmentCreationAction", () => {
           id: "payment-1",
           orderId: "order-1",
           paidAt: now,
-          provider: "MONOBANK",
+          provider: "MANUAL_CARD_TRANSFER",
           providerInvoiceId: "invoice-1",
           providerModifiedAt: now,
           status: "PAID",

@@ -2,8 +2,8 @@ import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { formatInstagramUsername } from "@/modules/orders/application/customer-instagram";
 import {
+  getPaymentProviderLabel,
   orderStatusLabels,
-  paymentProviderLabels,
   paymentStatusLabels,
   shipmentCarrierLabels,
   shipmentStatusLabels,
@@ -219,7 +219,7 @@ function PaymentSummary({
     <div className="grid min-w-0 gap-1">
       <p className="truncate font-medium">
         {prefix ? `${prefix}: ` : null}
-        {paymentProviderLabels[payment.provider]}
+        {getPaymentProviderLabel(payment.provider)}
       </p>
       <StatusBadge
         label={paymentStatusLabels[payment.status]}

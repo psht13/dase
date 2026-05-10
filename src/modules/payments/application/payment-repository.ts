@@ -1,5 +1,4 @@
 export type PaymentProviderCode =
-  | "MONOBANK"
   | "MANUAL_CARD_TRANSFER"
   | "CASH_ON_DELIVERY";
 export type PaymentStatus =
@@ -17,11 +16,18 @@ export type PaymentRecord = {
   id: string;
   orderId: string;
   paidAt: Date | null;
-  provider: PaymentProviderCode;
+  provider: string;
   providerInvoiceId: string | null;
   providerModifiedAt: Date | null;
   status: PaymentStatus;
   updatedAt: Date;
+};
+
+export type PaymentCreateInput = Omit<
+  PaymentRecord,
+  "createdAt" | "id" | "provider" | "updatedAt"
+> & {
+  provider: PaymentProviderCode;
 };
 
 export type UpdatePaymentProviderInvoiceInput = {
@@ -41,12 +47,10 @@ export type UpdatePaymentStatusInput = {
 export interface PaymentRepository {
   findByOrderId(orderId: string): Promise<PaymentRecord[]>;
   findByProviderInvoiceId(
-    provider: PaymentProviderCode,
+    provider: string,
     providerInvoiceId: string,
   ): Promise<PaymentRecord | null>;
-  save(
-    payment: Omit<PaymentRecord, "createdAt" | "id" | "updatedAt">,
-  ): Promise<PaymentRecord>;
+  save(payment: PaymentCreateInput): Promise<PaymentRecord>;
   updateProviderInvoice(
     input: UpdatePaymentProviderInvoiceInput,
   ): Promise<PaymentRecord>;

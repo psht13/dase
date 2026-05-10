@@ -1,5 +1,6 @@
 import {
   getAuditEventLabel,
+  getPaymentProviderLabel,
   orderStatusLabels,
   paymentProviderLabels,
   paymentStatusLabels,
@@ -15,6 +16,9 @@ describe("owner order Ukrainian labels", () => {
     expect(paymentProviderLabels.CASH_ON_DELIVERY).toBe("Післяплата");
     expect(paymentProviderLabels.MANUAL_CARD_TRANSFER).toBe(
       "Оплата картою онлайн",
+    );
+    expect(getPaymentProviderLabel("LEGACY_EXTERNAL_ACQUIRING")).toBe(
+      "Історична онлайн-оплата",
     );
     expect(paymentStatusLabels.PENDING).toBe("Очікує підтвердження");
     expect(getAuditEventLabel("ORDER_STATUS_UPDATED")).toBe(

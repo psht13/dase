@@ -4,9 +4,6 @@ import type {
   PublicOrderReview as PublicOrderReviewData,
   PublicOrderStatus as PublicOrderStatusData,
 } from "@/modules/orders/application/lookup-public-order";
-import { getCustomerPaymentStatusMessage } from "@/modules/payments/application/payment-status";
-import type { PaymentRetryActionResult } from "@/modules/payments/ui/payment-actions";
-import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { Button } from "@/shared/ui/button";
 import { ActionBar, PageHeader, PageShell } from "@/shared/ui/page-layout";
@@ -15,13 +12,11 @@ import { formatMoneyMinor } from "@/shared/utils/format-money";
 type PublicOrderReviewProps = {
   deliveryHref: string;
   order: PublicOrderReviewData;
-  paymentRetryAction?: () => Promise<PaymentRetryActionResult>;
 };
 
 export function PublicOrderReview({
   deliveryHref,
   order,
-  paymentRetryAction,
 }: PublicOrderReviewProps) {
   return (
     <PageShell contentClassName="grid gap-6 sm:gap-8" maxWidth="xl">
@@ -32,14 +27,6 @@ export function PublicOrderReview({
           title="Ваше замовлення"
         />
       </div>
-
-      <PaymentStatusNotice order={order} />
-
-      {order.canRetryMonobankPayment && paymentRetryAction ? (
-        <div className="rounded-md border border-accent bg-card/95 p-4 shadow-sm">
-          <PaymentRetryForm action={paymentRetryAction} />
-        </div>
-      ) : null}
 
       <div className="grid gap-4">
         {order.items.map((item) => (
@@ -89,10 +76,8 @@ export function PublicOrderReview({
 
 export function PublicOrderStatus({
   order,
-  paymentRetryAction,
 }: {
   order: PublicOrderStatusData;
-  paymentRetryAction?: () => Promise<PaymentRetryActionResult>;
 }) {
   return (
     <PageShell contentClassName="grid gap-6 sm:gap-8" maxWidth="lg">
@@ -132,14 +117,7 @@ export function PublicOrderStatus({
         </p>
       </section>
 
-      <PaymentStatusNotice order={order} />
       <ManualCardPaymentNotice order={order} />
-
-      {order.canRetryMonobankPayment && paymentRetryAction ? (
-        <div className="rounded-md border border-accent bg-card/95 p-4 shadow-sm">
-          <PaymentRetryForm action={paymentRetryAction} />
-        </div>
-      ) : null}
 
       <section
         aria-labelledby="public-order-summary-heading"
@@ -180,31 +158,6 @@ export function PublicOrderStatus({
         </div>
       </section>
     </PageShell>
-  );
-}
-
-function PaymentStatusNotice({
-  order,
-}: {
-  order: PublicOrderReviewData | PublicOrderStatusData;
-}) {
-  const message = getCustomerPaymentStatusMessage(order.status, {
-    provider: order.paymentProvider,
-    status: order.paymentStatus,
-  });
-
-  if (!message) {
-    return null;
-  }
-
-  return (
-    <p
-      aria-live="polite"
-      className="rounded-md border border-accent bg-accent/25 px-4 py-3 text-sm text-foreground shadow-sm"
-      role="status"
-    >
-      {message}
-    </p>
   );
 }
 

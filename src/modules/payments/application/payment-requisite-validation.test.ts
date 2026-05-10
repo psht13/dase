@@ -3,7 +3,7 @@ import { safeParsePaymentRequisiteInput } from "@/modules/payments/application/p
 describe("payment requisite validation", () => {
   it("accepts owner-provided card, IBAN, or payment details without strict card validation", () => {
     const result = safeParsePaymentRequisiteInput({
-      bankName: "monobank",
+      bankName: "ПриватБанк",
       displayValue: "UA12 3456 7890 1234 5678 9012 345",
       isActive: true,
       label: "Основна картка",

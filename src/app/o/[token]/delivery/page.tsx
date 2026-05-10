@@ -8,7 +8,6 @@ import {
 } from "@/modules/orders/ui/public-order-review";
 import { getPaymentRepository } from "@/modules/payments/infrastructure/payment-repository-factory";
 import { getPaymentRequisiteRepository } from "@/modules/payments/infrastructure/payment-requisite-repository-factory";
-import { retryPublicMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { PageHeader, PageShell } from "@/shared/ui/page-layout";
 
@@ -38,15 +37,7 @@ export default async function PublicDeliveryPage({
   }
 
   if (result.order.state === "status") {
-    return (
-      <PublicOrderStatus
-        order={result.order}
-        paymentRetryAction={retryPublicMonobankPaymentAction.bind(
-          null,
-          result.order.publicToken,
-        )}
-      />
-    );
+    return <PublicOrderStatus order={result.order} />;
   }
 
   return (

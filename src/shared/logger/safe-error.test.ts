@@ -4,10 +4,10 @@ describe("safe error formatting", () => {
   it("redacts credentialed URLs and sensitive assignments", () => {
     expect(
       redactSensitiveText(
-        "DATABASE_URL=https://user:password@example.com/dase MONOBANK_TOKEN=token",
+        "DATABASE_URL=https://user:password@example.com/dase APP_ENCRYPTION_KEY=secret",
       ),
     ).toBe(
-      "DATABASE_URL=[redacted] MONOBANK_TOKEN=[redacted]",
+      "DATABASE_URL=[redacted] APP_ENCRYPTION_KEY=[redacted]",
     );
     expect(
       redactSensitiveText("connect https://user:password@example.com/dase"),
@@ -18,11 +18,11 @@ describe("safe error formatting", () => {
     expect(
       formatSafeError(
         new Error(
-          "failed with NOVA_POST_API_KEY=secret and https://u:p@example.com",
+          "failed with OWNER_SETUP_TOKEN=secret and https://u:p@example.com",
         ),
       ),
     ).toBe(
-      "Error: failed with NOVA_POST_API_KEY=[redacted] and https://[redacted]:[redacted]@example.com",
+      "Error: failed with OWNER_SETUP_TOKEN=[redacted] and https://[redacted]:[redacted]@example.com",
     );
   });
 });

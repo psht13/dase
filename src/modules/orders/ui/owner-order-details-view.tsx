@@ -6,8 +6,8 @@ import { formatInstagramUsername } from "@/modules/orders/application/customer-i
 import {
   auditActorLabels,
   getAuditEventLabel,
+  getPaymentProviderLabel,
   orderStatusLabels,
-  paymentProviderLabels,
   paymentStatusLabels,
   shipmentCarrierLabels,
   shipmentStatusLabels,
@@ -30,9 +30,6 @@ import { OwnerOrderManualPaymentForm } from "@/modules/orders/ui/owner-order-man
 import { OwnerOrderRetryShipmentForm } from "@/modules/orders/ui/owner-order-retry-shipment-form";
 import { OwnerOrderStatusForm } from "@/modules/orders/ui/owner-order-status-form";
 import { OwnerOrderTagPanel } from "@/modules/orders/ui/owner-order-tag-panel";
-import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
-import { retryOwnerMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
-import { PaymentRetryForm } from "@/modules/payments/ui/payment-retry-form";
 import {
   shippingLabelCreationDisabledMessage,
   type ShippingLabelCreationMode,
@@ -54,12 +51,6 @@ export function OwnerOrderDetailsView({
   shippingLabelCreationMode = "live",
 }: OwnerOrderDetailsViewProps) {
   const publicUrl = `/o/${order.publicToken}`;
-  const canRetryMonobankPayment = order.payments.some((payment) =>
-    canCreateMonobankInvoiceForPayment(order.status, payment),
-  );
-  const hasHistoricalMonobankPayment = order.payments.some(
-    (payment) => payment.provider === "MONOBANK",
-  );
   const canMarkManualCardPaymentPaid =
     order.status === "PAYMENT_PENDING" &&
     order.payments.some(
@@ -242,7 +233,7 @@ export function OwnerOrderDetailsView({
                     <dl className="grid min-w-0 gap-3 text-sm">
                       <InfoRow
                         label="Спосіб"
-                        value={paymentProviderLabels[payment.provider]}
+                        value={getPaymentProviderLabel(payment.provider)}
                       />
                       <InfoRow
                         label="Статус"
@@ -255,9 +246,9 @@ export function OwnerOrderDetailsView({
                           payment.currency,
                         )}
                       />
-                      {payment.provider === "MONOBANK" ? (
+                      {payment.providerInvoiceId ? (
                         <InfoRow
-                          label="Ідентифікатор рахунку"
+                          label="Ідентифікатор історичного рахунку"
                           value={payment.providerInvoiceId}
                         />
                       ) : null}
@@ -269,28 +260,6 @@ export function OwnerOrderDetailsView({
               <EmptyInlineState message="Оплата ще не створена. Після підтвердження клієнтом тут буде спосіб оплати та статус рахунку." />
             )}
 
-            {hasHistoricalMonobankPayment ? (
-              <div className="grid min-w-0 gap-3">
-                <div>
-                  <h3 className="text-base font-semibold">
-                    Повтор оплати MonoPay
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Повторне посилання доступне, якщо рахунок MonoPay не
-                    створився або попередня оплата завершилась помилкою.
-                  </p>
-                </div>
-                {canRetryMonobankPayment ? (
-                  <PaymentRetryForm
-                    action={retryOwnerMonobankPaymentAction.bind(null, order.id)}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Повтор оплати зараз недоступний.
-                  </p>
-                )}
-              </div>
-            ) : null}
           </DetailSection>
 
           <DetailSection testId="tags" title="Теги">

@@ -24,7 +24,7 @@ function createUpdateChain<T>(result: T) {
 describe("DrizzlePaymentRequisiteRepository", () => {
   const now = new Date("2026-05-08T00:00:00.000Z");
   const requisite = {
-    bankName: "monobank",
+    bankName: "ПриватБанк",
     createdAt: now,
     displayValue: "4441 1111 2222 3333",
     id: "requisite-1",
@@ -71,7 +71,7 @@ describe("DrizzlePaymentRequisiteRepository", () => {
     const repository = new DrizzlePaymentRequisiteRepository(db as never);
 
     await repository.save({
-      bankName: "monobank",
+      bankName: "ПриватБанк",
       displayValue: "4441 1111 2222 3333",
       isActive: true,
       label: "Основна картка",

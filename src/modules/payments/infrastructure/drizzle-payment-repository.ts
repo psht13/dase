@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type {
-  PaymentProviderCode,
+  PaymentCreateInput,
   PaymentRecord,
   PaymentRepository,
   UpdatePaymentProviderInvoiceInput,
@@ -25,7 +25,7 @@ export class DrizzlePaymentRepository implements PaymentRepository {
   }
 
   async findByProviderInvoiceId(
-    provider: PaymentProviderCode,
+    provider: string,
     providerInvoiceId: string,
   ): Promise<PaymentRecord | null> {
     const [payment] = await this.db
@@ -33,7 +33,10 @@ export class DrizzlePaymentRepository implements PaymentRepository {
       .from(schema.payments)
       .where(
         and(
-          eq(schema.payments.provider, provider),
+          eq(
+            schema.payments.provider,
+            provider as typeof schema.payments.provider.enumValues[number],
+          ),
           eq(schema.payments.providerInvoiceId, providerInvoiceId),
         ),
       )
@@ -46,9 +49,7 @@ export class DrizzlePaymentRepository implements PaymentRepository {
     return mapPayment(payment);
   }
 
-  async save(
-    payment: Omit<PaymentRecord, "createdAt" | "id" | "updatedAt">,
-  ): Promise<PaymentRecord> {
+  async save(payment: PaymentCreateInput): Promise<PaymentRecord> {
     const [savedPayment] = await this.db
       .insert(schema.payments)
       .values({

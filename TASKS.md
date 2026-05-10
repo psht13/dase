@@ -1,5 +1,7 @@
 # Dase prompts - owner-configured Nova Post settings and env cleanup v1
 
+Historical prompt archive: this file records the ENV-00 through ENV-05 work queue and older audit context. It is not current runtime documentation; use `README.md`, `DEPLOYMENT.md`, `spec.md`, and `docs/audits/env-cleanup.md` for the current supported environment variables and active payment/shipping behavior.
+
 Цей файл містить набір промптів для Codex, щоб перенести налаштування доставки з env у UI, прибрати застарілі env ключі, очистити Railway/local envs і документацію.
 
 ## Контекст аудиту

@@ -163,7 +163,7 @@ describe("runtime environment validation", () => {
     expect(env.OWNER_SETUP_TOKEN).toBeUndefined();
   });
 
-  it("accepts production disabled shipping mode without Nova Post credentials", () => {
+  it("accepts production disabled shipping mode without owner Nova Post env credentials", () => {
     const env = validateWorkerEnv({
       AUTO_COMPLETE_AFTER_DELIVERED_HOURS: "24",
       DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
@@ -172,7 +172,7 @@ describe("runtime environment validation", () => {
     });
 
     expect(env.SHIPPING_LABEL_CREATION_MODE).toBe("disabled");
-    expect(env.NOVA_POST_API_KEY).toBeUndefined();
+    expect("NOVA_POST_API_KEY" in env).toBe(false);
   });
 
   it("rejects mock shipping mode in production", () => {
@@ -195,39 +195,30 @@ describe("runtime environment validation", () => {
       SHIPPING_LABEL_CREATION_MODE: "live",
     });
 
-    expect(env.NOVA_POST_API_KEY).toBeUndefined();
+    expect("NOVA_POST_API_KEY" in env).toBe(false);
     expect(env.SHIPPING_LABEL_CREATION_MODE).toBe("live");
   });
 
-  it("still parses transitional Nova Post values when present without requiring them", () => {
+  it("strips deprecated payment and shipping env values when present", () => {
     const env = validateWorkerEnv({
       AUTO_COMPLETE_AFTER_DELIVERED_HOURS: "24",
       DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
+      MONOBANK_TOKEN: "deprecated-token",
+      MONOBANK_API_URL: "https://api.example.test",
       NODE_ENV: "production",
       NOVA_POST_API_KEY: "nova-key",
       NOVA_POST_API_URL: "https://api.novapost.com/v.1.0/",
-      NOVA_POST_AUTH_URL:
-        "https://api.novapost.com/v.1.0/clients/authorization",
-      NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS: "750",
-      NOVA_POST_DEFAULT_HEIGHT_MM: "100",
-      NOVA_POST_DEFAULT_LENGTH_MM: "300",
-      NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS: "500",
-      NOVA_POST_DEFAULT_WIDTH_MM: "200",
-      NOVA_POST_PAYER_TYPE: "Recipient",
       NOVA_POST_SENDER_COUNTRY_CODE: "UA",
-      NOVA_POST_SENDER_DIVISION_ID: "11759",
-      NOVA_POST_SENDER_EMAIL: "",
-      NOVA_POST_SENDER_NAME: "Тестова Тетяна",
-      NOVA_POST_SENDER_PHONE: "380007654321",
+      NOVA_POSHTA_API_KEY: "legacy-key",
       SHIPPING_LABEL_CREATION_MODE: "live",
     });
 
-    expect(env.NOVA_POST_API_URL).toBe("https://api.novapost.com/v.1.0/");
-    expect(env.NOVA_POST_AUTH_URL).toBe(
-      "https://api.novapost.com/v.1.0/clients/authorization",
-    );
-    expect(env.NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS).toBe(750);
-    expect(env.NOVA_POST_SENDER_EMAIL).toBeUndefined();
+    expect("MONOBANK_TOKEN" in env).toBe(false);
+    expect("MONOBANK_API_URL" in env).toBe(false);
+    expect("NOVA_POST_API_KEY" in env).toBe(false);
+    expect("NOVA_POST_API_URL" in env).toBe(false);
+    expect("NOVA_POST_SENDER_COUNTRY_CODE" in env).toBe(false);
+    expect("NOVA_POSHTA_API_KEY" in env).toBe(false);
     expect(env.SHIPPING_LABEL_CREATION_MODE).toBe("live");
   });
 

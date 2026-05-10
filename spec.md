@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, historical MonoPay / Monobank payment flow and retry support, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, final production-readiness audit, and production PostgreSQL split implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, final production-readiness audit, production PostgreSQL split, owner-based Nova Post settings, and deprecated env cleanup implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -98,28 +98,26 @@ Customer delivery confirmation update on 2026-04-30:
 - MSW contract tests cover Nova Post response mapping, status mapping, carrier error handling, and disabled-carrier guards.
 - Playwright e2e covers a customer confirming delivery with mocked carrier lookup.
 
-MonoPay / Monobank payment update on 2026-04-30:
-- `PaymentProvider` application port defines `createInvoice`, `getInvoiceStatus`, and `verifyWebhook`.
-- Monobank infrastructure provider creates invoices through the acquiring API shape, reads invoice status, verifies webhook `X-Sign` signatures with the configured public key, and sanitizes webhook payloads so card data is not stored.
-- Customer confirmation now creates a MonoPay invoice when payment method is `MONOBANK`, stores the provider invoice id, moves the order to `PAYMENT_PENDING`, and returns a payment redirect URL.
-- Cash on delivery skips online invoice creation and keeps the existing confirmation/shipment preparation path.
-- `/api/webhooks/monobank` accepts raw signed webhook bodies, verifies the signature, stores webhook events idempotently, ignores stale events by comparing Monobank `modifiedDate`, and safely updates payment/order statuses.
-- Payment status copy shown to customers is Ukrainian: pending confirmation, successful MonoPay payment, and failed MonoPay payment states are covered by tests.
-- MSW contract tests cover Monobank invoice creation/status mapping and webhook signature verification without calling live Monobank APIs.
-- Playwright e2e covers customer MonoPay confirmation, mocked invoice redirect, mocked successful webhook, and Ukrainian paid status copy.
+Manual card payment update on 2026-05-10:
+- The active customer payment methods are `Оплата картою онлайн` and `Післяплата`.
+- `Оплата картою онлайн` is a manual transfer flow backed by owner-managed requisites in `/dashboard/settings/payment`; the app does not process customer cards or require acquiring runtime credentials.
+- Public order pages and the delivery/payment form do not show inactive acquiring copy or retry actions.
+- Owner order details expose `Позначити оплату отриманою` for pending manual-card payments and do not show inactive acquiring retry actions.
+- Existing database enum history and nullable provider invoice fields are retained for old rows, but active runtime code no longer creates invoices, handles acquiring webhooks, or reads acquiring env variables.
+- Cash on delivery skips online payment and keeps the existing confirmation/shipment preparation path.
 
 Shipment worker update on 2026-04-30:
 - `pg-boss` is the selected Postgres-backed job queue; `pnpm worker:start` starts the shipment worker entrypoint.
 - Worker jobs are registered for `create-shipment`, `sync-shipment-status`, and `auto-complete-delivered-order`.
 - Confirmed cash-on-delivery orders enqueue `create-shipment` after the customer confirmation use case stores customer, payment, and shipment rows.
-- Successful MonoPay webhooks mark payment as paid, move the order into shipment preparation, and enqueue `create-shipment`.
+- Successful manual-card owner confirmation marks payment as paid, moves the order into shipment preparation, and enqueues `create-shipment`.
 - `create-shipment` calls the selected `ShippingCarrier`, stores tracking number, carrier document id, and label URL/reference, marks the shipment created, moves the order to `SHIPMENT_CREATED`, and schedules status sync.
 - Shipment creation failures mark the shipment `FAILED`, append a Ukrainian audit payload, and rethrow so pg-boss retry behavior can apply.
 - `sync-shipment-status` calls carrier tracking, maps carrier status into internal shipment/order statuses, schedules another sync for active shipments, and schedules auto-completion for delivered shipments.
 - `auto-complete-delivered-order` moves delivered orders to `COMPLETED` after `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
 - Owner retry action `retryShipmentCreationAction` re-enqueues failed shipment creation and returns Ukrainian dashboard-facing messages.
 - Dashboard/status helper labels for shipment statuses and worker job names are Ukrainian and covered by tests.
-- Public payment status copy remains payment-aware: MonoPay paid orders continue to show Ukrainian paid copy after moving into shipment statuses, while cash-on-delivery shipment statuses do not show MonoPay copy.
+- Public payment status copy remains focused on manual card transfer and cash-on-delivery; inactive acquiring retry/status copy is not shown.
 - Tests cover job enqueueing, shipment creation success and failure, tracking status mapping, auto-completion rules, retry action copy, pg-boss retry options, and Ukrainian shipment status/job labels.
 
 Owner order management update on 2026-04-30:
@@ -158,11 +156,11 @@ Release candidate hardening update on 2026-04-30:
 - Production domain/application layer imports were audited; no production domain/application files import React, Next.js, Drizzle, infrastructure, or UI code.
 - Dashboard catalog read paths now go through catalog application use cases for owner product listing and owner-scoped product lookup.
 - Source, schema, and tests were audited for forbidden roles; only `owner` and `user` roles are present outside documentation describing the forbidden-role rule.
-- User-facing UI copy was audited and remains Ukrainian, with brand names such as Dase and MonoPay kept as proper names.
+- User-facing UI copy was audited and remains Ukrainian, with brand names such as Dase and legacy external acquiring kept as proper names.
 - Product image handling remains external URL only through `product_images`; no object storage service or upload path was added.
 - Worker error logging now formats errors through a safe logger that redacts credentialed URLs and sensitive environment assignments before printing.
 - Environment documentation now includes every app/tooling variable read by the repository, including `PLAYWRIGHT_BASE_URL`, `NODE_ENV`, and `CI`.
-- External API adapters remain covered by MSW contract tests and fixture adapters; CI does not call live Monobank or Nova Post APIs.
+- External API adapters remain covered by MSW contract tests and fixture adapters; CI does not call live legacy external acquiring or Nova Post APIs.
 - Public order routes expose only token-scoped public order review/payment status data and do not expose full internal order IDs.
 - Owner dashboard routes continue to require an authenticated `owner`; `user` role sessions are redirected away from `/dashboard`.
 - Railway MCP was attempted again during Prompt 11 with `check_railway_status`, but live Railway configuration was initially blocked by invalid or expired Railway authentication.
@@ -178,9 +176,9 @@ Production owner access and payment/shipment safety update on 2026-04-30, repair
 - Dashboard access redirects unauthenticated visitors to `/login`; authenticated `user` role sessions remain denied dashboard access.
 - Owner sessions persist across `/dashboard`, `/dashboard/products`, `/dashboard/orders`, `/dashboard/orders/new`, hard reloads, client-side navigation, and browser back/forward.
 - Customer confirmation writes now support a customer-confirmation unit of work so customer, order, payment, shipment, and audit rows use transaction-scoped repositories in PostgreSQL.
-- MonoPay invoice creation now supports retry when a confirmed order has a MonoPay payment without `providerInvoiceId`, or when a previous MonoPay payment failed.
-- Public order review and owner order details expose the Ukrainian `Повторити оплату` action when MonoPay retry is available.
-- Tests cover first owner setup, setup blocked after an owner exists, form-based setup-token handling, Ukrainian login labels, owner dashboard access, user dashboard denial, real setup/login persistence, transaction wiring, MonoPay retry eligibility, and public/owner retry UI.
+- legacy external acquiring invoice creation now supports retry when a confirmed order has a legacy external acquiring payment without `providerInvoiceId`, or when a previous legacy external acquiring payment failed.
+- Public order review and owner order details expose the Ukrainian `Повторити оплату` action when legacy external acquiring retry is available.
+- Tests cover first owner setup, setup blocked after an owner exists, form-based setup-token handling, Ukrainian login labels, owner dashboard access, user dashboard denial, real setup/login persistence, transaction wiring, legacy external acquiring retry eligibility, and public/owner retry UI.
 
 Railway live setup retry on 2026-04-30:
 - Railway authentication was refreshed and Railway MCP `check_railway_status` passed.
@@ -195,16 +193,16 @@ Railway live setup retry on 2026-04-30:
 - Verified the Railway web deployment succeeded and `/api/health` returns `status: ok`.
 - Verified the Railway worker deployment succeeded and logs `Shipment worker is ready.`
 - Verified Railway PostgreSQL connectivity through the Railway public database proxy with a read-only query; `publicTableCount` was 16 after migration.
-- External production credentials for Monobank and Nova Post still require manual configuration in Railway before live payment/shipping verification. Future carriers must be documented and enabled through the carrier registry before production use.
+- External production credentials for legacy external acquiring and Nova Post still require manual configuration in Railway before live payment/shipping verification. Future carriers must be documented and enabled through the carrier registry before production use.
 
 Nova Post API replacement update on 2026-05-07:
 - Removed the legacy Nova Poshta JSON adapter and replaced it with `NovaPostShippingCarrier` plus `NovaPostJwtProvider`.
 - The adapter uses official Nova Post API v.1.0 endpoints: production `https://api.novapost.com/v.1.0/`, stage/test `https://api-stage.novapost.pl/v.1.0/`, authorization `GET /clients/authorization?apiKey=...`, directory lookup through `GET /divisions`, shipment creation through `POST /shipments`, tracking through `GET /shipments/tracking/history`, and label references through `GET /shipments/print`.
-- `NOVA_POST_API_KEY` is exchanged server-side for a JWT token; the JWT is cached for less than one hour and refreshed before expiration. API keys and JWTs are not logged or included in safe application errors.
+- `Nova Post owner API key` is exchanged server-side for a JWT token; the JWT is cached for less than one hour and refreshed before expiration. API keys and JWTs are not logged or included in safe application errors.
 - Nova Post v.1.0 requests send the generated JWT as the raw `Authorization` header value. Nova Post rejects a `Bearer `-prefixed JWT for directory requests.
 - Public carrier directory route handlers still return internal DTOs only and map provider failures to safe Ukrainian messages.
 - Shipment creation validates required sender config before calling Nova Post. Missing sender country, sender division, sender name, or sender phone fails safely, stores a Ukrainian audit reason, and leaves the owner retry path available.
-- New preferred env names are `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, and optional `NOVA_POST_AUTH_URL`; `NOVA_POSHTA_API_KEY` and `NOVA_POSHTA_API_URL` are temporarily accepted as deprecated compatibility names.
+- New preferred env names are `Nova Post owner API key`, `Nova Post owner API URL`, and optional `Nova Post owner auth URL`; `legacy Nova Poshta API key env` and `legacy Nova Poshta API URL env` are temporarily accepted as deprecated compatibility names.
 - Public customer delivery now exposes `Нова пошта` as the only active carrier. The database/internal enum value remains `NOVA_POSHTA` for compatibility with existing rows and worker code.
 - MSW tests cover JWT generation, JWT caching, JWT refresh, city/warehouse mapping, shipment creation mapping, tracking status mapping, safe provider errors, no credential logging, and missing sender config blocking live shipment calls.
 
@@ -284,16 +282,16 @@ Owner order details layout update on 2026-05-08:
 - `/dashboard/orders/[orderId]` now uses clear Ukrainian sections: `Огляд`, `Товари`, `Клієнт`, `Доставка`, `Оплата`, `Теги`, `Історія статусів`, and `Аудит`.
 - The mobile layout uses open collapsible section cards instead of wide product and audit tables. Products render as item cards, status history renders as compact event cards, and audit events render as a compact readable list.
 - Desktop widths use a two-column layout at wide breakpoints: products, status history, and audit stay in the main column, while overview, customer, delivery, payment, and tags stay in the side column.
-- Existing server actions and application use cases are unchanged. MonoPay retry, shipment retry, manual status update, and tag assignment/removal remain available through the same owner actions.
-- Delivery and shipment details are grouped under `Доставка`; payment details and MonoPay retry are grouped under `Оплата`.
-- Focused component tests cover the Ukrainian section headings, collapsible stacked sections, MonoPay retry eligibility, shipment retry availability, manual status update submission, and compact audit visibility.
+- Existing server actions and application use cases are unchanged. legacy external acquiring retry, shipment retry, manual status update, and tag assignment/removal remain available through the same owner actions.
+- Delivery and shipment details are grouped under `Доставка`; payment details and legacy external acquiring retry are grouped under `Оплата`.
+- Focused component tests cover the Ukrainian section headings, collapsible stacked sections, legacy external acquiring retry eligibility, shipment retry availability, manual status update submission, and compact audit visibility.
 - Playwright E2E covers the owner order details page at 390 px and checks the same page at 360 px for no horizontal overflow.
 
 Dashboard filter, empty-state, and feedback polish update on 2026-05-08:
 - `/dashboard/orders` filters now render as a responsive Ukrainian panel with a mobile-collapsed default, active-filter summary chips, accessible controls, and a clear-filters action. The same URL-backed GET parameters and application filtering behavior are unchanged.
 - Empty states now distinguish no orders from no filtered results and include useful Ukrainian next actions. Product catalog and order-builder empty states also point owners to create or enable products without changing product or order business rules.
 - `/dashboard/orders/[orderId]` now has clearer Ukrainian empty states for no items, no tags, no status history, no audit events, and missing payment/shipment records.
-- Tag updates, manual status updates, MonoPay retry, and shipment retry now share live-region feedback for pending, successful, and failed action states where applicable.
+- Tag updates, manual status updates, legacy external acquiring retry, and shipment retry now share live-region feedback for pending, successful, and failed action states where applicable.
 - Component tests cover mobile filter panel behavior, active summaries, clear filters, Ukrainian empty states, and action feedback messages. Playwright E2E now exercises the owner order filter panel and active-summary behavior after filtering.
 
 Owner order view declutter update on 2026-05-08:
@@ -321,15 +319,15 @@ Prompt 09 final order/payment QA on 2026-05-08:
 - Full Playwright E2E passed with Chromium: 22 tests passed and the opt-in authenticated production smoke spec skipped by default.
 - Playwright MCP inspected product create, order builder, public delivery, public post-confirmation status, owner order list, owner order details, and payment settings against local E2E-safe data at 390x844, 768x1024, and 1440x900.
 - The active public customer flow was rechecked with a seeded manual-card order: pre-confirmation review showed products and total; the delivery/payment step collected full name, phone, Instagram nickname, Nova Post delivery, and payment method; `Оплата картою онлайн` showed active owner requisites and the Instagram receipt instruction; reopening the public link showed the status page instead of a duplicate form.
-- The active customer UI check passed for the public review, delivery/payment step, and manual-card public status page: `Оплата картою онлайн` and `Після оплати надішліть квитанцію продавцю в Instagram чат` were present where expected, while `MonoPay` and `Monobank` were absent.
+- The active customer UI check passed for the public review, delivery/payment step, and manual-card public status page: `Оплата картою онлайн` and `Після оплати надішліть квитанцію продавцю в Instagram чат` were present where expected, while `legacy external acquiring` and `legacy external acquiring` were absent.
 - Owner QA verified search by displayed short order id, visible Instagram nickname, manual card payment status, marking the payment as received, and the resulting `Оплату картою підтверджено` audit event.
 - Cash on delivery remains covered by the full Playwright E2E customer-delivery flow.
 - Production `/api/health` returned `status: ok` on 2026-05-08. The authenticated production smoke test was not run because `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` were not set in the local shell; keep those credentials temporary and local-only when running `pnpm test:e2e:prod`.
-- Automated tests continue to use fixtures, MSW, or in-memory adapters for Monobank and Nova Post; no live external APIs are called in CI or local automated checks.
+- Automated tests continue to use fixtures, MSW, or in-memory adapters for legacy external acquiring and Nova Post; no live external APIs are called in CI or local automated checks.
 
 ## Order, payment, and responsive UI audit on 2026-05-08
 
-Audit scope: public order pages under `/o/[token]`, the customer delivery/payment form, owner product form, owner order builder, owner orders list, owner order details, dashboard shell, payment modules, Monobank provider/webhook code, shipping enqueue/job flow, and migrations through `drizzle/0003_kind_deathstrike.sql`.
+Audit scope: public order pages under `/o/[token]`, the customer delivery/payment form, owner product form, owner order builder, owner orders list, owner order details, dashboard shell, payment modules, legacy external acquiring provider/webhook code, shipping enqueue/job flow, and migrations through `drizzle/0003_kind_deathstrike.sql`.
 
 Current active behavior:
 - Public order lookup distinguishes unavailable links, review state, and post-confirmation status state. `/o/[token]` renders the delivery CTA only while the order is `SENT_TO_CUSTOMER`; confirmed, payment, shipment, completed, returned, and failed-payment states render a Ukrainian status page.
@@ -337,15 +335,15 @@ Current active behavior:
 - The public status page shows a stable customer-facing display number using the first 8 characters of the order UUID, for example `#55e143f7`; it does not expose the full internal UUID. It also shows Ukrainian status labels, processing/payment guidance, seller-chat instruction, selected products, and total.
 - Customer contact data collects and persists full name, phone, and an optional Instagram nickname. `customers.email` exists but the public form does not use it.
 - Customer payment defaults to `MANUAL_CARD_TRANSFER` when the owner has active payment requisites, otherwise to `CASH_ON_DELIVERY`. The active customer choices are `Оплата картою онлайн` and `Післяплата`.
-- Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `MONOBANK`, `MANUAL_CARD_TRANSFER`, and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` remain Monobank-specific but nullable.
-- MonoPay is no longer active in the customer delivery/payment form. Monobank provider, webhook, and retry code remains for historical records and explicit retry paths through `MONOBANK_*` variables and `/api/webhooks/monobank`.
+- Payment method values are persisted in `payments.provider`, backed by the PostgreSQL enum `payment_provider` and TypeScript `PaymentProviderCode`. Current values are `LEGACY_EXTERNAL_ACQUIRING`, `MANUAL_CARD_TRANSFER`, and `CASH_ON_DELIVERY`; `provider_invoice_id` and `provider_modified_at` remain legacy external acquiring-specific but nullable.
+- legacy external acquiring is no longer active in the customer delivery/payment form. legacy external acquiring provider, webhook, and retry code remains for historical records and explicit retry paths through `LEGACY_EXTERNAL_ACQUIRING_*` variables and `/api/webhooks/legacy-acquiring`.
 - Owner order search is URL-backed through `/dashboard/orders?search=...`. `matchesSearch(...)` matches full order UUIDs, the displayed short order number, customer phone digits, optional Instagram nickname with or without leading `@`, customer full names, and shipment tracking numbers.
-- Shipping enqueueing treats cash on delivery as shipment-ready immediately after confirmation, historical MonoPay orders wait for a paid webhook, and manual card transfer orders wait for the owner to mark the transfer received.
+- Shipping enqueueing treats cash on delivery as shipment-ready immediately after confirmation, historical legacy external acquiring orders wait for a paid webhook, and manual card transfer orders wait for the owner to mark the transfer received.
 - Owner dashboard settings exist under `/dashboard/settings/payment` for public payment card/requisite records.
 
 Completed functional changes from this audit:
-- Replaced the active customer MonoPay choice with `Оплата картою онлайн`. This is a manual card transfer flow: after customer confirmation, owner-configured active card/requisite records are visible and the customer is told in Ukrainian to send the receipt in the Instagram chat.
-- Kept Monobank adapter, webhook, and historical payment records readable for existing data, while removing MonoPay from the active customer flow and default form value. MonoPay retry no longer appears for new manual-card customer flows.
+- Replaced the active customer legacy external acquiring choice with `Оплата картою онлайн`. This is a manual card transfer flow: after customer confirmation, owner-configured active card/requisite records are visible and the customer is told in Ukrainian to send the receipt in the Instagram chat.
+- Kept legacy external acquiring adapter, webhook, and historical payment records readable for existing data, while removing legacy external acquiring from the active customer flow and default form value. legacy external acquiring retry no longer appears for new manual-card customer flows.
 - Instagram nickname capture is complete for the public contact step, server validation, confirmation use case input, customer persistence, owner order list/detail read models, and UI tests with Ukrainian labels.
 - Extended the public status page with owner-configured manual-card requisites.
 - Add owner order search matching for full order UUID, the displayed short order ID, customer full name, Instagram with or without leading `@`, phone, and tracking in `matchesSearch(...)`; update the filter placeholder to `ID, Instagram, телефон або ТТН`.
@@ -368,7 +366,7 @@ Public order status page update on 2026-05-08:
 - Public order lookup now returns `review` only for `SENT_TO_CUSTOMER` and `status` for valid post-confirmation/payment/shipment/completion states. Cancelled, expired, malformed, and missing links remain unavailable.
 - `/o/[token]` shows the pre-confirmation review CTA only before confirmation. After confirmation it shows `Замовлення #...`, the Ukrainian status label, status guidance such as `Ваше замовлення обробляється` or `Очікуємо оплату картою`, the seller-chat instruction, selected products, and total.
 - `/o/[token]/delivery` no longer renders the form after confirmation; it renders the same status state and leaves duplicate confirmation blocked in `confirmPublicOrderUseCase`.
-- Successful manual-card and cash-on-delivery confirmations return the customer to `/o/[token]`. Historical MonoPay retry still redirects to the existing provider URL and returns to the same public status page.
+- Successful manual-card and cash-on-delivery confirmations return the customer to `/o/[token]`. Historical legacy external acquiring retry still redirects to the existing provider URL and returns to the same public status page.
 - Tests cover display-number formatting, public lookup review/status/unavailable states, duplicate-confirmation rejection without extra customer/payment/shipment writes, Ukrainian status UI copy, delivery-page status rendering, and the Playwright revisit contract.
 
 Customer Instagram nickname update on 2026-05-08:
@@ -387,7 +385,7 @@ Manual card payment requisite settings update on 2026-05-08:
 - Manual card transfer confirmations move the order to `PAYMENT_PENDING`, keep payment status `PENDING`, and do not enqueue shipment creation before payment is handled by the owner workflow.
 - Owner dashboard shows a Ukrainian warning when no active payment requisites exist, and the public delivery form falls back to `Післяплата` without showing the online-card option in that state.
 - Owner order details expose `Позначити оплату отриманою` for pending `MANUAL_CARD_TRANSFER` payments. The action marks the payment `PAID`, transitions the order through `PAID`, appends `MANUAL_PAYMENT_MARKED_PAID`, and only then asks the shipment enqueue use case to prepare shipment creation.
-- MonoPay/Monobank remains implemented for historical records, webhook handling, and retry support, but it is no longer an active option in the customer delivery/payment form.
+- Legacy external acquiring remains implemented for historical records, webhook handling, and retry support, but it is no longer an active option in the customer delivery/payment form.
 - Focused tests cover validation, repository save/list/update/toggle, owner access, user denial through E2E, public active-only read model behavior, Ukrainian UI labels, owner requisite creation, and public manual-card display.
 - Verification for this milestone passed with `pnpm db:generate`, `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e`, and `pnpm build`. A plain `pnpm test:e2e` first reused an unrelated local Next app already answering on port 3000 (`/api/health` returned `401 no_refresh_token`), so the clean Dase run used isolated port 3100 and passed 19 tests with the production smoke skipped.
 
@@ -400,7 +398,7 @@ Owner order search and summary update on 2026-05-08:
 
 Risks:
 - PostgreSQL enum migrations must be forward-compatible and tested against Railway PostgreSQL before production promotion.
-- Removing MonoPay from the active customer flow while keeping historical Monobank webhooks/read models requires clear filtering so existing orders still render safely.
+- Removing legacy external acquiring from the active customer flow while keeping historical legacy external acquiring webhooks/read models requires clear filtering so existing orders still render safely.
 - Manual card transfer now depends on owner confirmation before shipment enqueueing. A future receipt-upload flow would need separate storage and moderation decisions; object storage remains out of scope.
 - Publicly showing an order number needs a product decision on whether the current UUID prefix is acceptable or whether a dedicated display number is required.
 - Owner-entered card/requisite data is buyer-visible financial information; avoid logging it unnecessarily and do not treat it like secret environment credentials.
@@ -450,7 +448,7 @@ Repair order checklist:
 
 ## Final production-readiness audit on 2026-05-07
 
-Audit scope: `AGENTS.md`, this specification, `DEPLOYMENT.md`, ADR 0001, `README.md`, package/env configuration, Railway MCP service status, auth/setup/login/logout flow, owner dashboard access, Nova Post shipping integration, disabled Ukrposhta handling, MonoPay retry/webhook handling, migrations, transactional customer confirmation, CI/e2e setup, and user-facing UI copy.
+Audit scope: `AGENTS.md`, this specification, `DEPLOYMENT.md`, ADR 0001, `README.md`, package/env configuration, Railway MCP service status, auth/setup/login/logout flow, owner dashboard access, Nova Post shipping integration, disabled Ukrposhta handling, legacy external acquiring retry/webhook handling, migrations, transactional customer confirmation, CI/e2e setup, and user-facing UI copy.
 
 Audit result:
 - Auth remains protected against redirect loops: unauthenticated dashboard access redirects to `/login`, authenticated `owner` sessions persist across dashboard navigation, reload, browser history, and logout, and authenticated `user` sessions are denied dashboard access.
@@ -460,12 +458,12 @@ Audit result:
 - No live Ukrposhta production adapter is wired, and no legacy Nova Poshta `v2.0/json` production adapter remains.
 - `SHIPPING_LABEL_CREATION_MODE` prevents accidental live labels: production defaults to `disabled`, production rejects `mock`, and `live` requires complete Nova Post API, sender, payer, and parcel settings before a provider call can be made.
 - Nova Post API keys and JWTs are not logged. Provider errors expose safe messages and tests assert credential logging is avoided.
-- MonoPay retry remains available for confirmed orders missing a provider invoice id and for failed MonoPay payments. Webhook processing verifies signatures, stores events idempotently, ignores stale provider modified dates, and stores sanitized payloads without card data.
+- legacy external acquiring retry remains available for confirmed orders missing a provider invoice id and for failed legacy external acquiring payments. Webhook processing verifies signatures, stores events idempotently, ignores stale provider modified dates, and stores sanitized payloads without card data.
 - Database migrations are forward-only schema/data migrations with no production destructive scripts. Customer confirmation writes use `CustomerConfirmationUnitOfWork` and Drizzle transactions when PostgreSQL is configured.
-- User-facing application copy remains Ukrainian, with product/brand names such as Dase, MonoPay, Monobank, and Nova Post kept as proper names.
+- User-facing application copy remains Ukrainian, with product/brand names such as Dase, legacy external acquiring, legacy external acquiring, and Nova Post kept as proper names.
 - Public pages are covered by mobile Playwright checks with no horizontal overflow, and dashboard navigation remains covered by owner e2e flows.
 - `README.md`, `.env.example`, this specification, `DEPLOYMENT.md`, Railway config files, and CI workflow are aligned with the current web, worker, postgres, env var, no-object-storage, and mocked-external-API requirements.
-- CI and local tests use MSW, fixtures, or in-memory adapters for Monobank and Nova Post; live external APIs are not called in automated tests.
+- CI and local tests use MSW, fixtures, or in-memory adapters for legacy external acquiring and Nova Post; live external APIs are not called in automated tests.
 
 ## Production logout origin repair on 2026-05-07
 
@@ -482,7 +480,7 @@ Audit result:
 ## Nova Post live directory regression on 2026-05-08
 
 - Official Nova Post docs were checked for the active v.1.0 endpoints, JWT generation, raw token usage, branch directory lookup, branch identifiers, and local shipment fields.
-- Railway production variables were verified without exposing secret values. The `web` service has `NOVA_POST_API_KEY` and `NOVA_POST_API_URL` configured for the Nova Post stage endpoint. `SHIPPING_LABEL_CREATION_MODE`, Nova Post sender, payer, and parcel defaults are not configured on `web`.
+- Railway production variables were verified without exposing secret values. The `web` service has `Nova Post owner API key` and `Nova Post owner API URL` configured for the Nova Post stage endpoint. `SHIPPING_LABEL_CREATION_MODE`, Nova Post sender, payer, and parcel defaults are not configured on `web`.
 - The `worker` service has `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`, but Nova Post API, sender, payer, parcel defaults, and `SHIPPING_LABEL_CREATION_MODE` are not configured there.
 - Before the adapter repair, production `/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ` returned the safe Ukrainian `502` message because Nova Post rejected `Authorization: Bearer <jwt>` with `401 Unauthorized`.
 - After the adapter repair, a Railway-env local probe using the production `web` variables returned one Київ city record and five warehouse records from Nova Post stage data.
@@ -613,18 +611,6 @@ For online card transfer:
 5. Owner marks the transfer received from order details after checking the receipt.
 6. App marks the payment `PAID`, transitions through `PAID`, writes `MANUAL_PAYMENT_MARKED_PAID`, and then enqueues shipment creation when a shipment is present and eligible.
 
-For historical MonoPay:
-
-1. App creates payment invoice after customer confirmation.
-2. App stores the provider invoice id and marks the order `PAYMENT_PENDING`.
-3. Customer is redirected to payment.
-4. Monobank sends webhook.
-5. App verifies signature.
-6. App stores event idempotently.
-7. App ignores stale events by provider `modifiedDate`.
-8. App updates payment and order status.
-9. If a historical confirmed order has no provider invoice id or the previous MonoPay payment failed, the customer or owner can use `Повторити оплату` to create a new invoice and move the payment/order back to pending.
-
 For cash on delivery:
 
 1. App skips online payment.
@@ -730,7 +716,7 @@ Confirmed customer delivery data is stored through existing tables:
 
 No new migration was required for the customer delivery form milestone because the foundation schema already included these columns and `carrier_directory_cache`.
 
-The MonoPay payment milestone also required no new migration because the foundation schema already included:
+The legacy external acquiring payment milestone also required no new migration because the foundation schema already included:
 - `payments.provider_invoice_id`
 - `payments.provider_modified_at`
 - `webhook_events.external_event_id`
@@ -776,14 +762,14 @@ Latest local quality status on 2026-04-30 after the UI polish milestone:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 90.84% statements, 80.17% branches, 93% functions, and 90.84% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium, including the updated keyboard, mobile public customer, product creation, order builder, delivery/payment, MonoPay, and owner order management checks.
+- `pnpm test:e2e` passed with Chromium, including the updated keyboard, mobile public customer, product creation, order builder, delivery/payment, legacy external acquiring, and owner order management checks.
 - `pnpm build` passed.
 
 Latest local quality status on 2026-04-30 after the Railway deployment readiness milestone:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 90.84% statements, 80.15% branches, 93% functions, and 90.84% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium, including health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and owner-role access checks.
+- `pnpm test:e2e` passed with Chromium, including health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked legacy external acquiring, owner order management, and owner-role access checks.
 - `pnpm build` passed.
 - Railway live deployment, PostgreSQL provisioning, GitHub autodeploy configuration, secure variable configuration, web health check verification, worker runtime verification, and Railway migration/database verification passed after Railway authentication was refreshed.
 
@@ -791,7 +777,7 @@ Latest local quality status on 2026-04-30 after the release candidate hardening 
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 90.88% statements, 80.17% branches, 93.06% functions, and 90.88% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 8 tests covering health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and `user` role dashboard denial.
+- `pnpm test:e2e` passed with Chromium: 8 tests covering health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked legacy external acquiring, owner order management, and `user` role dashboard denial.
 - `pnpm build` passed.
 - Railway live deployment, PostgreSQL provisioning, GitHub autodeploy configuration, secure variable configuration, web health check verification, worker runtime verification, and Railway migration/database verification passed after Railway authentication was refreshed.
 
@@ -799,7 +785,7 @@ Latest local quality status on 2026-04-30 after the Railway live setup retry:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 90.88% statements, 80.18% branches, 93.06% functions, and 90.88% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 8 tests covering health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and `user` role dashboard denial. The first run was blocked by local sandbox port binding permissions and passed after rerunning with elevated local server permission.
+- `pnpm test:e2e` passed with Chromium: 8 tests covering health, Ukrainian home UI, owner product/order flows, mocked customer delivery, mocked legacy external acquiring, owner order management, and `user` role dashboard denial. The first run was blocked by local sandbox port binding permissions and passed after rerunning with elevated local server permission.
 - `pnpm build` passed.
 - Railway MCP/CLI live verification passed for project creation, service creation, PostgreSQL provisioning, GitHub autodeploy, secure variable configuration, web health, worker startup, and read-only database connectivity/schema verification.
 
@@ -807,7 +793,7 @@ Latest local quality status on 2026-04-30 after production owner access and paym
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 87.24% statements, 80.35% branches, 91.5% functions, and 87.24% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 10 tests covering health, Ukrainian home UI, Ukrainian login UI, owner dashboard access, `user` dashboard denial, owner product/order flows, mocked customer delivery, mocked MonoPay, and owner order management.
+- `pnpm test:e2e` passed with Chromium: 10 tests covering health, Ukrainian home UI, Ukrainian login UI, owner dashboard access, `user` dashboard denial, owner product/order flows, mocked customer delivery, mocked legacy external acquiring, and owner order management.
 - `pnpm build` passed.
 - Railway CLI verification passed for adding `OWNER_SETUP_TOKEN` securely with deploy triggering skipped; current validation requires it only for the production `web` first-owner setup path.
 
@@ -815,35 +801,35 @@ Latest local quality status on 2026-05-07 after owner setup and login persistenc
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 88.38% statements, 80.39% branches, 90.57% functions, and 88.38% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery, mocked MonoPay, owner order management, and the real `/setup` plus `/login` persistence path across dashboard navigation, hard reload, browser back/forward, and logout.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery, mocked legacy external acquiring, owner order management, and the real `/setup` plus `/login` persistence path across dashboard navigation, hard reload, browser back/forward, and logout.
 - `pnpm build` passed.
 
 Latest local quality status on 2026-05-07 after Nova Post API replacement:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 88.53% statements, 80.04% branches, 90.84% functions, and 88.53% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier, mocked MonoPay, owner order management, and real setup/login persistence.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier, mocked legacy external acquiring, owner order management, and real setup/login persistence.
 - `pnpm build` passed.
 
 Latest local quality status on 2026-05-07 after Ukrposhta active-MVP removal:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 88.48% statements, 80.29% branches, 90.64% functions, and 88.48% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login persistence.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked legacy external acquiring, owner order management, and real setup/login persistence.
 - `pnpm build` passed.
 
 Latest local quality status on 2026-05-07 after runtime-aware environment validation:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 88.51% statements, 80.01% branches, 90.68% functions, and 88.51% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login persistence.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, Ukrainian home/login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked legacy external acquiring, owner order management, and real setup/login persistence.
 - `pnpm build` passed.
 
 Latest local quality status on 2026-05-07 after final production-readiness audit:
 - `pnpm lint` passed.
 - `pnpm typecheck` passed.
 - `pnpm test:coverage` passed with 88.51% statements, 80.01% branches, 90.68% functions, and 88.51% lines across the configured coverage scope.
-- `pnpm test:e2e` passed with Chromium: 11 tests covering health, clickable Ukrainian home CTA navigation, Ukrainian login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked MonoPay, owner order management, and real setup/login/logout persistence.
+- `pnpm test:e2e` passed with Chromium: 11 tests covering health, clickable Ukrainian home CTA navigation, Ukrainian login UI, owner and `user` dashboard access behavior, owner product/order flows, mocked customer delivery with Nova Post as the only public carrier and no Ukrposhta option, mocked legacy external acquiring, owner order management, and real setup/login/logout persistence.
 - `pnpm build` passed.
 
 Latest local quality status on 2026-05-07 after production auth redirect hardening:
@@ -911,7 +897,7 @@ Latest local quality status on 2026-05-08 after Prompt 09 final QA:
 - `pnpm test:coverage` passed with 88.99% statements, 81.44% branches, 89.76% functions, and 88.99% lines across the configured coverage scope.
 - `PORT=3100 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e` passed with Chromium: 22 tests passed and the opt-in production auth smoke spec skipped by default.
 - `pnpm build` passed.
-- A local browser customer-flow check confirmed the active manual-card UI contains `Оплата картою онлайн` and `Після оплати надішліть квитанцію продавцю в Instagram чат`, and does not contain `MonoPay` or `Monobank`.
+- A local browser customer-flow check confirmed the active manual-card UI contains `Оплата картою онлайн` and `Після оплати надішліть квитанцію продавцю в Instagram чат`, and does not contain `legacy external acquiring` or `legacy external acquiring`.
 - Production unauthenticated health smoke passed against `https://web-production-26609.up.railway.app/api/health`; authenticated production smoke remains gated by temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD`.
 
 Prompt 10 recovery on 2026-05-08:
@@ -1047,7 +1033,7 @@ Resolution:
 Completed a docs-only audit before moving shipping/payment configuration out of environment variables. The detailed audit is in `docs/audits/env-cleanup.md`.
 
 Current findings:
-- Monobank/MonoPay env names are still documented and parsed for historical webhook/retry code, but Monobank is not part of the active customer payment flow.
+- legacy external acquiring/legacy external acquiring env names are still documented and parsed for historical webhook/retry code, but legacy external acquiring is not part of the active customer payment flow.
 - Nova Post API, auth URL, sender, payer, and parcel defaults are still parsed from env and used by the current Nova Post carrier factory.
 - `NOVA_POSHTA_*` compatibility env names are still accepted by code and tracked docs.
 - `SHIPPING_LABEL_CREATION_MODE` is still a global runtime switch and should be kept only as a global kill switch if retained after owner settings are implemented.
@@ -1058,7 +1044,21 @@ Planned direction:
 - Add owner-scoped encrypted Nova Post settings backed by a new `APP_ENCRYPTION_KEY`.
 - Add owner shipping settings UI alongside the existing payment settings pattern.
 - Refactor public carrier lookups and worker shipment creation to resolve Nova Post settings by owner/order context.
-- Remove deprecated Monobank and Nova Post env validation/docs in a later cleanup step after runtime code no longer depends on those names.
+- Remove deprecated legacy external acquiring and Nova Post env validation/docs in a later cleanup step after runtime code no longer depends on those names.
+
+## ENV-04 deprecated environment cleanup on 2026-05-10
+
+Implemented tracked code and documentation cleanup for deprecated payment and owner-managed shipping configuration.
+
+Current state:
+- Active environment validation accepts infrastructure/runtime keys only and strips deprecated payment and owner-managed Nova Post keys when present.
+- `.env.example` documents database/auth, `APP_ENCRYPTION_KEY`, `SHIPPING_LABEL_CREATION_MODE`, worker timing, and test/smoke variables only.
+- Active payment runtime is manual owner card transfer plus cash on delivery. Invoice creation, acquiring webhook handling, payment retry actions, and runtime acquiring configuration were removed from active code.
+- Public customer UI offers only `Оплата картою онлайн` when active owner requisites exist and `Післяплата`.
+- Owner UI does not show inactive acquiring retry actions. Historical payment rows remain readable through a generic historical payment label.
+- Active Nova Post runtime uses encrypted owner settings from `/dashboard/settings/shipping`; the existing database carrier enum value remains for historical shipment rows and current carrier compatibility.
+- `SHIPPING_LABEL_CREATION_MODE` remains as a global kill switch: `disabled`, `mock`, or `live`.
+- No Railway variables, ignored local env files, production data, or unsafe DB enum history were deleted in this milestone.
 
 ## Commands
 
@@ -1099,18 +1099,10 @@ BETTER_AUTH_URL= # production web
 OWNER_SETUP_TOKEN= # production web setup path only while first-owner setup is available
 APP_ENCRYPTION_KEY= # required to save/decrypt owner Nova Post settings
 
-MONOBANK_TOKEN=
-MONOBANK_API_URL=
-MONOBANK_PUBLIC_KEY=
-MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
-
 SHIPPING_LABEL_CREATION_MODE=live
 
 # Nova Post API key, endpoint, sender, payer, and parcel defaults are owner
 # settings saved from /dashboard/settings/shipping, not runtime env vars.
-# ENV-04 still owns removing deprecated NOVA_POST_* / NOVA_POSHTA_* names from
-# tracked templates, optional env parsing, Railway variables, and ignored local
-# env files.
 
 AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24 # production worker
 
@@ -1241,9 +1233,9 @@ Status: completed on 2026-04-30; Railway deployment and migration verification p
 
 ### Milestone 5 - Payments, shipments, and worker
 
-Status: payment module and shipment worker automation completed on 2026-04-30. Railway migration/database verification and worker startup verification passed after Railway authentication was refreshed.
+Status: payment module and shipment worker automation completed on 2026-04-30, then updated on 2026-05-10 so active payments use manual card transfer and cash on delivery only. Railway migration/database verification and worker startup verification passed after Railway authentication was refreshed.
 
-- Implement MonoPay invoice creation and webhook handling. Completed locally with mocked/contract-tested Monobank adapters.
+- Implement manual card transfer and cash-on-delivery payment handling. Active acquiring invoice creation, webhook handling, retry actions, and runtime env configuration are removed.
 - Implement Nova Post shipment creation/tracking adapters. Nova Post now uses API v.1.0 with JWT authorization; Ukrposhta is disabled in the active carrier registry and is not wired into production factory selection.
 - Add worker jobs for shipment creation, tracking sync, and auto-completion. Completed locally with pg-boss queue adapter and in-memory test queue.
 - Add shipment audit events. Completed locally for worker enqueue/create/failure/sync/auto-complete events.
@@ -1306,8 +1298,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Open questions
 
-- Historical MonoPay credentials, public key, and final callback domain are needed only if historical MonoPay retry/webhook verification is intentionally exercised; they are not required for the active customer payment flow.
-- Nova Post owner settings now back active public lookup and worker shipment creation. Production `web` and `worker` may still contain transitional Nova Post runtime variables until ENV-04 removes them operationally, but active shipping runtime no longer reads them.
+- Nova Post owner settings now back active public lookup and worker shipment creation. Production `web` and `worker` should not keep deprecated owner-managed shipping variables after the matching operational cleanup.
 - Production shipping label creation is currently enabled through `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API; switch to the production Nova Post API only after a deliberate production shipping cutover.
 - Future Ukrposhta reintroduction requires practical test/production API access, sender/client/address workflow confirmation, shipment/package details, payer settings, label decisions, and enabling the carrier through the central registry.
 - Whether to reserve stock when order link is created or only after customer confirms.
@@ -1317,9 +1308,8 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Known limitations
 
 - Authenticated production smoke testing requires temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` values. They were not present during Prompt 09 final QA, so only unauthenticated production health was verified live on 2026-05-08.
-- Real Monobank production credentials are not required for active customer payments and are not currently needed for production startup. They remain necessary only for historical MonoPay retry/webhook verification.
 - Production external API credentials and Nova Post sender settings are not present in the repository. Nova Post API keys must be saved as encrypted owner settings after `APP_ENCRYPTION_KEY` is configured.
-- Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
+- Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Nova Post behavior still needs a low-risk production smoke test after owner settings are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.
 - Stock reservation timing is still an open product decision.
 
@@ -1338,7 +1328,5 @@ After external production variables are configured:
 9. Complete a customer delivery confirmation with Nova Post lookup and `Оплата картою онлайн`; confirm the public status page shows `Очікуємо оплату`, active requisites, and the Instagram receipt instruction.
 10. Confirm Ukrposhta is not shown in the public customer delivery form unless it is deliberately re-enabled later.
 11. From owner order details, mark the manual card transfer received and confirm payment status becomes paid, `MANUAL_PAYMENT_MARKED_PAID` appears in audit history, and shipment preparation is queued only after this owner action.
-12. For historical MonoPay only, create a retry invoice, complete payment, verify signed Monobank webhook processing, duplicate webhook idempotency, and stale event handling.
-13. Confirm `Повторити оплату` creates a new MonoPay invoice when a historical confirmed order is missing a provider invoice id or the previous payment failed.
-14. After the shipping settings UI/runtime prompts land, confirm the owner Nova Post settings save with only a masked API-key preview, then confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
-15. Confirm owner order filters, tags, status updates, audit history, payment retry, and shipment retry work with Ukrainian labels in production.
+12. Confirm the owner Nova Post settings save with only a masked API-key preview, then confirm the worker creates shipments, syncs tracking, and auto-completes delivered orders according to `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`.
+13. Confirm owner order filters, tags, status updates, audit history, manual payment confirmation, and shipment retry work with Ukrainian labels in production.

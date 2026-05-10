@@ -296,11 +296,11 @@ Current state after 2026-05-08 order details refactor:
 - Each section is an open native `<details>` card, so phone users can collapse dense blocks without losing access to audit/status data.
 - Product and audit tables were removed from the details page. Products render as repeated item cards; audit events render as compact event rows with time, event, actor, and payload summary.
 - Wide desktop widths use a two-column layout: products, status history, and audit in the main column; overview, customer, delivery, payment, and tags in the side column.
-- Manual status update, MonoPay retry, shipment retry, and tag assignment/removal still use the existing server actions and application use cases.
-- Payment retry remains grouped under `Оплата`; shipment retry and disabled-shipping notice remain grouped under `Доставка`.
+- Manual status update, manual payment confirmation, shipment retry, and tag assignment/removal still use the existing server actions and application use cases.
+- Manual payment confirmation remains grouped under `Оплата`; shipment retry and disabled-shipping notice remain grouped under `Доставка`.
 - Empty states now cover no items, no tags, no status history, no audit events, and missing payment/shipment records with concise Ukrainian guidance.
-- Tag, status, payment retry, and shipment retry actions expose pending/success/error messages through live regions where appropriate.
-- Focused component tests cover section headings, stacked/collapsible structure, retry actions, manual status update, and audit visibility.
+- Tag, status, manual payment confirmation, and shipment retry actions expose pending/success/error messages through live regions where appropriate.
+- Focused component tests cover section headings, stacked/collapsible structure, shipment retry, manual status update, and audit visibility.
 - Focused component tests also cover Ukrainian empty states and successful/failed owner action feedback.
 - Playwright E2E covers the details page at 390 px and verifies no page-level horizontal overflow at 360 px.
 
@@ -316,7 +316,7 @@ Current state:
 Plan:
 - Keep the card pattern as the reference for owner table-to-card work.
 - Raise CTA height to at least 44 px.
-- Preserve token-only public access and retry payment behavior.
+- Preserve token-only public access and post-confirmation status behavior.
 
 ### `/o/[token]/delivery`
 
@@ -327,9 +327,9 @@ Current state after 2026-05-08 public delivery stepper refactor:
 - City and warehouse lookup still goes through route handlers and carrier use cases, not direct provider calls from UI.
 - Search results render as full-width mobile cards with Ukrainian loading, empty, and error states instead of cramped dropdowns.
 - Selected city and warehouse values are shown as clear selected-state summaries with `Змінити місто` and `Змінити відділення` actions.
-- The payment step uses explicit MonoPay and `Післяплата` radio-card choices with short Ukrainian explanations.
+- The payment step uses explicit `Оплата картою онлайн` and `Післяплата` radio-card choices with short Ukrainian explanations.
 - The review step summarizes contact, delivery, and payment data before the unchanged confirmation/payment action runs.
-- Focused tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, MonoPay redirect wiring, cash-on-delivery confirmation, and duplicate-submit prevention.
+- Focused tests cover step navigation, contact validation, city/warehouse selection, payment selection, final review, manual-card confirmation, cash-on-delivery confirmation, and duplicate-submit prevention.
 - Playwright customer delivery E2E follows the step flow at 390 px and asserts no page-level horizontal overflow; the public-pages mobile smoke still covers the delivery page at 360 px.
 
 Remaining plan:

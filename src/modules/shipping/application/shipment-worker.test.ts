@@ -57,7 +57,7 @@ describe("shipment worker use cases", () => {
   it("skips shipment creation enqueueing when an order is not ready", async () => {
     const context = await createContext({
       orderStatus: "CONFIRMED_BY_CUSTOMER",
-      paymentProvider: "MONOBANK",
+      paymentProvider: "MANUAL_CARD_TRANSFER",
       paymentStatus: "PENDING",
     });
 
@@ -933,7 +933,7 @@ type ContextInput = {
     | "PAID"
     | "SHIPMENT_CREATED"
     | "SHIPMENT_PENDING";
-  paymentProvider?: "CASH_ON_DELIVERY" | "MANUAL_CARD_TRANSFER" | "MONOBANK";
+  paymentProvider?: "CASH_ON_DELIVERY" | "MANUAL_CARD_TRANSFER";
   paymentStatus?: "PAID" | "PENDING";
   shipmentCarrier?: "NOVA_POSHTA" | "UKRPOSHTA";
   shipmentStatus?: "CREATED" | "DELIVERED" | "FAILED" | "PENDING";
@@ -969,7 +969,7 @@ async function createContext(input: ContextInput = {}) {
       input.paymentStatus === "PAID"
         ? new Date("2026-04-30T09:00:00.000Z")
         : null,
-    provider: input.paymentProvider ?? "MONOBANK",
+    provider: input.paymentProvider ?? "MANUAL_CARD_TRANSFER",
     providerInvoiceId: "invoice-1",
     providerModifiedAt: null,
     status: input.paymentStatus ?? "PAID",

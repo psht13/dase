@@ -32,7 +32,6 @@ export const orderStatus = pgEnum("order_status", [
   "CANCELLED",
 ]);
 export const paymentProvider = pgEnum("payment_provider", [
-  "MONOBANK",
   "MANUAL_CARD_TRANSFER",
   "CASH_ON_DELIVERY",
 ]);
@@ -62,7 +61,6 @@ export const auditActorType = pgEnum("audit_actor_type", [
   "SYSTEM",
 ]);
 export const webhookProvider = pgEnum("webhook_provider", [
-  "MONOBANK",
   "NOVA_POSHTA",
   "UKRPOSHTA",
 ]);

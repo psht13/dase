@@ -9,7 +9,6 @@ import type {
   PaymentRepository,
   PaymentStatus,
 } from "@/modules/payments/application/payment-repository";
-import { canCreateMonobankInvoiceForPayment } from "@/modules/payments/application/create-payment-invoice";
 import {
   listActivePaymentRequisitesForOwnerUseCase,
 } from "@/modules/payments/application/manage-payment-requisites";
@@ -19,7 +18,6 @@ import type {
 } from "@/modules/payments/application/payment-requisite-repository";
 
 type PublicOrderBase = {
-  canRetryMonobankPayment: boolean;
   currency: string;
   items: PublicOrderReviewItem[];
   paymentProvider: PaymentProviderCode | null;
@@ -108,11 +106,8 @@ export async function lookupPublicOrderUseCase(
   }
 
   const payments = await dependencies.paymentRepository.findByOrderId(order.id);
-  const monobankPayment =
-    payments.find((payment) => payment.provider === "MONOBANK") ?? null;
   const currentPayment =
     payments.find((payment) => payment.provider === "MANUAL_CARD_TRANSFER") ??
-    monobankPayment ??
     payments.find((payment) => payment.provider === "CASH_ON_DELIVERY") ??
     null;
   const paymentRequisites = await listActivePaymentRequisitesForOwnerUseCase(
@@ -125,9 +120,6 @@ export async function lookupPublicOrderUseCase(
   );
 
   const publicOrderBase: PublicOrderBase = {
-    canRetryMonobankPayment: monobankPayment
-      ? canCreateMonobankInvoiceForPayment(order.status, monobankPayment)
-      : false,
     currency: order.currency,
     items: order.items.map((item) => ({
       lineTotalMinor: item.lineTotalMinor,
@@ -137,7 +129,10 @@ export async function lookupPublicOrderUseCase(
       quantity: item.quantity,
       unitPriceMinor: item.unitPriceMinor,
     })),
-    paymentProvider: currentPayment?.provider ?? null,
+    paymentProvider:
+      currentPayment && isPublicPaymentProvider(currentPayment.provider)
+        ? currentPayment.provider
+        : null,
     paymentRequisites,
     paymentStatus: currentPayment?.status ?? null,
     publicToken: order.publicToken,
@@ -167,4 +162,12 @@ export async function lookupPublicOrderUseCase(
       statusMessage: getPublicOrderStatusMessage(order.status),
     },
   };
+}
+
+function isPublicPaymentProvider(
+  provider: string,
+): provider is PaymentProviderCode {
+  return (
+    provider === "MANUAL_CARD_TRANSFER" || provider === "CASH_ON_DELIVERY"
+  );
 }

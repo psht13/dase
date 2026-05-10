@@ -4,7 +4,7 @@ describe("InMemoryPaymentRequisiteRepository", () => {
   it("saves, lists, updates, toggles, and filters active requisites", async () => {
     const repository = new InMemoryPaymentRequisiteRepository();
     const saved = await repository.save({
-      bankName: "monobank",
+      bankName: "ПриватБанк",
       displayValue: "4441 1111 2222 3333",
       isActive: true,
       label: "Основна картка",

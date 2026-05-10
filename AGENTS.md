@@ -11,7 +11,7 @@ The app has:
 - Owner-created public order links.
 - Public customer confirmation page.
 - Delivery form with Nova Post as the active MVP carrier.
-- MonoPay / Monobank acquiring integration.
+- Manual online card transfer through owner-managed payment requisites.
 - Shipment creation and tracking.
 - Order tags, statuses, and audit history.
 - Railway deployment with GitHub-based deploy flow.
@@ -220,7 +220,7 @@ Forbidden:
 Allowed:
 - Drizzle repositories
 - Better Auth adapter setup
-- Monobank provider implementation
+- Manual payment requisite repositories and payment confirmation workflows
 - Nova Poshta provider implementation
 - Future carrier provider implementations behind the `ShippingCarrier` port
 - Job queue implementation
@@ -260,7 +260,7 @@ Future possible strategies, not for initial implementation:
 
 - Unit test domain logic.
 - Integration test application use cases.
-- Use MSW for Monobank, Nova Post, and any re-enabled carrier API mocks.
+- Use MSW or fixtures for Nova Post and any re-enabled carrier API mocks.
 - Use Playwright for end-to-end flows.
 - Use Playwright MCP to inspect and verify UI behavior where useful.
 - Keep tests deterministic.
@@ -294,12 +294,12 @@ Bad examples:
 
 ## External integrations
 
-### Monobank / MonoPay
+### Manual online card transfer
 
-- Verify webhook signatures.
-- Store webhook events idempotently.
-- Use provider modified date to avoid applying stale events.
-- Never store card data.
+- Owners manage buyer-visible card or account requisites in the dashboard.
+- Public customers can choose `Оплата картою онлайн` only when active owner requisites exist.
+- The app must never ask buyers for card number, expiry, CVV, or other customer card data.
+- Shipment creation for manual-card orders waits until the owner marks the transfer received.
 
 ### Nova Poshta
 

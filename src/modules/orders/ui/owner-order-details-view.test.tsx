@@ -7,7 +7,6 @@ import {
   updateOwnerOrderStatusAction,
 } from "@/modules/orders/ui/owner-order-actions";
 import { OwnerOrderDetailsView } from "@/modules/orders/ui/owner-order-details-view";
-import { retryOwnerMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 import { retryShipmentCreationAction } from "@/modules/shipping/ui/shipment-actions";
 
 vi.mock("next/navigation", () => ({
@@ -26,10 +25,6 @@ vi.mock("@/modules/orders/ui/owner-order-actions", () => ({
 
 vi.mock("@/modules/shipping/ui/shipment-actions", () => ({
   retryShipmentCreationAction: vi.fn(),
-}));
-
-vi.mock("@/modules/payments/ui/payment-actions", () => ({
-  retryOwnerMonobankPaymentAction: vi.fn(),
 }));
 
 describe("OwnerOrderDetailsView", () => {
@@ -134,37 +129,6 @@ describe("OwnerOrderDetailsView", () => {
     ).toBeVisible();
     expect(
       within(auditList).getByText(/Статус замовлення змінено вручну/),
-    ).toBeVisible();
-  });
-
-  it("keeps the MonoPay retry action available for failed payments", () => {
-    render(
-      <OwnerOrderDetailsView
-        availableTags={[]}
-        order={createOrderDetails({
-          payments: [
-            {
-              amountMinor: 2_400_00,
-              createdAt: new Date("2026-04-30T10:00:00.000Z"),
-              currency: "UAH",
-              failureReason: "Оплату відхилено",
-              id: "payment-2",
-              orderId: "order-1",
-              paidAt: null,
-              provider: "MONOBANK",
-              providerInvoiceId: "invoice-old",
-              providerModifiedAt: null,
-              status: "FAILED",
-              updatedAt: new Date("2026-04-30T10:00:00.000Z"),
-            },
-          ],
-          status: "PAYMENT_FAILED",
-        })}
-      />,
-    );
-
-    expect(
-      screen.getByRole("button", { name: "Повторити оплату" }),
     ).toBeVisible();
   });
 
@@ -327,45 +291,6 @@ describe("OwnerOrderDetailsView", () => {
         screen.getByText("Повторне створення відправлення заплановано"),
       ).toBeVisible();
     });
-  });
-
-  it("shows failed payment retry feedback", async () => {
-    const user = userEvent.setup();
-    vi.mocked(retryOwnerMonobankPaymentAction).mockResolvedValue({
-      message: "Повторити оплату MonoPay зараз неможливо.",
-      ok: false,
-    });
-
-    render(
-      <OwnerOrderDetailsView
-        availableTags={[]}
-        order={createOrderDetails({
-          payments: [
-            {
-              amountMinor: 2_400_00,
-              createdAt: new Date("2026-04-30T10:00:00.000Z"),
-              currency: "UAH",
-              failureReason: "Оплату відхилено",
-              id: "payment-2",
-              orderId: "order-1",
-              paidAt: null,
-              provider: "MONOBANK",
-              providerInvoiceId: "invoice-old",
-              providerModifiedAt: null,
-              status: "FAILED",
-              updatedAt: new Date("2026-04-30T10:00:00.000Z"),
-            },
-          ],
-          status: "PAYMENT_FAILED",
-        })}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Повторити оплату" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Повторити оплату MonoPay зараз неможливо.",
-    );
   });
 
   it("renders Ukrainian empty states for missing related records", () => {

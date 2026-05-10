@@ -35,9 +35,8 @@ describe("lookupPublicOrderUseCase", () => {
             quantity: 2,
           },
         ],
-        canRetryMonobankPayment: false,
-        paymentProvider: "MONOBANK",
-        paymentStatus: "PAID",
+        paymentProvider: null,
+        paymentStatus: null,
         publicToken: validToken,
         state: "review",
         status: "SENT_TO_CUSTOMER",
@@ -129,7 +128,7 @@ describe("lookupPublicOrderUseCase", () => {
     });
   });
 
-  it("marks MonoPay invoice retry available when provider invoice is missing", async () => {
+  it("does not expose historical external acquiring payments in public order state", async () => {
     const result = await lookupPublicOrderUseCase(
       {
         now: new Date("2026-04-30T10:00:00.000Z"),
@@ -150,7 +149,7 @@ describe("lookupPublicOrderUseCase", () => {
     expect(result).toMatchObject({
       available: true,
       order: {
-        canRetryMonobankPayment: true,
+        paymentProvider: null,
       },
     });
   });
@@ -254,7 +253,7 @@ function createPaymentRepository(
 ): PaymentRepository {
   const providerInvoiceId: string | null =
     "providerInvoiceId" in input ? input.providerInvoiceId ?? null : "invoice-1";
-  const provider = input.provider ?? "MONOBANK";
+  const provider = input.provider ?? "LEGACY_EXTERNAL_ACQUIRING";
   const status = input.status ?? "PAID";
 
   return {
@@ -285,7 +284,7 @@ function createPaymentRequisiteRepository(): PaymentRequisiteRepository {
   return {
     listActiveByOwnerId: vi.fn(async () => [
       {
-        bankName: "monobank",
+        bankName: "ПриватБанк",
         displayValue: "4441 1111 2222 3333",
         id: "requisite-1",
         label: "Основна картка",

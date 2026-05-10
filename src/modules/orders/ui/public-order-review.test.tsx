@@ -42,40 +42,6 @@ describe("PublicOrderReview", () => {
     expect(screen.getByText(/термін його дії завершився/i)).toBeVisible();
   });
 
-  it("renders Ukrainian MonoPay status messages", () => {
-    render(
-      <PublicOrderStatus
-        order={createPublicOrderStatus({
-          paymentProvider: "MONOBANK",
-          paymentStatus: "PENDING",
-          status: "PAYMENT_PENDING",
-        })}
-      />,
-    );
-
-    expect(
-      screen.getByText("Очікуємо підтвердження оплати MonoPay."),
-    ).toBeVisible();
-  });
-
-  it("renders a Ukrainian MonoPay retry action when retry is available", () => {
-    render(
-      <PublicOrderStatus
-        order={createPublicOrderStatus({
-          canRetryMonobankPayment: true,
-          paymentProvider: "MONOBANK",
-          paymentStatus: "FAILED",
-          status: "PAYMENT_FAILED",
-        })}
-        paymentRetryAction={vi.fn()}
-      />,
-    );
-
-    expect(
-      screen.getByRole("button", { name: "Повторити оплату" }),
-    ).toBeVisible();
-  });
-
   it("renders active manual card payment requisites with customer instruction", () => {
     render(
       <PublicOrderStatus
@@ -133,7 +99,6 @@ function createPublicOrder(
   input: Partial<PublicOrderReviewData> = {},
 ): PublicOrderReviewData {
   return {
-    canRetryMonobankPayment: false,
     currency: "UAH",
     items: [
       {
@@ -161,7 +126,6 @@ function createPublicOrderStatus(
   input: Partial<PublicOrderStatusData> = {},
 ): PublicOrderStatusData {
   return {
-    canRetryMonobankPayment: false,
     currency: "UAH",
     displayNumber: "#55e143f7",
     items: [

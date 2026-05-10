@@ -56,16 +56,10 @@ The production `worker` does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`
 Shared shipping mode:
 - `SHIPPING_LABEL_CREATION_MODE` - `disabled`, `mock`, or `live`. This is only a global label-creation kill switch. Use `disabled` to prevent worker label creation regardless of owner settings, `live` to use saved owner Nova Post settings, and `mock` only for local fixture runs. `mock` is rejected in production.
 
-Required only for historical MonoPay / Monobank retry or webhook verification. These are not required for `web` startup, `worker` startup, or the active manual online card transfer customer flow:
-- `MONOBANK_TOKEN`
-- `MONOBANK_API_URL`
-- `MONOBANK_PUBLIC_KEY`
-- `MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY`
-
 Owner-managed Nova Post settings:
 - Owners configure the Nova Post API environment, custom API URL when needed, API key, optional auth URL override, sender data, payer data, parcel defaults, and per-owner shipping creation flag in the dashboard under `/dashboard/settings/shipping`.
 - Nova Post API keys and sender settings must be configured from the dashboard, not from env variables or tracked files. Active public lookup and worker shipment creation now resolve owner settings by public order token or order owner.
-- Railway `web` and `worker` no longer need `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, `NOVA_POST_AUTH_URL`, `NOVA_POST_SENDER_*`, `NOVA_POST_PAYER_*`, `NOVA_POST_DEFAULT_*`, `NOVA_POSHTA_API_KEY`, or `NOVA_POSHTA_API_URL` for active shipping runtime. ENV-04 still owns deleting any existing Railway/local variables and removing deprecated tracked env references.
+- Railway `web` and `worker` should not keep deprecated payment variables or owner-managed Nova Post API, sender, payer, or parcel variables. Keep shipping credentials in owner settings and keep secrets out of tracked files.
 - The API key is encrypted in `owner_shipping_settings.api_key_encrypted`; read models expose only `api_key_preview`, for example the last four characters with masking.
 - The supported API environments are stage/test `https://api-stage.novapost.pl/v.1.0/`, production global `https://api.novapost.com/v.1.0/`, production Ukraine `https://api.novaposhta.ua/v.1.0/`, and custom HTTPS URL.
 - ENV-01 added the encrypted database model and application repositories, ENV-02 added the owner UI and dashboard connection test, and ENV-03 switched public lookup and worker carrier runtime to owner settings. Railway/local variable cleanup remains intentionally left for ENV-04.
@@ -75,7 +69,7 @@ Owner-managed Nova Post settings:
   - https://api-portal.novapost.com/en/api-nova-post/start/endpoints/
   - https://api-portal.novapost.com/en/api-nova-post/start/token-usage/
 
-`NOVA_POST_PAYMENT_METHOD`, legacy sender contact ids, and Ukrposhta variables are not required for the current Nova Post v.1.0 integration. Recipient counterparty data comes from the confirmed customer delivery form for each order.
+Legacy sender contact ids and Ukrposhta variables are not required for the current Nova Post v.1.0 integration. Recipient counterparty data comes from the confirmed customer delivery form for each order.
 
 Nova Post authenticated API calls use the generated JWT as the raw `Authorization` header value. Do not prefix the JWT with `Bearer`.
 
@@ -173,11 +167,6 @@ Do not call live external APIs in CI. After production variables are configured,
 - Owner payment settings allow creating active requisites under `/dashboard/settings/payment`, and the public customer payment step shows only active requisites for `Оплата картою онлайн`.
 - If no active requisites exist, confirm the owner dashboard warning appears and the public customer payment step does not offer online card payment.
 - For an online-card order, confirm owner order details show `Позначити оплату отриманою`; after using it, payment status becomes paid and shipment preparation is queued only after that action.
-- Historical MonoPay invoice creation redirects to the expected Monobank payment URL when the retry path is used.
-- Historical MonoPay retry shows `Повторити оплату` when a confirmed order is missing a provider invoice or when payment failed.
-- Monobank webhook signature verification accepts a signed provider callback.
-- Duplicate Monobank webhooks are idempotent.
-- Stale Monobank webhook events do not overwrite newer payment state.
 - Nova Post city and warehouse search works for a known city through mocked CI tests and a low-risk manual production check.
 - Nova Post shipment creation returns a tracking number for a test shipment only after `SHIPPING_LABEL_CREATION_MODE=live` and the order owner has enabled complete Nova Post settings in `/dashboard/settings/shipping`.
 - Nova Post tracking sync maps provider status codes into Ukrainian dashboard shipment statuses.
@@ -259,8 +248,7 @@ Completed live setup:
 - Нова production база досі не має жодного `owner` після DB-03 перевірки; створіть першого власника через `/setup` з `OWNER_SETUP_TOKEN`.
 
 Remaining manual production verification:
-- Configure real Monobank credentials in Railway variables only if historical MonoPay retry/webhook verification is intentionally needed; no Monobank variable is required for the active customer payment flow.
-- Nova Post stage/test API variables and live shipment creation mode are configured on both `web` and `worker`. Run a low-risk shipment smoke test after creating the first `owner`.
+- Nova Post owner settings and live shipment creation mode are configured through dashboard settings plus the global kill switch. Run a low-risk shipment smoke test after creating the first `owner`.
 - Do not configure Ukrposhta for the active MVP; re-enable a future carrier only through the central carrier registry and updated deployment docs.
 - Run the external API checklist above with low-risk production test data.
 
@@ -371,6 +359,6 @@ Resolution:
 - На обох сервісах налаштовано Nova Post stage/test API host, sender country, test sender division/name/phone, payer type `Recipient`, and parcel dimension/weight defaults.
 - Локальні ignored файли `.env`, `.env.test.local`, and `.env.production.local` також переведені на `SHIPPING_LABEL_CREATION_MODE=live` з тими самими test sender/payer/parcel defaults.
 - Для локального live режиму `USE_MOCK_SHIPPING_CARRIERS` має бути порожнім; explicit `SHIPPING_LABEL_CREATION_MODE=live` використовує Nova Post adapter, а не fixture carrier.
-- Значення `NOVA_POST_API_KEY`, database URLs, auth secrets, and owner setup token не друкувалися і не додавалися у tracked files.
+- Значення Nova Post API key, database URLs, auth secrets, and owner setup token не друкувалися і не додавалися у tracked files.
 - Playwright e2e залишається ізольованим: `playwright.config.ts` явно задає `SHIPPING_LABEL_CREATION_MODE=disabled`, тому автоматизовані тести не викликають live Nova Post API.
 - ENV-03 supersedes the env-backed Nova Post runtime path: active shipping runtime now reads encrypted owner settings from the database. Delete the older Nova Post Railway/local variables only during ENV-04 operational cleanup.

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type {
-  PaymentProviderCode,
+  PaymentCreateInput,
   PaymentRecord,
   PaymentRepository,
   UpdatePaymentProviderInvoiceInput,
@@ -17,7 +17,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
   }
 
   async findByProviderInvoiceId(
-    provider: PaymentProviderCode,
+    provider: string,
     providerInvoiceId: string,
   ): Promise<PaymentRecord | null> {
     return (
@@ -29,9 +29,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     );
   }
 
-  async save(
-    payment: Omit<PaymentRecord, "createdAt" | "id" | "updatedAt">,
-  ): Promise<PaymentRecord> {
+  async save(payment: PaymentCreateInput): Promise<PaymentRecord> {
     const now = new Date();
     const savedPayment: PaymentRecord = {
       ...payment,

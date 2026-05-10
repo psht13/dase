@@ -1,5 +1,5 @@
 const sensitiveAssignmentPattern =
-  /\b([A-Z0-9_]*(?:DATABASE_URL|TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY)[A-Z0-9_]*=)([^\s]+)/gi;
+  /\b([A-Z0-9_]*(?:DATABASE_URL|TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY|ENCRYPTION_KEY)[A-Z0-9_]*=)([^\s]+)/gi;
 const credentialedUrlPattern = /([a-z][a-z0-9+.-]*:\/\/)([^/\s:@]+):([^/\s@]+)@/gi;
 
 export function formatSafeError(error: unknown): string {

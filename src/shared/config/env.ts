@@ -8,17 +8,9 @@ const optionalUrl = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().url().optional(),
 );
-const optionalEmail = z.preprocess(
-  (value) => (value === "" ? undefined : value),
-  z.string().email().optional(),
-);
 const optionalSecret = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().min(32).optional(),
-);
-const optionalPositiveInt = z.preprocess(
-  (value) => (value === "" ? undefined : value),
-  z.coerce.number().int().positive().optional(),
 );
 const shippingLabelCreationMode = z.enum(["disabled", "mock", "live"]);
 const optionalShippingLabelCreationMode = z.preprocess(
@@ -38,34 +30,9 @@ export const serverEnvSchema = z
     BETTER_AUTH_URL: optionalUrl,
     DATABASE_URL: optionalUrl,
     DATABASE_URL_TEST: optionalUrl,
-    MONOBANK_PUBLIC_KEY: optionalString,
-    MONOBANK_API_URL: optionalUrl,
-    MONOBANK_TOKEN: optionalString,
-    MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY: optionalString,
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
-    NOVA_POST_API_KEY: optionalString,
-    NOVA_POST_API_URL: optionalUrl,
-    NOVA_POST_AUTH_URL: optionalUrl,
-    NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS: optionalPositiveInt,
-    NOVA_POST_DEFAULT_HEIGHT_MM: optionalPositiveInt,
-    NOVA_POST_DEFAULT_LENGTH_MM: optionalPositiveInt,
-    NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS: optionalPositiveInt,
-    NOVA_POST_DEFAULT_WIDTH_MM: optionalPositiveInt,
-    NOVA_POST_PAYER_CONTRACT_NUMBER: optionalString,
-    NOVA_POST_PAYER_TYPE: z
-      .enum(["Recipient", "Sender", "ThirdPerson"])
-      .optional(),
-    NOVA_POST_SENDER_COMPANY_NAME: optionalString,
-    NOVA_POST_SENDER_COMPANY_TIN: optionalString,
-    NOVA_POST_SENDER_COUNTRY_CODE: optionalString,
-    NOVA_POST_SENDER_DIVISION_ID: optionalString,
-    NOVA_POST_SENDER_EMAIL: optionalEmail,
-    NOVA_POST_SENDER_NAME: optionalString,
-    NOVA_POST_SENDER_PHONE: optionalString,
-    NOVA_POSHTA_API_KEY: optionalString,
-    NOVA_POSHTA_API_URL: optionalUrl,
     OWNER_SETUP_TOKEN: optionalSecret,
     SHIPPING_LABEL_CREATION_MODE: optionalShippingLabelCreationMode,
   })

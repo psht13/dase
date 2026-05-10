@@ -15,7 +15,7 @@ describe("payment requisite use cases", () => {
 
     const saved = await createPaymentRequisiteUseCase(
       {
-        bankName: "monobank",
+        bankName: "ПриватБанк",
         displayValue: "4441 1111 2222 3333",
         isActive: true,
         label: "Основна картка",
@@ -145,7 +145,7 @@ function createRequisiteInput(
   overrides: Partial<Parameters<typeof createPaymentRequisiteUseCase>[0]> = {},
 ): Parameters<typeof createPaymentRequisiteUseCase>[0] {
   return {
-    bankName: "monobank",
+    bankName: "ПриватБанк",
     displayValue: "UA123456789",
     isActive: true,
     label: "Основна картка",

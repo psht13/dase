@@ -30,7 +30,7 @@ Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_H
 
 Nova Post API keys, endpoint choice, sender, payer, parcel defaults, and the per-owner shipment creation switch are configured in the dashboard under `/dashboard/settings/shipping`. The API key is encrypted in `owner_shipping_settings`, and the owner UI shows only a safe preview such as `****7890`; never put owner Nova Post API keys or sender settings into tracked env files. Public delivery lookup and worker shipment creation resolve these saved owner settings by order context.
 
-MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option or production startup. Keep Railway values in secure service variables or variable references.
+Owners configure payment details in `/dashboard/settings/payment`. The active customer payment flow is manual card transfer through those owner-managed requisites; no external acquiring credentials are required for normal startup.
 
 ## Створення першого owner у production
 
@@ -70,7 +70,7 @@ This is a manual transfer flow, not card processing. The app stores owner-provid
 
 Customers choose `Оплата картою онлайн`, copy one of the active owner requisites, and send the receipt to the seller in Instagram chat.
 
-The active public customer payment UI should show `Оплата картою онлайн` and the instruction `Після оплати надішліть квитанцію продавцю в Instagram чат`. It should not show MonoPay or Monobank copy unless a historical MonoPay retry/status path is deliberately opened for an old order.
+The active public customer payment UI should show `Оплата картою онлайн` and the instruction `Після оплати надішліть квитанцію продавцю в Instagram чат`. It must not show inactive acquiring copy.
 
 If no active requisites exist, the owner dashboard shows a warning and the public customer form offers only `Післяплата`.
 
@@ -80,7 +80,7 @@ When the seller receives and verifies the transfer, the owner order details page
 
 `SHIPPING_LABEL_CREATION_MODE` is only a global label-creation kill switch. Use `live` to create shipments from saved owner Nova Post settings, `disabled` to stop worker label creation regardless of owner settings, and `mock` only for local fixture development.
 
-Configure owner Nova Post API access and sender data from `/dashboard/settings/shipping`, not from env variables. Railway no longer needs Nova Post API, sender, payer, or parcel env keys for active shipping runtime; deleting old Railway/local variables is left for the ENV-04 cleanup prompt.
+Configure owner Nova Post API access and sender data from `/dashboard/settings/shipping`, not from env variables. Railway should keep only infrastructure/runtime variables and must not keep deprecated payment or owner-managed shipping variables for active runtime.
 
 Use `SHIPPING_LABEL_CREATION_MODE=disabled` when shipment creation must be blocked globally. Shipment creation jobs stop before live label creation, and no real tracking number is recorded.
 

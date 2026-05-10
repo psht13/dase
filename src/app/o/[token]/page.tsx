@@ -7,7 +7,6 @@ import {
   PublicOrderStatus,
   PublicOrderUnavailable,
 } from "@/modules/orders/ui/public-order-review";
-import { retryPublicMonobankPaymentAction } from "@/modules/payments/ui/payment-actions";
 
 type PublicOrderPageProps = {
   params: Promise<{
@@ -33,25 +32,13 @@ export default async function PublicOrderPage({ params }: PublicOrderPageProps) 
   }
 
   if (result.order.state === "status") {
-    return (
-      <PublicOrderStatus
-        order={result.order}
-        paymentRetryAction={retryPublicMonobankPaymentAction.bind(
-          null,
-          result.order.publicToken,
-        )}
-      />
-    );
+    return <PublicOrderStatus order={result.order} />;
   }
 
   return (
     <PublicOrderReview
       deliveryHref={`/o/${result.order.publicToken}/delivery`}
       order={result.order}
-      paymentRetryAction={retryPublicMonobankPaymentAction.bind(
-        null,
-        result.order.publicToken,
-      )}
     />
   );
 }

@@ -45,8 +45,15 @@ export const shipmentStatusLabels: Record<ShipmentStatus, string> = {
 export const paymentProviderLabels: Record<PaymentProviderCode, string> = {
   CASH_ON_DELIVERY: "Післяплата",
   MANUAL_CARD_TRANSFER: "Оплата картою онлайн",
-  MONOBANK: "MonoPay",
 };
+
+export function getPaymentProviderLabel(provider: string): string {
+  if (provider in paymentProviderLabels) {
+    return paymentProviderLabels[provider as PaymentProviderCode];
+  }
+
+  return "Історична онлайн-оплата";
+}
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   CANCELLED: "Скасовано",

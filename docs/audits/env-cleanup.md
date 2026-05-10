@@ -304,3 +304,15 @@ Operational cleanup later:
 - Verify production owner settings save/read, directory lookup, shipment creation, and disabled/kill-switch behavior without printing secrets.
 
 No operational cleanup was performed in this audit.
+
+## ENV-04 Tracked Cleanup Result
+
+Completed on 2026-05-10 for tracked code and documentation only.
+
+- `.env.example` no longer contains inactive Monobank keys or owner-managed Nova Post API, sender, payer, or parcel-default keys.
+- Active environment validation no longer parses Monobank keys, `NOVA_POSHTA_*` compatibility keys, or owner-managed `NOVA_POST_*` runtime keys. Unknown deprecated names are stripped from the parsed env object.
+- Active payment runtime is manual owner card transfer plus cash on delivery. Monobank invoice creation, retry actions, webhook route, provider factory, provider implementation, and active tests were removed.
+- Public UI offers only `Оплата картою онлайн` and `Післяплата`; owner UI no longer shows Monobank retry actions.
+- Active shipping runtime continues to resolve Nova Post from encrypted owner settings. `SHIPPING_LABEL_CREATION_MODE` remains as the global kill switch.
+- Existing migrations and Drizzle snapshots still contain historical enum values such as `MONOBANK` and `NOVA_POSHTA`; they were not rewritten or made destructive.
+- This milestone did not delete Railway variables, edit ignored local env files, redeploy production, run a migration helper, or perform final production smoke.

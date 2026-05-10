@@ -36,7 +36,7 @@ describe("PublicDeliveryPage", () => {
     vi.mocked(getPaymentRequisiteRepository).mockReturnValue({
       listActiveByOwnerId: vi.fn(async () => [
         {
-          bankName: "monobank",
+          bankName: "ПриватБанк",
           displayValue: "4441 1111 2222 3333",
           id: "requisite-1",
           label: "Основна картка",
