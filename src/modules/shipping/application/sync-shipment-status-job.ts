@@ -9,10 +9,14 @@ import type {
 } from "@/modules/shipping/application/shipment-job-queue";
 import type {
   ShippingCarrier,
+  ShippingCarrierResolver,
+} from "@/modules/shipping/application/shipping-carrier";
+import {
+  shipmentSettingsIncompleteSyncMessage,
+  ShippingCarrierSettingsUnavailableError,
 } from "@/modules/shipping/application/shipping-carrier";
 import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import type {
-  ShipmentCarrier,
   ShipmentRecord,
   ShipmentRepository,
   ShipmentStatus,
@@ -21,7 +25,7 @@ import type {
 type SyncShipmentStatusDependencies = {
   auditEventRepository: AuditEventRepository;
   autoCompleteAfterDeliveredHours: number;
-  getShippingCarrier: (carrier: ShipmentCarrier) => ShippingCarrier;
+  getShippingCarrier: ShippingCarrierResolver;
   now?: () => Date;
   orderRepository: OrderRepository;
   shipmentJobQueue: ShipmentJobQueue;
@@ -58,7 +62,34 @@ export async function syncShipmentStatusJobUseCase(
     return shipment;
   }
 
-  const carrier = dependencies.getShippingCarrier(shipment.carrier);
+  let carrier: ShippingCarrier;
+
+  try {
+    carrier = await dependencies.getShippingCarrier(shipment.carrier, {
+      ownerId: order.ownerId,
+    });
+  } catch (error) {
+    if (error instanceof ShippingCarrierSettingsUnavailableError) {
+      await dependencies.auditEventRepository.append({
+        actorCustomerId: null,
+        actorType: "SYSTEM",
+        actorUserId: null,
+        eventType: "SHIPMENT_STATUS_SYNCED",
+        orderId: order.id,
+        payload: {
+          carrier: shipment.carrier,
+          message: shipmentSettingsIncompleteSyncMessage,
+          shipmentStatus: shipment.status,
+          trackingNumber: shipment.trackingNumber,
+        },
+      });
+
+      return shipment;
+    }
+
+    throw error;
+  }
+
   const carrierStatus = await carrier.getShipmentStatus(
     shipment.carrierShipmentId
       ? {

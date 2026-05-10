@@ -34,7 +34,11 @@ describe("DeliveryForm", () => {
     const action = vi.fn();
 
     render(
-      <DeliveryForm action={action} paymentRequisites={activePaymentRequisites} />,
+      <DeliveryForm
+        action={action}
+        paymentRequisites={activePaymentRequisites}
+        publicToken="secure_public_token_123456789012345"
+      />,
     );
 
     expect(screen.getByRole("heading", { name: "Контакти" })).toBeVisible();
@@ -66,6 +70,7 @@ describe("DeliveryForm", () => {
       <DeliveryForm
         action={vi.fn()}
         paymentRequisites={activePaymentRequisites}
+        publicToken="secure_public_token_123456789012345"
       />,
     );
 
@@ -93,6 +98,7 @@ describe("DeliveryForm", () => {
       <DeliveryForm
         action={vi.fn()}
         paymentRequisites={activePaymentRequisites}
+        publicToken="secure_public_token_123456789012345"
       />,
     );
 
@@ -132,7 +138,11 @@ describe("DeliveryForm", () => {
     stubCarrierLookup();
 
     render(
-      <DeliveryForm action={action} paymentRequisites={activePaymentRequisites} />,
+      <DeliveryForm
+        action={action}
+        paymentRequisites={activePaymentRequisites}
+        publicToken="secure_public_token_123456789012345"
+      />,
     );
 
     await completeDeliveryStep(user);
@@ -192,7 +202,13 @@ describe("DeliveryForm", () => {
     );
     stubCarrierLookup();
 
-    render(<DeliveryForm action={action} paymentRequisites={[]} />);
+    render(
+      <DeliveryForm
+        action={action}
+        paymentRequisites={[]}
+        publicToken="secure_public_token_123456789012345"
+      />,
+    );
 
     await completeDeliveryStep(user);
     await user.click(screen.getByRole("button", { name: "Далі" }));
@@ -210,6 +226,37 @@ describe("DeliveryForm", () => {
     expect(submittedForms[0]?.get("paymentMethod")).toBe("CASH_ON_DELIVERY");
     expect(
       await screen.findByText("Замовлення підтверджено. Оплата при отриманні."),
+    ).toBeVisible();
+  });
+
+  it("shows public-safe delivery unavailable copy from lookup responses", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        json: vi.fn(async () => ({
+          message: "Доставка тимчасово недоступна. Зверніться до продавця.",
+        })),
+        ok: false,
+      })),
+    );
+
+    render(
+      <DeliveryForm
+        action={vi.fn()}
+        paymentRequisites={activePaymentRequisites}
+        publicToken="secure_public_token_123456789012345"
+      />,
+    );
+
+    await fillContacts(user);
+    await user.click(screen.getByRole("button", { name: "Далі" }));
+    await user.type(screen.getByLabelText("Місто або населений пункт"), "Київ");
+
+    expect(
+      await screen.findByText(
+        "Доставка тимчасово недоступна. Зверніться до продавця.",
+      ),
     ).toBeVisible();
   });
 });
@@ -243,6 +290,12 @@ function stubCarrierLookup() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
+      const lookupUrl = new URL(url, "https://dase.test");
+
+      expect(lookupUrl.searchParams.get("token")).toBe(
+        "secure_public_token_123456789012345",
+      );
+
       if (url.includes("/api/carriers/cities")) {
         return jsonResponse({
           cities: [

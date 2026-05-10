@@ -28,7 +28,7 @@ Production `worker` requires `DATABASE_URL` and `AUTO_COMPLETE_AFTER_DELIVERED_H
 
 `APP_ENCRYPTION_KEY` is required before an owner can save a Nova Post API key. Use a base64 or hex encoded value with at least 32 decoded bytes and do not reuse `BETTER_AUTH_SECRET`.
 
-Nova Post API keys, endpoint choice, sender, payer, parcel defaults, and the per-owner shipment creation switch are configured in the dashboard under `/dashboard/settings/shipping`. The API key is encrypted in `owner_shipping_settings`, and the owner UI shows only a safe preview such as `****7890`; never put owner Nova Post API keys or sender settings into tracked env files. The runtime carrier switchover that makes worker shipment creation resolve these owner settings is intentionally left for the later ENV-03 prompt.
+Nova Post API keys, endpoint choice, sender, payer, parcel defaults, and the per-owner shipment creation switch are configured in the dashboard under `/dashboard/settings/shipping`. The API key is encrypted in `owner_shipping_settings`, and the owner UI shows only a safe preview such as `****7890`; never put owner Nova Post API keys or sender settings into tracked env files. Public delivery lookup and worker shipment creation resolve these saved owner settings by order context.
 
 MonoPay variables are needed only for historical Monobank retry/webhook support, not for the active customer payment option or production startup. Keep Railway values in secure service variables or variable references.
 
@@ -78,13 +78,13 @@ When the seller receives and verifies the transfer, the owner order details page
 
 ## Shipping Creation Mode
 
-Current Railway `web` and `worker` envs, plus local `.env`, `.env.test.local`, and `.env.production.local`, use `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API until the later runtime switchover reads owner settings by order context.
+`SHIPPING_LABEL_CREATION_MODE` is only a global label-creation kill switch. Use `live` to create shipments from saved owner Nova Post settings, `disabled` to stop worker label creation regardless of owner settings, and `mock` only for local fixture development.
 
-Configure owner Nova Post API access and sender data from `/dashboard/settings/shipping`, not from env variables. Existing transitional Nova Post env variables are retained only until the scheduled runtime switchover removes the env-backed carrier factory path.
+Configure owner Nova Post API access and sender data from `/dashboard/settings/shipping`, not from env variables. Railway no longer needs Nova Post API, sender, payer, or parcel env keys for active shipping runtime; deleting old Railway/local variables is left for the ENV-04 cleanup prompt.
 
-Use `SHIPPING_LABEL_CREATION_MODE=disabled` only when Nova Post sender settings are intentionally incomplete. Owners will see a Ukrainian notice, shipment creation jobs will stop before live label creation, and no real tracking number is recorded.
+Use `SHIPPING_LABEL_CREATION_MODE=disabled` when shipment creation must be blocked globally. Shipment creation jobs stop before live label creation, and no real tracking number is recorded.
 
-Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local fixture-based development. Keep `USE_MOCK_SHIPPING_CARRIERS` blank when `SHIPPING_LABEL_CREATION_MODE=live` should use Nova Post stage/test credentials. Playwright e2e forces shipping creation to `disabled` in its dev server command so automated tests never call the live Nova Post API.
+Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local fixture-based development. Playwright e2e forces shipping creation to `disabled` in its dev server command and uses saved fake owner settings plus fixture carrier lookup, so automated tests never call the live Nova Post API.
 
 Official Nova Post references for owner settings:
 - https://api-portal.novapost.com/en/about-api/general/

@@ -1,157 +1,154 @@
-import { resetServerEnvForTests } from "@/shared/config/env";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import type { OwnerShippingSettingsRecord } from "@/modules/shipping/application/owner-shipping-settings-repository";
+import { ShippingCarrierSettingsUnavailableError } from "@/modules/shipping/application/shipping-carrier";
 import { FixtureShippingCarrier } from "@/modules/shipping/infrastructure/fixture-shipping-carrier";
 import { NovaPostShippingCarrier } from "@/modules/shipping/infrastructure/nova-post-shipping-carrier";
 import {
-  getMissingNovaPostLiveShipmentConfigKeys,
-  getShippingCarrier,
+  createNovaPostRuntimeConfigFromOwnerSettings,
+  createNovaPostShippingCarrier,
   getShippingLabelCreationMode,
-  validateLiveShipmentCreationConfig,
 } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
+import { resetServerEnvForTests } from "@/shared/config/env";
 
-describe("getShippingCarrier", () => {
+describe("owner-scoped Nova Post carrier construction", () => {
   afterEach(() => {
     resetServerEnvForTests();
     vi.unstubAllEnvs();
   });
 
-  it("uses fixture carriers for Playwright e2e", () => {
-    vi.stubEnv("PLAYWRIGHT_E2E", "1");
-    vi.stubEnv("NODE_ENV", "development");
-
-    expect(getShippingCarrier("NOVA_POSHTA")).toBeInstanceOf(
-      FixtureShippingCarrier,
+  it("builds Nova Post runtime config from decrypted owner settings", async () => {
+    const decrypt = vi.fn(async () => "owner-nova-post-key");
+    const runtimeConfig = await createNovaPostRuntimeConfigFromOwnerSettings(
+      createOwnerSettings({
+        apiKeyEncrypted: "encrypted-owner-key",
+      }),
+      {
+        decrypt,
+        encrypt: vi.fn(),
+      },
     );
-  });
 
-  it("creates real adapters when credentials are configured", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("SHIPPING_LABEL_CREATION_MODE", "live");
-    vi.stubEnv("NOVA_POST_API_KEY", "nova-key");
-    stubCompleteNovaPostLiveConfig();
-
-    expect(getShippingCarrier("NOVA_POSHTA")).toBeInstanceOf(
+    expect(decrypt).toHaveBeenCalledWith("encrypted-owner-key");
+    expect(runtimeConfig).toMatchObject({
+      apiKey: "owner-nova-post-key",
+      authUrl: "https://api-stage.novapost.pl/v.1.0/clients/authorization/",
+      baseUrl: "https://api-stage.novapost.pl/v.1.0/",
+      sender: expect.objectContaining({
+        countryCode: "UA",
+        divisionId: "11759",
+        name: "Олена Петренко",
+        payerType: "Recipient",
+        phone: "+380671234567",
+      }),
+      shipmentDefaults: expect.objectContaining({
+        actualWeightGrams: 500,
+        heightMm: 100,
+        lengthMm: 300,
+        volumetricWeightGrams: 500,
+        widthMm: 200,
+      }),
+    });
+    expect(createNovaPostShippingCarrier(runtimeConfig)).toBeInstanceOf(
       NovaPostShippingCarrier,
     );
   });
 
-  it("lets explicit live mode override local mock carrier flags", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("SHIPPING_LABEL_CREATION_MODE", "live");
-    vi.stubEnv("USE_MOCK_SHIPPING_CARRIERS", "1");
-    vi.stubEnv("NOVA_POST_API_KEY", "nova-key");
-    stubCompleteNovaPostLiveConfig();
+  it("does not build carriers when owner settings are missing, disabled, or lack an API key", async () => {
+    const encryptionService = {
+      decrypt: vi.fn(async () => "owner-nova-post-key"),
+      encrypt: vi.fn(),
+    };
 
-    expect(getShippingCarrier("NOVA_POSHTA")).toBeInstanceOf(
-      NovaPostShippingCarrier,
-    );
-  });
-
-  it("rejects disabled carriers even when mock mode is enabled", () => {
-    vi.stubEnv("PLAYWRIGHT_E2E", "1");
-    vi.stubEnv("NODE_ENV", "development");
-
-    expect(() => getShippingCarrier("UKRPOSHTA")).toThrow(
-      /Shipping carrier is disabled/,
-    );
-  });
-
-  it("requires carrier credentials outside mock mode", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("SHIPPING_LABEL_CREATION_MODE", "live");
-    stubCompleteNovaPostLiveConfig();
-    vi.stubEnv("NOVA_POST_API_KEY", "");
-
-    expect(() => getShippingCarrier("NOVA_POSHTA")).toThrow(
-      /NOVA_POST_API_KEY/,
-    );
-  });
-
-  it("temporarily accepts deprecated Nova Poshta env names", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("SHIPPING_LABEL_CREATION_MODE", "live");
-    vi.stubEnv("NOVA_POSHTA_API_KEY", "legacy-nova-key");
-    stubCompleteNovaPostLiveConfig();
-
-    expect(getShippingCarrier("NOVA_POSHTA")).toBeInstanceOf(
-      NovaPostShippingCarrier,
-    );
+    await expect(
+      createNovaPostRuntimeConfigFromOwnerSettings(null, encryptionService),
+    ).rejects.toBeInstanceOf(ShippingCarrierSettingsUnavailableError);
+    await expect(
+      createNovaPostRuntimeConfigFromOwnerSettings(
+        createOwnerSettings({ isEnabled: false }),
+        encryptionService,
+      ),
+    ).rejects.toBeInstanceOf(ShippingCarrierSettingsUnavailableError);
+    await expect(
+      createNovaPostRuntimeConfigFromOwnerSettings(
+        createOwnerSettings({ apiKeyEncrypted: null }),
+        encryptionService,
+      ),
+    ).rejects.toBeInstanceOf(ShippingCarrierSettingsUnavailableError);
+    expect(encryptionService.decrypt).not.toHaveBeenCalled();
   });
 
   it("defaults local label creation to mock mode", () => {
     vi.stubEnv("NODE_ENV", "development");
 
     expect(getShippingLabelCreationMode()).toBe("mock");
+    expect(new FixtureShippingCarrier("NOVA_POSHTA")).toBeInstanceOf(
+      FixtureShippingCarrier,
+    );
   });
 
-  it("reports missing Nova Post live shipment settings without secrets", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("SHIPPING_LABEL_CREATION_MODE", "disabled");
-    vi.stubEnv("NOVA_POST_API_KEY", "secret-api-key");
-    vi.stubEnv("NOVA_POST_SENDER_NAME", "Таємний відправник");
-    const validation = validateLiveShipmentCreationConfig("NOVA_POSHTA");
+  it("keeps deprecated Nova Post env keys out of active shipping code", () => {
+    const productionFiles = listProductionShippingFiles(
+      join(process.cwd(), "src/modules/shipping"),
+    );
+    const deprecatedPattern =
+      /NOVA_POST_(?:API_KEY|API_URL|AUTH_URL|SENDER_|PAYER_|DEFAULT_)|NOVA_POSHTA_API_(?:KEY|URL)/;
+    const offenders = productionFiles.filter((filePath) =>
+      deprecatedPattern.test(readFileSync(filePath, "utf8")),
+    );
 
-    expect(validation).toEqual({
-      missingKeys: expect.arrayContaining([
-        "NOVA_POST_SENDER_DIVISION_ID",
-        "NOVA_POST_SENDER_PHONE",
-      ]),
-      ok: false,
-      reason: expect.stringContaining("Налаштування Нова пошта"),
-    });
-    expect(validation.ok).toBe(false);
-    if (validation.ok) {
-      throw new Error("Expected missing Nova Post config");
-    }
-    expect(
-      getMissingNovaPostLiveShipmentConfigKeys(getCompleteEnvForLiveConfig()),
-    ).toEqual([]);
-    expect(validation.reason).not.toContain("secret-api-key");
-    expect(validation.reason).not.toContain("Таємний відправник");
+    expect(offenders).toEqual([]);
   });
 });
 
-function stubCompleteNovaPostLiveConfig() {
-  vi.stubEnv("NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS", "500");
-  vi.stubEnv("NOVA_POST_DEFAULT_HEIGHT_MM", "100");
-  vi.stubEnv("NOVA_POST_DEFAULT_LENGTH_MM", "300");
-  vi.stubEnv("NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS", "500");
-  vi.stubEnv("NOVA_POST_DEFAULT_WIDTH_MM", "200");
-  vi.stubEnv("NOVA_POST_PAYER_TYPE", "Recipient");
-  vi.stubEnv("NOVA_POST_SENDER_COUNTRY_CODE", "UA");
-  vi.stubEnv("NOVA_POST_SENDER_DIVISION_ID", "11759");
-  vi.stubEnv("NOVA_POST_SENDER_NAME", "Тестова Тетяна");
-  vi.stubEnv("NOVA_POST_SENDER_PHONE", "380007654321");
+function createOwnerSettings(
+  input: Partial<OwnerShippingSettingsRecord> = {},
+): OwnerShippingSettingsRecord {
+  const now = new Date("2026-05-10T10:00:00.000Z");
+
+  return {
+    apiBaseUrl: "https://api-stage.novapost.pl/v.1.0/",
+    apiEnvironment: "stage",
+    apiKeyEncrypted: "encrypted-owner-key",
+    apiKeyPreview: "****7890",
+    authUrl: "https://api-stage.novapost.pl/v.1.0/clients/authorization/",
+    carrier: "NOVA_POST",
+    createdAt: now,
+    defaultActualWeightGrams: 500,
+    defaultHeightMm: 100,
+    defaultLengthMm: 300,
+    defaultVolumetricWeightGrams: 500,
+    defaultWidthMm: 200,
+    id: "settings-1",
+    isEnabled: true,
+    ownerId: "owner-1",
+    payerContractNumber: null,
+    payerType: "Recipient",
+    senderCompanyName: "Dase Jewelry",
+    senderCompanyTin: "12345678",
+    senderCountryCode: "UA",
+    senderDivisionId: "11759",
+    senderEmail: "olena@example.com",
+    senderName: "Олена Петренко",
+    senderPhone: "+380671234567",
+    updatedAt: now,
+    ...input,
+  };
 }
 
-function getCompleteEnvForLiveConfig() {
-  return {
-    AUTO_COMPLETE_AFTER_DELIVERED_HOURS: 24,
-    BETTER_AUTH_SECRET: undefined,
-    BETTER_AUTH_URL: undefined,
-    DATABASE_URL: undefined,
-    DATABASE_URL_TEST: undefined,
-    MONOBANK_API_URL: undefined,
-    NODE_ENV: "development" as const,
-    NOVA_POST_API_KEY: "nova-key",
-    NOVA_POST_API_URL: undefined,
-    NOVA_POST_AUTH_URL: undefined,
-    NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS: 500,
-    NOVA_POST_DEFAULT_HEIGHT_MM: 100,
-    NOVA_POST_DEFAULT_LENGTH_MM: 300,
-    NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS: 500,
-    NOVA_POST_DEFAULT_WIDTH_MM: 200,
-    NOVA_POST_PAYER_CONTRACT_NUMBER: undefined,
-    NOVA_POST_PAYER_TYPE: "Recipient" as const,
-    NOVA_POST_SENDER_COMPANY_NAME: undefined,
-    NOVA_POST_SENDER_COMPANY_TIN: undefined,
-    NOVA_POST_SENDER_COUNTRY_CODE: "UA",
-    NOVA_POST_SENDER_DIVISION_ID: "11759",
-    NOVA_POST_SENDER_EMAIL: undefined,
-    NOVA_POST_SENDER_NAME: "Тестова Тетяна",
-    NOVA_POST_SENDER_PHONE: "380007654321",
-    NOVA_POSHTA_API_KEY: undefined,
-    NOVA_POSHTA_API_URL: undefined,
-    OWNER_SETUP_TOKEN: undefined,
-    SHIPPING_LABEL_CREATION_MODE: "live" as const,
-  };
+function listProductionShippingFiles(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const filePath = join(directory, entry);
+    const stats = statSync(filePath);
+
+    if (stats.isDirectory()) {
+      return listProductionShippingFiles(filePath);
+    }
+
+    if (!filePath.endsWith(".ts") || filePath.endsWith(".test.ts")) {
+      return [];
+    }
+
+    return [filePath];
+  });
 }

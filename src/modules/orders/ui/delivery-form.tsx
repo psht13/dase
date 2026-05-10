@@ -47,6 +47,7 @@ type DeliveryFormProps = {
   cancelHref?: string;
   navigateToPayment?: (url: string) => void;
   paymentRequisites: PublicPaymentRequisite[];
+  publicToken: string;
 };
 
 type LookupStatus = "idle" | "loading" | "loaded" | "error";
@@ -99,6 +100,7 @@ export function DeliveryForm({
   cancelHref,
   navigateToPayment,
   paymentRequisites,
+  publicToken,
 }: DeliveryFormProps) {
   const router = useRouter();
   const submitLockRef = useRef(false);
@@ -112,6 +114,12 @@ export function DeliveryForm({
   const [warehouses, setWarehouses] = useState<ShippingWarehouse[]>([]);
   const [cityStatus, setCityStatus] = useState<LookupStatus>("idle");
   const [warehouseStatus, setWarehouseStatus] = useState<LookupStatus>("idle");
+  const [cityErrorMessage, setCityErrorMessage] = useState(
+    "Не вдалося завантажити міста",
+  );
+  const [warehouseErrorMessage, setWarehouseErrorMessage] = useState(
+    "Не вдалося завантажити відділення",
+  );
   const paymentMethodOptions = buildPaymentMethodOptions(paymentRequisites);
   const form = useForm<DeliveryFormValues>({
     defaultValues: {
@@ -152,16 +160,15 @@ export function DeliveryForm({
     setCityStatus("loading");
 
     void fetch(
-      `/api/carriers/cities?carrier=${encodeURIComponent(carrier)}&query=${encodeURIComponent(query)}`,
+      `/api/carriers/cities?carrier=${encodeURIComponent(carrier)}&query=${encodeURIComponent(query)}&token=${encodeURIComponent(publicToken)}`,
       { signal: controller.signal },
     )
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Failed to load cities");
-        }
-
-        return (await response.json()) as { cities: ShippingCity[] };
-      })
+      .then((response) =>
+        parseLookupResponse<{ cities: ShippingCity[] }>(
+          response,
+          "Не вдалося завантажити міста",
+        ),
+      )
       .then((data) => {
         setCities(data.cities);
         setCityStatus("loaded");
@@ -172,11 +179,14 @@ export function DeliveryForm({
         }
 
         setCities([]);
+        setCityErrorMessage(
+          getLookupErrorMessage(error, "Не вдалося завантажити міста"),
+        );
         setCityStatus("error");
       });
 
     return () => controller.abort();
-  }, [carrier, cityQuery]);
+  }, [carrier, cityQuery, publicToken]);
 
   useEffect(() => {
     if (!selectedCityId) {
@@ -189,16 +199,15 @@ export function DeliveryForm({
     setWarehouseStatus("loading");
 
     void fetch(
-      `/api/carriers/warehouses?carrier=${encodeURIComponent(carrier)}&cityId=${encodeURIComponent(selectedCityId)}&query=${encodeURIComponent(warehouseQuery.trim())}`,
+      `/api/carriers/warehouses?carrier=${encodeURIComponent(carrier)}&cityId=${encodeURIComponent(selectedCityId)}&query=${encodeURIComponent(warehouseQuery.trim())}&token=${encodeURIComponent(publicToken)}`,
       { signal: controller.signal },
     )
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Failed to load warehouses");
-        }
-
-        return (await response.json()) as { warehouses: ShippingWarehouse[] };
-      })
+      .then((response) =>
+        parseLookupResponse<{ warehouses: ShippingWarehouse[] }>(
+          response,
+          "Не вдалося завантажити відділення",
+        ),
+      )
       .then((data) => {
         setWarehouses(data.warehouses);
         setWarehouseStatus("loaded");
@@ -209,11 +218,14 @@ export function DeliveryForm({
         }
 
         setWarehouses([]);
+        setWarehouseErrorMessage(
+          getLookupErrorMessage(error, "Не вдалося завантажити відділення"),
+        );
         setWarehouseStatus("error");
       });
 
     return () => controller.abort();
-  }, [carrier, selectedCityId, warehouseQuery]);
+  }, [carrier, publicToken, selectedCityId, warehouseQuery]);
 
   function onSubmit(values: DeliveryFormValues) {
     if (submitLockRef.current || isConfirmed) {
@@ -561,7 +573,7 @@ export function DeliveryForm({
                 ) : (
                   <LookupResults
                     emptyMessage="Місто не знайдено"
-                    errorMessage="Не вдалося завантажити міста"
+                    errorMessage={cityErrorMessage}
                     loadingMessage="Пошук міст…"
                     onSelect={selectCity}
                     renderItem={(city) => (
@@ -629,7 +641,7 @@ export function DeliveryForm({
                 ) : (
                   <LookupResults
                     emptyMessage="Відділення не знайдено"
-                    errorMessage="Не вдалося завантажити відділення"
+                    errorMessage={warehouseErrorMessage}
                     loadingMessage="Пошук відділень…"
                     onSelect={selectWarehouse}
                     renderItem={(warehouse) => (
@@ -888,6 +900,36 @@ function LookupIdleMessage({ message }: { message: string }) {
       {message}
     </p>
   );
+}
+
+async function parseLookupResponse<T>(
+  response: Response,
+  fallbackMessage: string,
+): Promise<T> {
+  if (response.ok) {
+    return (await response.json()) as T;
+  }
+
+  const body = (await response.json().catch(() => null)) as {
+    message?: unknown;
+  } | null;
+
+  throw new Error(
+    typeof body?.message === "string" && body.message.trim()
+      ? body.message
+      : fallbackMessage,
+  );
+}
+
+function getLookupErrorMessage(
+  error: unknown,
+  fallbackMessage: string,
+): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallbackMessage;
 }
 
 function SelectedLookupSummary({

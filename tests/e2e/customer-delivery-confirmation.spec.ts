@@ -2,11 +2,17 @@ import { expect, test } from "@playwright/test";
 import {
   createProduct,
   expectNoHorizontalOverflow,
+  saveOwnerShippingSettings,
   seedSession,
 } from "./helpers";
 
+test.beforeEach(async ({ page }) => {
+  await page.request.post("/api/test/reset");
+});
+
 test("customer confirms delivery with mocked carrier lookup", async ({ page }) => {
   await seedSession(page, "owner");
+  await saveOwnerShippingSettings(page);
   const sku = `DELIVERY-E2E-${Date.now()}`;
   const productName = `Каблучка доставка ${Date.now()}`;
 
@@ -117,4 +123,42 @@ test("customer confirms delivery with mocked carrier lookup", async ({ page }) =
     page.getByRole("heading", { name: /Замовлення #/ }),
   ).toBeVisible();
   await expect(page.getByLabel("Повне ім’я")).not.toBeVisible();
+});
+
+test("customer sees safe delivery unavailable copy when owner settings are missing", async ({
+  page,
+}) => {
+  await seedSession(page, "owner");
+  const stamp = Date.now();
+  const productName = `Доставка без налаштувань ${stamp}`;
+
+  await createProduct(page, {
+    description: "Товар для перевірки відсутніх налаштувань доставки",
+    imageUrl: "https://example.com/missing-shipping-settings.jpg",
+    name: productName,
+    price: "1450",
+    sku: `NO-SHIP-${stamp}`,
+    stock: "4",
+  });
+  await page.goto("/dashboard/orders/new");
+  await page.getByLabel(`Додати ${productName}`).check();
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page
+    .getByRole("spinbutton", { name: `Кількість для ${productName}` })
+    .fill("1");
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page.getByRole("button", { name: "Створити посилання" }).click();
+  const publicUrl = await page
+    .getByRole("textbox", { name: "Публічне посилання" })
+    .inputValue();
+
+  await page.goto(`${publicUrl}/delivery`);
+  await page.getByLabel("Повне ім’я").fill("Олена Петренко");
+  await page.getByLabel("Телефон").fill("+380671234567");
+  await page.getByRole("button", { name: "Далі" }).click();
+  await page.getByLabel("Місто або населений пункт").fill("Київ");
+
+  await expect(
+    page.getByText("Доставка тимчасово недоступна. Зверніться до продавця."),
+  ).toBeVisible();
 });

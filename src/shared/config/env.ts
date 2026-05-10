@@ -82,17 +82,6 @@ export const serverEnvSchema = z
       });
     }
 
-    if (labelCreationMode === "live") {
-      const requiredLiveShippingKeys = getRequiredLiveShippingKeys(env);
-
-      for (const key of requiredLiveShippingKeys) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `${key} is required when SHIPPING_LABEL_CREATION_MODE=live`,
-          path: [key],
-        });
-      }
-    }
   })
   .transform((env) => ({
     ...env,
@@ -323,56 +312,6 @@ function getPublicProductionUrlIssue(
   }
 
   return null;
-}
-
-function getRequiredLiveShippingKeys(env: {
-  NOVA_POST_API_KEY?: string;
-  NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS?: number;
-  NOVA_POST_DEFAULT_HEIGHT_MM?: number;
-  NOVA_POST_DEFAULT_LENGTH_MM?: number;
-  NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS?: number;
-  NOVA_POST_DEFAULT_WIDTH_MM?: number;
-  NOVA_POST_PAYER_CONTRACT_NUMBER?: string;
-  NOVA_POST_PAYER_TYPE?: "Recipient" | "Sender" | "ThirdPerson";
-  NOVA_POST_SENDER_COUNTRY_CODE?: string;
-  NOVA_POST_SENDER_DIVISION_ID?: string;
-  NOVA_POST_SENDER_NAME?: string;
-  NOVA_POST_SENDER_PHONE?: string;
-  NOVA_POSHTA_API_KEY?: string;
-}): string[] {
-  const missingKeys: string[] = [];
-
-  if (!env.NOVA_POST_API_KEY && !env.NOVA_POSHTA_API_KEY) {
-    missingKeys.push("NOVA_POST_API_KEY");
-  }
-
-  const requiredKeys = [
-    "NOVA_POST_SENDER_COUNTRY_CODE",
-    "NOVA_POST_SENDER_DIVISION_ID",
-    "NOVA_POST_SENDER_NAME",
-    "NOVA_POST_SENDER_PHONE",
-    "NOVA_POST_PAYER_TYPE",
-    "NOVA_POST_DEFAULT_WIDTH_MM",
-    "NOVA_POST_DEFAULT_LENGTH_MM",
-    "NOVA_POST_DEFAULT_HEIGHT_MM",
-    "NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS",
-    "NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS",
-  ] as const;
-
-  for (const key of requiredKeys) {
-    if (!env[key]) {
-      missingKeys.push(key);
-    }
-  }
-
-  if (
-    env.NOVA_POST_PAYER_TYPE === "ThirdPerson" &&
-    !env.NOVA_POST_PAYER_CONTRACT_NUMBER
-  ) {
-    missingKeys.push("NOVA_POST_PAYER_CONTRACT_NUMBER");
-  }
-
-  return missingKeys;
 }
 
 function createInvalidEnvironmentError(issues: EnvironmentIssue[]): Error {

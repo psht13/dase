@@ -102,9 +102,9 @@ type NovaPostTrackingHistoryResponse = {
 };
 
 export class NovaPostShipmentConfigurationError extends ShippingCarrierApiError {
-  constructor(missingKeys: string[]) {
+  constructor(missingFields: string[]) {
     super(
-      `Налаштування відправника Нова пошта неповні: ${missingKeys.join(", ")}`,
+      `Налаштування відправника Нова пошта неповні: ${missingFields.join(", ")}`,
     );
     this.name = "NovaPostShipmentConfigurationError";
   }
@@ -518,19 +518,19 @@ function missingSenderKeys(
   const missing: string[] = [];
 
   if (!sender?.countryCode) {
-    missing.push("NOVA_POST_SENDER_COUNTRY_CODE");
+    missing.push("sender.countryCode");
   }
 
   if (!sender?.divisionId) {
-    missing.push("NOVA_POST_SENDER_DIVISION_ID");
+    missing.push("sender.divisionId");
   }
 
   if (!sender?.name) {
-    missing.push("NOVA_POST_SENDER_NAME");
+    missing.push("sender.name");
   }
 
   if (!sender?.phone) {
-    missing.push("NOVA_POST_SENDER_PHONE");
+    missing.push("sender.phone");
   }
 
   return missing;

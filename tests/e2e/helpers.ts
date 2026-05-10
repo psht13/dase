@@ -136,6 +136,31 @@ export async function createProduct(
   await page.waitForURL(/\/dashboard\/products$/);
 }
 
+export async function saveOwnerShippingSettings(page: Page) {
+  const stamp = Date.now();
+
+  await page.goto("/dashboard/settings/shipping");
+  await expect(page.getByRole("heading", { name: "Доставка" })).toBeVisible();
+
+  const apiKeyInput = page.getByLabel("API ключ Nova Post");
+
+  if (await apiKeyInput.isVisible()) {
+    await apiKeyInput.fill(`fake-owner-nova-post-key-${stamp}`);
+  }
+
+  await page.getByLabel("ПІБ відправника").fill("Олена Петренко");
+  await page.getByLabel("Телефон відправника").fill("+380671234567");
+  await page.getByLabel("Email відправника").fill("olena@example.com");
+  await page.getByLabel("Код країни").fill("UA");
+  await page.getByLabel("ID відділення або філії").fill("11759");
+  await page.getByLabel("Назва компанії").fill("Dase Jewelry");
+  await page.getByLabel("ІПН або ЄДРПОУ компанії").fill("12345678");
+  await page.getByLabel("Створення відправлень увімкнено").check();
+  await page.getByRole("button", { name: "Зберегти налаштування" }).click();
+  await expect(page.getByText("Налаштування доставки збережено")).toBeVisible();
+  await expect(page.getByText("API ключ збережено")).toBeVisible();
+}
+
 export async function createPublicOrderLink(
   page: Page,
   input: {
@@ -169,6 +194,7 @@ export async function confirmPublicOrderDelivery(
     publicUrl: string;
   },
 ) {
+  await saveOwnerShippingSettings(page);
   await page.goto(input.publicUrl);
   await page
     .getByRole("link", { name: "Перейти до доставки й оплати" })

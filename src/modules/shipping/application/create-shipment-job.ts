@@ -6,15 +6,15 @@ import type { CreateShipmentJobData } from "@/modules/shipping/application/shipm
 import type { ShipmentJobQueue } from "@/modules/shipping/application/shipment-job-queue";
 import {
   shippingLabelCreationDisabledMessage,
-  type ShipmentCreationConfigValidation,
   type ShippingLabelCreationMode,
 } from "@/modules/shipping/application/shipping-label-creation-mode";
-import type {
-  ShippingCarrier,
+import type { ShippingCarrierResolver } from "@/modules/shipping/application/shipping-carrier";
+import {
+  shipmentSettingsIncompleteMessage,
+  ShippingCarrierSettingsUnavailableError,
 } from "@/modules/shipping/application/shipping-carrier";
 import { isShipmentCreationEnabled } from "@/modules/shipping/application/shipping-carrier-registry";
 import type {
-  ShipmentCarrier,
   ShipmentRecord,
   ShipmentRepository,
 } from "@/modules/shipping/application/shipment-repository";
@@ -22,17 +22,12 @@ import type {
 type CreateShipmentJobDependencies = {
   auditEventRepository: AuditEventRepository;
   customerRepository: CustomerRepository;
-  getShippingCarrier: (carrier: ShipmentCarrier) => ShippingCarrier;
+  getShippingCarrier: ShippingCarrierResolver;
   now?: () => Date;
   orderRepository: OrderRepository;
   shippingLabelCreationMode?: ShippingLabelCreationMode;
   shipmentJobQueue: ShipmentJobQueue;
   shipmentRepository: ShipmentRepository;
-  validateLiveShipmentCreationConfig?: (
-    carrier: ShipmentCarrier,
-  ) =>
-    | Promise<ShipmentCreationConfigValidation>
-    | ShipmentCreationConfigValidation;
 };
 
 export class ShipmentJobCannotBeProcessedError extends Error {
@@ -112,31 +107,10 @@ export async function createShipmentJobUseCase(
     );
   }
 
-  if (labelCreationMode === "live") {
-    const validation =
-      (await dependencies.validateLiveShipmentCreationConfig?.(shipment.carrier)) ??
-      ({ ok: true } as const);
-
-    if (!validation.ok) {
-      return markShipmentCreationFailed(
-        {
-          auditEventRepository: dependencies.auditEventRepository,
-          shipmentRepository: dependencies.shipmentRepository,
-        },
-        {
-          missingConfigKeys: validation.missingKeys,
-          mode: labelCreationMode,
-          orderId: order.id,
-          reason: validation.reason,
-          shipmentId: shipment.id,
-        },
-      );
-    }
-  }
-
-  const carrier = dependencies.getShippingCarrier(shipment.carrier);
-
   try {
+    const carrier = await dependencies.getShippingCarrier(shipment.carrier, {
+      ownerId: order.ownerId,
+    });
     const createdShipment = await carrier.createShipment({
       carrier: shipment.carrier,
       declaredValueMinor: order.totalMinor,
@@ -189,6 +163,20 @@ export async function createShipmentJobUseCase(
 
     return updatedShipment;
   } catch (error) {
+    if (error instanceof ShippingCarrierSettingsUnavailableError) {
+      return markShipmentCreationFailed(
+        {
+          auditEventRepository: dependencies.auditEventRepository,
+          shipmentRepository: dependencies.shipmentRepository,
+        },
+        {
+          orderId: order.id,
+          reason: shipmentSettingsIncompleteMessage,
+          shipmentId: shipment.id,
+        },
+      );
+    }
+
     await markShipmentCreationFailed(
       {
         auditEventRepository: dependencies.auditEventRepository,
@@ -231,7 +219,7 @@ async function markShipmentCreationFailed(
     eventType: "SHIPMENT_CREATION_FAILED",
     orderId: input.orderId,
     payload: {
-      message: "Створення відправлення не вдалося",
+      message: input.reason,
       missingConfigKeys: input.missingConfigKeys,
       mode: input.mode,
       reason: input.reason,
@@ -271,7 +259,7 @@ function getSafeShipmentFailureReason(error: unknown): string {
     error instanceof Error &&
     error.message.startsWith("Налаштування відправника")
   ) {
-    return error.message;
+    return shipmentSettingsIncompleteMessage;
   }
 
   return "Помилка служби доставки. Повторіть створення відправлення пізніше.";

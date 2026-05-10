@@ -15,6 +15,7 @@ const defaultLimit = 20;
 
 export type CarrierDirectorySearchDependencies = {
   cacheRepository: CarrierDirectoryCacheRepository;
+  cacheScopeKey?: string;
   now?: () => Date;
   shippingCarrier: ShippingCarrier;
   ttlMs?: number;
@@ -31,7 +32,10 @@ export async function searchCarrierCitiesUseCase(
   }
 
   const limit = normalizeLimit(input.limit);
-  const lookupKey = JSON.stringify({ limit, query });
+  const lookupKey = createLookupKey(dependencies.cacheScopeKey, {
+    limit,
+    query,
+  });
 
   return cachedLookup({
     carrier: input.carrier,
@@ -55,7 +59,11 @@ export async function searchCarrierWarehousesUseCase(
 
   const query = normalizeLookupValue(input.query ?? "");
   const limit = normalizeLimit(input.limit);
-  const lookupKey = JSON.stringify({ cityId, limit, query });
+  const lookupKey = createLookupKey(dependencies.cacheScopeKey, {
+    cityId,
+    limit,
+    query,
+  });
 
   return cachedLookup({
     carrier: input.carrier,
@@ -120,6 +128,16 @@ function normalizeLimit(value: number | undefined): number {
   }
 
   return Math.min(value, 50);
+}
+
+function createLookupKey(
+  cacheScopeKey: string | undefined,
+  input: Record<string, string | number>,
+): string {
+  return JSON.stringify({
+    ...input,
+    scope: cacheScopeKey ?? "global",
+  });
 }
 
 function parseCitiesCachePayload(

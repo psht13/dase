@@ -1,7 +1,19 @@
 import { GET } from "@/app/api/carriers/cities/route";
+import type { PersistedOrder } from "@/modules/orders/application/order-repository";
+import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
+import {
+  publicDeliveryUnavailableMessage,
+  ShippingCarrierSettingsUnavailableError,
+} from "@/modules/shipping/application/shipping-carrier";
 import { getCarrierDirectoryCacheRepository } from "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory";
 import { ShippingCarrierApiError } from "@/modules/shipping/infrastructure/shipping-carrier-api-error";
-import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
+import {
+  resolveShippingCarrierForOwner,
+} from "@/modules/shipping/infrastructure/shipping-carrier-factory";
+
+vi.mock("@/modules/orders/infrastructure/order-repository-factory", () => ({
+  getOrderRepository: vi.fn(),
+}));
 
 vi.mock(
   "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory",
@@ -11,11 +23,14 @@ vi.mock(
 );
 
 vi.mock("@/modules/shipping/infrastructure/shipping-carrier-factory", () => ({
-  getShippingCarrier: vi.fn(),
+  resolveShippingCarrierForOwner: vi.fn(),
 }));
 
 describe("GET /api/carriers/cities", () => {
   beforeEach(() => {
+    vi.mocked(getOrderRepository).mockReturnValue({
+      findByPublicToken: vi.fn(async () => createOrder()),
+    } as never);
     vi.mocked(getCarrierDirectoryCacheRepository).mockReturnValue({
       findFresh: vi.fn(async () => null),
       upsert: vi.fn(async (entry) => ({
@@ -25,13 +40,16 @@ describe("GET /api/carriers/cities", () => {
         updatedAt: new Date("2026-04-30T10:00:00.000Z"),
       })),
     } as never);
-    vi.mocked(getShippingCarrier).mockReturnValue({
-      createShipment: vi.fn(),
-      getShipmentStatus: vi.fn(),
-      searchCities: vi.fn(async () => [
-        { id: "city-1", name: "Київ", region: "Київська область" },
-      ]),
-      searchWarehouses: vi.fn(),
+    vi.mocked(resolveShippingCarrierForOwner).mockResolvedValue({
+      cacheScopeKey: "owner-shipping-settings:owner-1:settings-1:2026-05-10",
+      shippingCarrier: {
+        createShipment: vi.fn(),
+        getShipmentStatus: vi.fn(),
+        searchCities: vi.fn(async () => [
+          { id: "city-1", name: "Київ", region: "Київська область" },
+        ]),
+        searchWarehouses: vi.fn(),
+      },
     } as never);
   });
 
@@ -39,16 +57,20 @@ describe("GET /api/carriers/cities", () => {
     vi.clearAllMocks();
   });
 
-  it("returns internal city DTOs", async () => {
+  it("uses public token to resolve the order owner before returning cities", async () => {
     const response = await GET(
       new Request(
-        "https://dase.test/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ",
+        "https://dase.test/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ&token=secure_public_token_123456789012345&ownerId=attacker-owner",
       ),
     );
 
     await expect(response.json()).resolves.toEqual({
       cities: [{ id: "city-1", name: "Київ", region: "Київська область" }],
     });
+    expect(resolveShippingCarrierForOwner).toHaveBeenCalledWith(
+      "NOVA_POSHTA",
+      { ownerId: "owner-1" },
+    );
   });
 
   it("rejects unsupported carriers with Ukrainian feedback", async () => {
@@ -64,29 +86,51 @@ describe("GET /api/carriers/cities", () => {
 
   it("rejects disabled carriers with Ukrainian feedback", async () => {
     const response = await GET(
-      new Request("https://dase.test/api/carriers/cities?carrier=UKRPOSHTA"),
+      new Request(
+        "https://dase.test/api/carriers/cities?carrier=UKRPOSHTA&token=secure_public_token_123456789012345",
+      ),
     );
 
     expect(response.status).toBe(400);
-    expect(getShippingCarrier).not.toHaveBeenCalled();
+    expect(resolveShippingCarrierForOwner).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({
       message: "Службу доставки тимчасово вимкнено",
     });
   });
 
+  it("returns public-safe feedback when settings are missing", async () => {
+    vi.mocked(resolveShippingCarrierForOwner).mockRejectedValue(
+      new ShippingCarrierSettingsUnavailableError(),
+    );
+
+    const response = await GET(
+      new Request(
+        "https://dase.test/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ&token=secure_public_token_123456789012345",
+      ),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      message: publicDeliveryUnavailableMessage,
+    });
+  });
+
   it("maps provider errors to safe Ukrainian feedback", async () => {
-    vi.mocked(getShippingCarrier).mockReturnValue({
-      createShipment: vi.fn(),
-      getShipmentStatus: vi.fn(),
-      searchCities: vi.fn(async () => {
-        throw new ShippingCarrierApiError("provider raw failure");
-      }),
-      searchWarehouses: vi.fn(),
+    vi.mocked(resolveShippingCarrierForOwner).mockResolvedValue({
+      cacheScopeKey: "owner-shipping-settings:owner-1:settings-1:2026-05-10",
+      shippingCarrier: {
+        createShipment: vi.fn(),
+        getShipmentStatus: vi.fn(),
+        searchCities: vi.fn(async () => {
+          throw new ShippingCarrierApiError("provider raw failure");
+        }),
+        searchWarehouses: vi.fn(),
+      },
     } as never);
 
     const response = await GET(
       new Request(
-        "https://dase.test/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ",
+        "https://dase.test/api/carriers/cities?carrier=NOVA_POSHTA&query=Київ&token=secure_public_token_123456789012345",
       ),
     );
 
@@ -96,3 +140,21 @@ describe("GET /api/carriers/cities", () => {
     });
   });
 });
+
+function createOrder(): PersistedOrder {
+  return {
+    confirmedAt: null,
+    createdAt: new Date("2026-05-10T10:00:00.000Z"),
+    currency: "UAH",
+    customerId: null,
+    id: "order-1",
+    items: [],
+    ownerId: "owner-1",
+    publicToken: "secure_public_token_123456789012345",
+    publicTokenExpiresAt: new Date("2026-05-20T10:00:00.000Z"),
+    sentAt: new Date("2026-05-10T10:00:00.000Z"),
+    status: "SENT_TO_CUSTOMER",
+    totalMinor: 2_400_00,
+    updatedAt: new Date("2026-05-10T10:00:00.000Z"),
+  };
+}

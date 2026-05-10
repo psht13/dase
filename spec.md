@@ -224,7 +224,7 @@ Owner Nova Post settings model update on 2026-05-10:
 - Added an application encryption service port and a Node.js AES-256-GCM implementation. `APP_ENCRYPTION_KEY` must be base64 or hex encoded with at least 32 decoded bytes and must not reuse `BETTER_AUTH_SECRET`.
 - Owner Nova Post API keys are no longer documented in tracked env templates. They are owner settings saved through the application model, encrypted in the database, and exposed to read models only as `apiKeyConfigured` plus a masked preview such as `****7890`; decrypted keys are not returned to UI read models.
 - Validation covers the official endpoint selector values: stage/test `https://api-stage.novapost.pl/v.1.0/`, production global `https://api.novapost.com/v.1.0/`, production Ukraine `https://api.novaposhta.ua/v.1.0/`, and custom HTTPS URLs. Sender, payer, contract-number, and parcel-default validation lives in the shipping application layer rather than UI components.
-- Added application use cases plus Drizzle and in-memory repositories for saving, updating, finding, and listing owner shipping settings. Existing env-backed carrier factory behavior remains transitional and is intentionally left for later ENV prompts.
+- Added application use cases plus Drizzle and in-memory repositories for saving, updating, finding, and listing owner shipping settings. The ENV-03 runtime switchover now uses these settings for active Nova Post lookup and worker calls.
 - Official Nova Post references used for this model:
   - https://api-portal.novapost.com/en/about-api/general/
   - https://api-portal.novapost.com/en/api-nova-post/start/api-keys/
@@ -240,14 +240,24 @@ Owner Nova Post settings UI update on 2026-05-10:
 - The form stores sender identity, branch/division ID, optional company data, payer type/contract number, default parcel dimensions/weights, and `Створення відправлень увімкнено`.
 - Added a thin owner server action for `Перевірити підключення`. It resolves saved encrypted settings server-side, decrypts only inside server code, exchanges the API key for a Nova Post JWT, and performs a harmless small directory lookup without creating a shipment or logging the key. Playwright/mock mode uses a fixture tester.
 - The UI and actions use shipping application use cases and infrastructure repositories; encryption logic remains outside React components.
-- README and DEPLOYMENT now document dashboard-based Nova Post configuration. ENV-03 still owns public lookup token scoping, worker/carrier runtime switchover, deprecated env cleanup, and Railway/local variable cleanup.
+- README and DEPLOYMENT now document dashboard-based Nova Post configuration. ENV-03 completed public lookup token scoping and worker/carrier runtime switchover; ENV-04 still owns tracked deprecated env cleanup and Railway/local variable removal.
 - Tests cover Ukrainian form labels, stage endpoint default, custom HTTPS URL handling, masked saved key display, key replacement, enabled state, connection-test action behavior, owner/user access, and the requested Playwright save-and-return flow.
+
+Owner Nova Post runtime switchover update on 2026-05-10:
+- Public delivery city and warehouse lookups now include the public order token. `/api/carriers/cities` and `/api/carriers/warehouses` resolve the order server-side by token, use `order.ownerId`, and ignore any raw `ownerId` query parameter.
+- Active Nova Post carrier construction no longer reads Nova Post API, auth URL, sender, payer, parcel default, or legacy `NOVA_POSHTA_*` values from env. The infrastructure factory receives owner settings, decrypts the API key server-side, and passes an explicit runtime config into `NovaPostShippingCarrier`.
+- Missing, disabled, or API-key-incomplete owner shipping settings return the public-safe Ukrainian message `Доставка тимчасово недоступна. Зверніться до продавця.` for customer lookup and do not reveal which setting is missing.
+- `createShipmentJobUseCase` loads the order, resolves Nova Post by `order.ownerId`, and fails shipment creation before provider calls when owner shipping settings are unavailable. The audit payload uses `Налаштування доставки не завершено. Відправлення не створено.` without secret values.
+- `SHIPPING_LABEL_CREATION_MODE` remains only a global label-creation kill switch: `disabled` blocks shipment creation before resolving a carrier, `live` uses owner settings, and `mock` remains rejected in production.
+- Carrier directory cache keys now include an owner settings scope so changing owner settings does not reuse stale directory results across owners/settings.
+- ENV-04 still owns removing deprecated env names from tracked templates/docs, optional env parsing, Railway variables, and ignored local env files. No Railway or local env cleanup was performed in ENV-03.
+- Tests cover token-to-order-to-owner lookup, rejection of arbitrary public `ownerId`, public-safe missing-settings copy, worker owner-setting resolution, disabled settings avoiding provider calls, the global disabled kill switch, server-side API-key decryption, and a code-search guard for deprecated Nova Post env keys in active shipping code.
 
 Runtime-aware environment validation update on 2026-05-07:
 - `src/shared/config/env.ts` now exposes `getWebEnv()`, `getWorkerEnv()`, and `getTestEnv()` alongside a documented safe `getServerEnv()` base parser for shared infrastructure.
 - Production `web` validation requires `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`. It requires `OWNER_SETUP_TOKEN` only when the first-owner setup path is enabled and does not force worker-only settings.
 - Production `worker` validation requires `DATABASE_URL` and an explicit `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`; it does not require `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, or `OWNER_SETUP_TOKEN`.
-- `SHIPPING_LABEL_CREATION_MODE=live` continues to require complete Nova Post live shipment settings, `mock` remains rejected in production, and disabled production shipping mode does not require Nova Post credentials.
+- `SHIPPING_LABEL_CREATION_MODE=live` now relies on encrypted owner Nova Post settings instead of Nova Post env keys, `mock` remains rejected in production, and disabled production shipping mode does not require Nova Post credentials.
 - Missing environment errors report variable names and runtime context only; they do not include secret values.
 - Tests cover web production validation, worker production validation, live and disabled shipping modes, dev/test fallback behavior, and the worker config path proving owner setup tokens are not required by the worker.
 
@@ -1087,6 +1097,7 @@ DATABASE_URL_TEST=
 BETTER_AUTH_SECRET= # production web
 BETTER_AUTH_URL= # production web
 OWNER_SETUP_TOKEN= # production web setup path only while first-owner setup is available
+APP_ENCRYPTION_KEY= # required to save/decrypt owner Nova Post settings
 
 MONOBANK_TOKEN=
 MONOBANK_API_URL=
@@ -1095,26 +1106,11 @@ MONOBANK_WEBHOOK_SECRET_OR_PUBLIC_KEY=
 
 SHIPPING_LABEL_CREATION_MODE=live
 
-NOVA_POST_API_KEY=
-NOVA_POST_API_URL=https://api-stage.novapost.pl/v.1.0/
-NOVA_POST_AUTH_URL=
-NOVA_POST_SENDER_COUNTRY_CODE=UA
-NOVA_POST_SENDER_DIVISION_ID=11759
-NOVA_POST_SENDER_NAME=Test Sender
-NOVA_POST_SENDER_PHONE=380007654321
-NOVA_POST_SENDER_EMAIL=
-NOVA_POST_SENDER_COMPANY_TIN=
-NOVA_POST_SENDER_COMPANY_NAME=
-NOVA_POST_PAYER_TYPE=Recipient
-NOVA_POST_PAYER_CONTRACT_NUMBER=
-NOVA_POST_DEFAULT_WIDTH_MM=200
-NOVA_POST_DEFAULT_LENGTH_MM=300
-NOVA_POST_DEFAULT_HEIGHT_MM=100
-NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS=500
-NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS=500
-
-NOVA_POSHTA_API_KEY= # deprecated compatibility name
-NOVA_POSHTA_API_URL= # deprecated compatibility name
+# Nova Post API key, endpoint, sender, payer, and parcel defaults are owner
+# settings saved from /dashboard/settings/shipping, not runtime env vars.
+# ENV-04 still owns removing deprecated NOVA_POST_* / NOVA_POSHTA_* names from
+# tracked templates, optional env parsing, Railway variables, and ignored local
+# env files.
 
 AUTO_COMPLETE_AFTER_DELIVERED_HOURS=24 # production worker
 
@@ -1311,7 +1307,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Open questions
 
 - Historical MonoPay credentials, public key, and final callback domain are needed only if historical MonoPay retry/webhook verification is intentionally exercised; they are not required for the active customer payment flow.
-- Nova Post owner settings now have an encrypted database model, but the owner settings UI route and runtime carrier lookup by owner/order context are still later ENV prompt work. Production `web` and `worker` may keep transitional Nova Post runtime variables until that switchover is deployed and verified.
+- Nova Post owner settings now back active public lookup and worker shipment creation. Production `web` and `worker` may still contain transitional Nova Post runtime variables until ENV-04 removes them operationally, but active shipping runtime no longer reads them.
 - Production shipping label creation is currently enabled through `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API; switch to the production Nova Post API only after a deliberate production shipping cutover.
 - Future Ukrposhta reintroduction requires practical test/production API access, sender/client/address workflow confirmation, shipment/package details, payer settings, label decisions, and enabling the carrier through the central registry.
 - Whether to reserve stock when order link is created or only after customer confirms.
@@ -1321,8 +1317,8 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Known limitations
 
 - Authenticated production smoke testing requires temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` values. They were not present during Prompt 09 final QA, so only unauthenticated production health was verified live on 2026-05-08.
-- Real Monobank production credentials are not required for active customer payments and are not currently needed for production startup. They remain necessary only for historical MonoPay retry/webhook verification. Nova Post label creation is still transitional until later ENV prompts wire runtime carrier resolution to owner settings.
-- Production external API credentials and Nova Post sender settings are not present in the repository. Nova Post API keys should be saved as encrypted owner settings after `APP_ENCRYPTION_KEY` and the owner UI/runtime switchover are in place.
+- Real Monobank production credentials are not required for active customer payments and are not currently needed for production startup. They remain necessary only for historical MonoPay retry/webhook verification.
+- Production external API credentials and Nova Post sender settings are not present in the repository. Nova Post API keys must be saved as encrypted owner settings after `APP_ENCRYPTION_KEY` is configured.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Monobank and Nova Post behavior still needs a low-risk production smoke test after variables are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.
 - Stock reservation timing is still an open product decision.

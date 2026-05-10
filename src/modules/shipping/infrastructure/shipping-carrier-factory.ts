@@ -1,12 +1,12 @@
+import type { ApplicationEncryptionService } from "@/modules/shipping/application/application-encryption-service";
+import type { OwnerShippingSettingsRecord } from "@/modules/shipping/application/owner-shipping-settings-repository";
 import type {
   ShippingCarrier,
+  ShippingCarrierResolutionContext,
 } from "@/modules/shipping/application/shipping-carrier";
+import { ShippingCarrierSettingsUnavailableError } from "@/modules/shipping/application/shipping-carrier";
 import type { ShipmentCarrier } from "@/modules/shipping/application/shipment-repository";
-import {
-  createMissingShipmentConfigMessage,
-  type ShipmentCreationConfigValidation,
-  type ShippingLabelCreationMode,
-} from "@/modules/shipping/application/shipping-label-creation-mode";
+import type { ShippingLabelCreationMode } from "@/modules/shipping/application/shipping-label-creation-mode";
 import {
   isShipmentCreationEnabled,
   isShippingCarrierSearchEnabled,
@@ -18,9 +18,37 @@ import {
   type NovaPostSenderConfig,
   type NovaPostShipmentDefaults,
 } from "@/modules/shipping/infrastructure/nova-post-shipping-carrier";
+import { getLazyApplicationEncryptionService } from "@/modules/shipping/infrastructure/application-encryption-service-factory";
+import {
+  getOwnerShippingSettingsRepository,
+} from "@/modules/shipping/infrastructure/owner-shipping-settings-repository-factory";
 import { getServerEnv, type ServerEnv } from "@/shared/config/env";
 
-export function getShippingCarrier(carrier: ShipmentCarrier): ShippingCarrier {
+export type NovaPostRuntimeConfig = {
+  apiKey: string;
+  authUrl?: string;
+  baseUrl: string;
+  sender: NovaPostSenderConfig;
+  shipmentDefaults: NovaPostShipmentDefaults;
+};
+
+export type ResolvedShippingCarrier = {
+  cacheScopeKey: string;
+  shippingCarrier: ShippingCarrier;
+};
+
+export async function getShippingCarrier(
+  carrier: ShipmentCarrier,
+  context: ShippingCarrierResolutionContext,
+): Promise<ShippingCarrier> {
+  return (await resolveShippingCarrierForOwner(carrier, context))
+    .shippingCarrier;
+}
+
+export async function resolveShippingCarrierForOwner(
+  carrier: ShipmentCarrier,
+  context: ShippingCarrierResolutionContext,
+): Promise<ResolvedShippingCarrier> {
   if (
     !isShippingCarrierSearchEnabled(carrier) &&
     !isShipmentCreationEnabled(carrier)
@@ -28,96 +56,87 @@ export function getShippingCarrier(carrier: ShipmentCarrier): ShippingCarrier {
     throw new Error("Shipping carrier is disabled");
   }
 
-  const env = getServerEnv();
-
-  if (isFixtureCarrierEnabled(env)) {
-    return new FixtureShippingCarrier(carrier);
+  if (carrier !== "NOVA_POSHTA") {
+    throw new Error("Shipping carrier is not configured");
   }
 
-  if (carrier === "NOVA_POSHTA") {
-    const apiKey = env.NOVA_POST_API_KEY ?? env.NOVA_POSHTA_API_KEY;
+  const settings =
+    await getOwnerShippingSettingsRepository().findByOwnerId(context.ownerId);
+  const runtimeConfig = await createNovaPostRuntimeConfigFromOwnerSettings(
+    settings,
+    getLazyApplicationEncryptionService(),
+  );
 
-    if (!apiKey) {
-      throw new Error("NOVA_POST_API_KEY is required for Nova Post");
-    }
-
-    return new NovaPostShippingCarrier({
-      apiKey,
-      authUrl: env.NOVA_POST_AUTH_URL,
-      baseUrl: env.NOVA_POST_API_URL ?? env.NOVA_POSHTA_API_URL,
-      sender: getNovaPostSenderConfig(env),
-      shipmentDefaults: getNovaPostShipmentDefaults(env),
-    });
+  if (isFixtureCarrierEnabled(getServerEnv())) {
+    return {
+      cacheScopeKey: createNovaPostCacheScopeKey(settings),
+      shippingCarrier: new FixtureShippingCarrier(carrier),
+    };
   }
 
-  throw new Error("Shipping carrier is not configured");
+  return {
+    cacheScopeKey: createNovaPostCacheScopeKey(settings),
+    shippingCarrier: createNovaPostShippingCarrier(runtimeConfig),
+  };
+}
+
+export async function createNovaPostRuntimeConfigFromOwnerSettings(
+  settings: OwnerShippingSettingsRecord | null,
+  encryptionService: ApplicationEncryptionService,
+): Promise<NovaPostRuntimeConfig> {
+  if (!settings || !settings.isEnabled || !settings.apiKeyEncrypted) {
+    throw new ShippingCarrierSettingsUnavailableError();
+  }
+
+  let apiKey: string;
+
+  try {
+    apiKey = await encryptionService.decrypt(settings.apiKeyEncrypted);
+  } catch {
+    throw new ShippingCarrierSettingsUnavailableError();
+  }
+
+  return {
+    apiKey,
+    authUrl: settings.authUrl ?? undefined,
+    baseUrl: settings.apiBaseUrl,
+    sender: {
+      companyName: settings.senderCompanyName ?? undefined,
+      companyTin: settings.senderCompanyTin ?? undefined,
+      countryCode: settings.senderCountryCode,
+      divisionId: settings.senderDivisionId,
+      email: settings.senderEmail ?? undefined,
+      name: settings.senderName,
+      payerContractNumber: settings.payerContractNumber ?? undefined,
+      payerType: settings.payerType as NovaPostPayerType,
+      phone: settings.senderPhone,
+    },
+    shipmentDefaults: {
+      actualWeightGrams: settings.defaultActualWeightGrams,
+      cargoCategory: "parcel",
+      currencyCode: "UAH",
+      heightMm: settings.defaultHeightMm,
+      lengthMm: settings.defaultLengthMm,
+      volumetricWeightGrams: settings.defaultVolumetricWeightGrams,
+      widthMm: settings.defaultWidthMm,
+    },
+  };
+}
+
+export function createNovaPostShippingCarrier(
+  config: NovaPostRuntimeConfig,
+): NovaPostShippingCarrier {
+  return new NovaPostShippingCarrier({
+    apiKey: config.apiKey,
+    authUrl: config.authUrl,
+    baseUrl: config.baseUrl,
+    sender: config.sender,
+    shipmentDefaults: config.shipmentDefaults,
+  });
 }
 
 export function getShippingLabelCreationMode(): ShippingLabelCreationMode {
   return getServerEnv().SHIPPING_LABEL_CREATION_MODE;
-}
-
-export function validateLiveShipmentCreationConfig(
-  carrier: ShipmentCarrier,
-): ShipmentCreationConfigValidation {
-  if (carrier !== "NOVA_POSHTA") {
-    return {
-      missingKeys: [],
-      ok: false,
-      reason:
-        "Створення відправлення для обраної служби доставки зараз недоступне.",
-    };
-  }
-
-  const missingKeys = getMissingNovaPostLiveShipmentConfigKeys(getServerEnv());
-
-  if (missingKeys.length > 0) {
-    return {
-      missingKeys,
-      ok: false,
-      reason: createMissingShipmentConfigMessage(carrier, missingKeys),
-    };
-  }
-
-  return { ok: true };
-}
-
-export function getMissingNovaPostLiveShipmentConfigKeys(
-  env: ServerEnv,
-): string[] {
-  const missingKeys: string[] = [];
-
-  if (!env.NOVA_POST_API_KEY && !env.NOVA_POSHTA_API_KEY) {
-    missingKeys.push("NOVA_POST_API_KEY");
-  }
-
-  const requiredKeys = [
-    "NOVA_POST_SENDER_COUNTRY_CODE",
-    "NOVA_POST_SENDER_DIVISION_ID",
-    "NOVA_POST_SENDER_NAME",
-    "NOVA_POST_SENDER_PHONE",
-    "NOVA_POST_PAYER_TYPE",
-    "NOVA_POST_DEFAULT_WIDTH_MM",
-    "NOVA_POST_DEFAULT_LENGTH_MM",
-    "NOVA_POST_DEFAULT_HEIGHT_MM",
-    "NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS",
-    "NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS",
-  ] as const;
-
-  for (const key of requiredKeys) {
-    if (!env[key]) {
-      missingKeys.push(key);
-    }
-  }
-
-  if (
-    env.NOVA_POST_PAYER_TYPE === "ThirdPerson" &&
-    !env.NOVA_POST_PAYER_CONTRACT_NUMBER
-  ) {
-    missingKeys.push("NOVA_POST_PAYER_CONTRACT_NUMBER");
-  }
-
-  return missingKeys;
 }
 
 function isFixtureCarrierEnabled(env: ServerEnv): boolean {
@@ -133,39 +152,17 @@ function isFixtureCarrierEnabled(env: ServerEnv): boolean {
   );
 }
 
-function getNovaPostSenderConfig(
-  env: ServerEnv,
-): NovaPostSenderConfig | undefined {
-  if (
-    !env.NOVA_POST_SENDER_COUNTRY_CODE &&
-    !env.NOVA_POST_SENDER_DIVISION_ID &&
-    !env.NOVA_POST_SENDER_NAME &&
-    !env.NOVA_POST_SENDER_PHONE
-  ) {
-    return undefined;
+function createNovaPostCacheScopeKey(
+  settings: OwnerShippingSettingsRecord | null,
+): string {
+  if (!settings) {
+    throw new ShippingCarrierSettingsUnavailableError();
   }
 
-  return {
-    companyName: env.NOVA_POST_SENDER_COMPANY_NAME,
-    companyTin: env.NOVA_POST_SENDER_COMPANY_TIN,
-    countryCode: env.NOVA_POST_SENDER_COUNTRY_CODE ?? "",
-    divisionId: env.NOVA_POST_SENDER_DIVISION_ID ?? "",
-    email: env.NOVA_POST_SENDER_EMAIL,
-    name: env.NOVA_POST_SENDER_NAME ?? "",
-    payerContractNumber: env.NOVA_POST_PAYER_CONTRACT_NUMBER,
-    payerType: env.NOVA_POST_PAYER_TYPE as NovaPostPayerType | undefined,
-    phone: env.NOVA_POST_SENDER_PHONE ?? "",
-  };
-}
-
-function getNovaPostShipmentDefaults(
-  env: ServerEnv,
-): Partial<NovaPostShipmentDefaults> {
-  return {
-    actualWeightGrams: env.NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS,
-    heightMm: env.NOVA_POST_DEFAULT_HEIGHT_MM,
-    lengthMm: env.NOVA_POST_DEFAULT_LENGTH_MM,
-    volumetricWeightGrams: env.NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS,
-    widthMm: env.NOVA_POST_DEFAULT_WIDTH_MM,
-  };
+  return [
+    "owner-shipping-settings",
+    settings.ownerId,
+    settings.id,
+    settings.updatedAt.toISOString(),
+  ].join(":");
 }

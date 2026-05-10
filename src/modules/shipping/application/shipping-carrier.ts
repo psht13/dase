@@ -3,6 +3,15 @@ import type {
   ShipmentStatus,
 } from "@/modules/shipping/application/shipment-repository";
 
+export const publicDeliveryUnavailableMessage =
+  "Доставка тимчасово недоступна. Зверніться до продавця.";
+
+export const shipmentSettingsIncompleteMessage =
+  "Налаштування доставки не завершено. Відправлення не створено.";
+
+export const shipmentSettingsIncompleteSyncMessage =
+  "Налаштування доставки не завершено. Автоматичне оновлення не виконано.";
+
 export type ShippingCity = {
   id: string;
   name: string;
@@ -72,4 +81,20 @@ export interface ShippingCarrier {
   getShipmentStatus(input: ShipmentStatusInput): Promise<CarrierShipmentStatus>;
   searchCities(input: SearchCitiesInput): Promise<ShippingCity[]>;
   searchWarehouses(input: SearchWarehousesInput): Promise<ShippingWarehouse[]>;
+}
+
+export type ShippingCarrierResolutionContext = {
+  ownerId: string;
+};
+
+export type ShippingCarrierResolver = (
+  carrier: ShipmentCarrier,
+  context: ShippingCarrierResolutionContext,
+) => Promise<ShippingCarrier> | ShippingCarrier;
+
+export class ShippingCarrierSettingsUnavailableError extends Error {
+  constructor(message = shipmentSettingsIncompleteMessage) {
+    super(message);
+    this.name = "ShippingCarrierSettingsUnavailableError";
+  }
 }

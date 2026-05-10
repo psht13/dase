@@ -7,7 +7,11 @@ import { createShipmentJobUseCase } from "@/modules/shipping/application/create-
 import { enqueueShipmentCreationForReadyOrderUseCase } from "@/modules/shipping/application/enqueue-shipment-creation";
 import { ShipmentCreationRetryUnavailableError } from "@/modules/shipping/application/enqueue-shipment-creation";
 import { syncShipmentStatusJobUseCase } from "@/modules/shipping/application/sync-shipment-status-job";
-import type { ShippingCarrier } from "@/modules/shipping/application/shipping-carrier";
+import {
+  shipmentSettingsIncompleteMessage,
+  ShippingCarrierSettingsUnavailableError,
+  type ShippingCarrier,
+} from "@/modules/shipping/application/shipping-carrier";
 import { shippingLabelCreationDisabledMessage } from "@/modules/shipping/application/shipping-label-creation-mode";
 import { FixtureShippingCarrier } from "@/modules/shipping/infrastructure/fixture-shipping-carrier";
 import { InMemoryShipmentJobQueue } from "@/modules/shipping/infrastructure/in-memory-shipment-job-queue";
@@ -194,6 +198,7 @@ describe("shipment worker use cases", () => {
         trackingNumber: "20450000000000",
       })),
     });
+    const getShippingCarrier = vi.fn(() => carrier);
 
     await expect(
       createShipmentJobUseCase(
@@ -205,7 +210,7 @@ describe("shipment worker use cases", () => {
         },
         {
           ...context,
-          getShippingCarrier: () => carrier,
+          getShippingCarrier,
           now: () => now,
         },
       ),
@@ -226,6 +231,9 @@ describe("shipment worker use cases", () => {
         shipmentId: context.shipment.id,
       }),
     ]);
+    expect(getShippingCarrier).toHaveBeenCalledWith("NOVA_POSHTA", {
+      ownerId: context.order.ownerId,
+    });
   });
 
   it("marks shipment creation failures for retry", async () => {
@@ -323,15 +331,11 @@ describe("shipment worker use cases", () => {
     expect(getShippingCarrier).not.toHaveBeenCalled();
   });
 
-  it("fails live shipment creation before provider calls when config is missing", async () => {
+  it("fails shipment creation before provider calls when owner settings are unavailable", async () => {
     const context = await createContext({ orderStatus: "SHIPMENT_PENDING" });
-    const getShippingCarrier = vi.fn(() => createCarrier());
-    const validateLiveShipmentCreationConfig = vi.fn(() => ({
-      missingKeys: ["NOVA_POST_SENDER_DIVISION_ID"],
-      ok: false as const,
-      reason:
-        "Налаштування Нова пошта для створення відправлень неповні: NOVA_POST_SENDER_DIVISION_ID. Відправлення не створено.",
-    }));
+    const getShippingCarrier = vi.fn(() => {
+      throw new ShippingCarrierSettingsUnavailableError();
+    });
 
     await expect(
       createShipmentJobUseCase(
@@ -346,25 +350,23 @@ describe("shipment worker use cases", () => {
           getShippingCarrier,
           now: () => now,
           shippingLabelCreationMode: "live",
-          validateLiveShipmentCreationConfig,
         },
       ),
     ).resolves.toMatchObject({
       status: "FAILED",
       trackingNumber: null,
     });
-    expect(validateLiveShipmentCreationConfig).toHaveBeenCalledWith(
-      "NOVA_POSHTA",
-    );
-    expect(getShippingCarrier).not.toHaveBeenCalled();
+    expect(getShippingCarrier).toHaveBeenCalledWith("NOVA_POSHTA", {
+      ownerId: context.order.ownerId,
+    });
     await expect(
       context.auditEventRepository.listForOrder(context.order.id),
     ).resolves.toEqual([
       expect.objectContaining({
         eventType: "SHIPMENT_CREATION_FAILED",
         payload: expect.objectContaining({
-          missingConfigKeys: ["NOVA_POST_SENDER_DIVISION_ID"],
-          mode: "live",
+          message: shipmentSettingsIncompleteMessage,
+          reason: shipmentSettingsIncompleteMessage,
         }),
       }),
     ]);

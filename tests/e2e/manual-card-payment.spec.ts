@@ -3,6 +3,7 @@ import {
   createProduct,
   createPublicOrderLink,
   expectNoHorizontalOverflow,
+  saveOwnerShippingSettings,
   seedSession,
 } from "./helpers";
 
@@ -10,6 +11,7 @@ test("owner creates payment requisites and customer sees online card payment", a
   page,
 }) => {
   await seedSession(page, "owner");
+  await saveOwnerShippingSettings(page);
   const stamp = Date.now();
   const productName = `Підвіска оплата ${stamp}`;
   const paymentValue = "4441 1111 2222 3333";

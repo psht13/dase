@@ -63,6 +63,7 @@ export default async function PublicDeliveryPage({
         action={confirmDeliveryAction.bind(null, token)}
         cancelHref={`/o/${result.order.publicToken}`}
         paymentRequisites={result.order.paymentRequisites}
+        publicToken={result.order.publicToken}
       />
     </PageShell>
   );

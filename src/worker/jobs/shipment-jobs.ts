@@ -16,7 +16,6 @@ import { getShipmentRepository } from "@/modules/shipping/infrastructure/shipmen
 import {
   getShippingCarrier,
   getShippingLabelCreationMode,
-  validateLiveShipmentCreationConfig,
 } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
 import { getWorkerEnv } from "@/shared/config/env";
 
@@ -45,7 +44,6 @@ export async function registerShipmentWorkers(boss: PgBoss): Promise<void> {
             shippingLabelCreationMode: getShippingLabelCreationMode(),
             shipmentJobQueue: dependencies.shipmentJobQueue,
             shipmentRepository: dependencies.shipmentRepository,
-            validateLiveShipmentCreationConfig,
           });
         }
       },

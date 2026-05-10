@@ -1,7 +1,19 @@
 import { GET } from "@/app/api/carriers/warehouses/route";
+import type { PersistedOrder } from "@/modules/orders/application/order-repository";
+import { getOrderRepository } from "@/modules/orders/infrastructure/order-repository-factory";
+import {
+  publicDeliveryUnavailableMessage,
+  ShippingCarrierSettingsUnavailableError,
+} from "@/modules/shipping/application/shipping-carrier";
 import { getCarrierDirectoryCacheRepository } from "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory";
 import { ShippingCarrierApiError } from "@/modules/shipping/infrastructure/shipping-carrier-api-error";
-import { getShippingCarrier } from "@/modules/shipping/infrastructure/shipping-carrier-factory";
+import {
+  resolveShippingCarrierForOwner,
+} from "@/modules/shipping/infrastructure/shipping-carrier-factory";
+
+vi.mock("@/modules/orders/infrastructure/order-repository-factory", () => ({
+  getOrderRepository: vi.fn(),
+}));
 
 vi.mock(
   "@/modules/shipping/infrastructure/carrier-directory-cache-repository-factory",
@@ -11,11 +23,14 @@ vi.mock(
 );
 
 vi.mock("@/modules/shipping/infrastructure/shipping-carrier-factory", () => ({
-  getShippingCarrier: vi.fn(),
+  resolveShippingCarrierForOwner: vi.fn(),
 }));
 
 describe("GET /api/carriers/warehouses", () => {
   beforeEach(() => {
+    vi.mocked(getOrderRepository).mockReturnValue({
+      findByPublicToken: vi.fn(async () => createOrder()),
+    } as never);
     vi.mocked(getCarrierDirectoryCacheRepository).mockReturnValue({
       findFresh: vi.fn(async () => null),
       upsert: vi.fn(async (entry) => ({
@@ -25,20 +40,23 @@ describe("GET /api/carriers/warehouses", () => {
         updatedAt: new Date("2026-04-30T10:00:00.000Z"),
       })),
     } as never);
-    vi.mocked(getShippingCarrier).mockReturnValue({
-      createShipment: vi.fn(),
-      getShipmentStatus: vi.fn(),
-      searchCities: vi.fn(),
-      searchWarehouses: vi.fn(async () => [
-        {
-          address: "вул. Хрещатик, 1",
-          cityId: "city-1",
-          id: "warehouse-1",
-          name: "Відділення №1",
-          number: "1",
-          type: "warehouse",
-        },
-      ]),
+    vi.mocked(resolveShippingCarrierForOwner).mockResolvedValue({
+      cacheScopeKey: "owner-shipping-settings:owner-1:settings-1:2026-05-10",
+      shippingCarrier: {
+        createShipment: vi.fn(),
+        getShipmentStatus: vi.fn(),
+        searchCities: vi.fn(),
+        searchWarehouses: vi.fn(async () => [
+          {
+            address: "вул. Хрещатик, 1",
+            cityId: "city-1",
+            id: "warehouse-1",
+            name: "Відділення №1",
+            number: "1",
+            type: "warehouse",
+          },
+        ]),
+      },
     } as never);
   });
 
@@ -46,10 +64,10 @@ describe("GET /api/carriers/warehouses", () => {
     vi.clearAllMocks();
   });
 
-  it("returns internal warehouse DTOs", async () => {
+  it("uses public token to resolve the order owner before returning warehouses", async () => {
     const response = await GET(
       new Request(
-        "https://dase.test/api/carriers/warehouses?carrier=NOVA_POSHTA&cityId=city-1&query=1",
+        "https://dase.test/api/carriers/warehouses?carrier=NOVA_POSHTA&cityId=city-1&query=1&token=secure_public_token_123456789012345&ownerId=attacker-owner",
       ),
     );
 
@@ -65,6 +83,10 @@ describe("GET /api/carriers/warehouses", () => {
         },
       ],
     });
+    expect(resolveShippingCarrierForOwner).toHaveBeenCalledWith(
+      "NOVA_POSHTA",
+      { ownerId: "owner-1" },
+    );
   });
 
   it("rejects unsupported carriers with Ukrainian feedback", async () => {
@@ -81,30 +103,50 @@ describe("GET /api/carriers/warehouses", () => {
   it("rejects disabled carriers with Ukrainian feedback", async () => {
     const response = await GET(
       new Request(
-        "https://dase.test/api/carriers/warehouses?carrier=UKRPOSHTA&cityId=city-1",
+        "https://dase.test/api/carriers/warehouses?carrier=UKRPOSHTA&cityId=city-1&token=secure_public_token_123456789012345",
       ),
     );
 
     expect(response.status).toBe(400);
-    expect(getShippingCarrier).not.toHaveBeenCalled();
+    expect(resolveShippingCarrierForOwner).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({
       message: "Службу доставки тимчасово вимкнено",
     });
   });
 
+  it("returns public-safe feedback when settings are missing", async () => {
+    vi.mocked(resolveShippingCarrierForOwner).mockRejectedValue(
+      new ShippingCarrierSettingsUnavailableError(),
+    );
+
+    const response = await GET(
+      new Request(
+        "https://dase.test/api/carriers/warehouses?carrier=NOVA_POSHTA&cityId=city-1&query=1&token=secure_public_token_123456789012345",
+      ),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      message: publicDeliveryUnavailableMessage,
+    });
+  });
+
   it("maps provider errors to safe Ukrainian feedback", async () => {
-    vi.mocked(getShippingCarrier).mockReturnValue({
-      createShipment: vi.fn(),
-      getShipmentStatus: vi.fn(),
-      searchCities: vi.fn(),
-      searchWarehouses: vi.fn(async () => {
-        throw new ShippingCarrierApiError("provider raw failure");
-      }),
+    vi.mocked(resolveShippingCarrierForOwner).mockResolvedValue({
+      cacheScopeKey: "owner-shipping-settings:owner-1:settings-1:2026-05-10",
+      shippingCarrier: {
+        createShipment: vi.fn(),
+        getShipmentStatus: vi.fn(),
+        searchCities: vi.fn(),
+        searchWarehouses: vi.fn(async () => {
+          throw new ShippingCarrierApiError("provider raw failure");
+        }),
+      },
     } as never);
 
     const response = await GET(
       new Request(
-        "https://dase.test/api/carriers/warehouses?carrier=NOVA_POSHTA&cityId=city-1&query=1",
+        "https://dase.test/api/carriers/warehouses?carrier=NOVA_POSHTA&cityId=city-1&query=1&token=secure_public_token_123456789012345",
       ),
     );
 
@@ -114,3 +156,21 @@ describe("GET /api/carriers/warehouses", () => {
     });
   });
 });
+
+function createOrder(): PersistedOrder {
+  return {
+    confirmedAt: null,
+    createdAt: new Date("2026-05-10T10:00:00.000Z"),
+    currency: "UAH",
+    customerId: null,
+    id: "order-1",
+    items: [],
+    ownerId: "owner-1",
+    publicToken: "secure_public_token_123456789012345",
+    publicTokenExpiresAt: new Date("2026-05-20T10:00:00.000Z"),
+    sentAt: new Date("2026-05-10T10:00:00.000Z"),
+    status: "SENT_TO_CUSTOMER",
+    totalMinor: 2_400_00,
+    updatedAt: new Date("2026-05-10T10:00:00.000Z"),
+  };
+}

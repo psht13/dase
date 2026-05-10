@@ -187,7 +187,19 @@ describe("runtime environment validation", () => {
     ).toThrow(/SHIPPING_LABEL_CREATION_MODE=mock is not allowed/);
   });
 
-  it("parses Nova Post v1 configuration for live shipping mode", () => {
+  it("allows live shipping mode to rely on encrypted owner Nova Post settings", () => {
+    const env = validateWorkerEnv({
+      AUTO_COMPLETE_AFTER_DELIVERED_HOURS: "24",
+      DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
+      NODE_ENV: "production",
+      SHIPPING_LABEL_CREATION_MODE: "live",
+    });
+
+    expect(env.NOVA_POST_API_KEY).toBeUndefined();
+    expect(env.SHIPPING_LABEL_CREATION_MODE).toBe("live");
+  });
+
+  it("still parses transitional Nova Post values when present without requiring them", () => {
     const env = validateWorkerEnv({
       AUTO_COMPLETE_AFTER_DELIVERED_HOURS: "24",
       DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
@@ -217,36 +229,6 @@ describe("runtime environment validation", () => {
     expect(env.NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS).toBe(750);
     expect(env.NOVA_POST_SENDER_EMAIL).toBeUndefined();
     expect(env.SHIPPING_LABEL_CREATION_MODE).toBe("live");
-  });
-
-  it("requires complete Nova Post settings in live shipping mode", () => {
-    expect(() =>
-      validateWorkerEnv({
-        AUTO_COMPLETE_AFTER_DELIVERED_HOURS: "24",
-        DATABASE_URL: "postgres://user:pass@example.com:5432/dase",
-        NODE_ENV: "production",
-        NOVA_POST_API_KEY: "nova-key",
-        SHIPPING_LABEL_CREATION_MODE: "live",
-      }),
-    ).toThrow(/NOVA_POST_SENDER_DIVISION_ID is required/);
-
-    expect(() =>
-      validateServerEnv({
-        NODE_ENV: "development",
-        NOVA_POST_API_KEY: "nova-key",
-        NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS: "500",
-        NOVA_POST_DEFAULT_HEIGHT_MM: "100",
-        NOVA_POST_DEFAULT_LENGTH_MM: "300",
-        NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS: "500",
-        NOVA_POST_DEFAULT_WIDTH_MM: "200",
-        NOVA_POST_PAYER_TYPE: "ThirdPerson",
-        NOVA_POST_SENDER_COUNTRY_CODE: "UA",
-        NOVA_POST_SENDER_DIVISION_ID: "11759",
-        NOVA_POST_SENDER_NAME: "Тестова Тетяна",
-        NOVA_POST_SENDER_PHONE: "380007654321",
-        SHIPPING_LABEL_CREATION_MODE: "live",
-      }),
-    ).toThrow(/NOVA_POST_PAYER_CONTRACT_NUMBER is required/);
   });
 
   it("keeps missing-env errors explicit without secret values", () => {
