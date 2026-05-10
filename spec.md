@@ -1007,6 +1007,24 @@ Resolution:
 - The remaining owner setup status is unchanged from DB-03: the first production `owner` still needs to be created through `/setup` with `OWNER_SETUP_TOKEN`.
 - Local verification after the DB-04 documentation update passed: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage` with 404 tests passed and 88.99% statements/lines, 81.44% branches, and 89.76% functions, `pnpm test:e2e` with 22 passed and the opt-in production smoke skipped, and `pnpm build`.
 
+## ENV-00 environment cleanup audit on 2026-05-10
+
+Completed a docs-only audit before moving shipping/payment configuration out of environment variables. The detailed audit is in `docs/audits/env-cleanup.md`.
+
+Current findings:
+- Monobank/MonoPay env names are still documented and parsed for historical webhook/retry code, but Monobank is not part of the active customer payment flow.
+- Nova Post API, auth URL, sender, payer, and parcel defaults are still parsed from env and used by the current Nova Post carrier factory.
+- `NOVA_POSHTA_*` compatibility env names are still accepted by code and tracked docs.
+- `SHIPPING_LABEL_CREATION_MODE` is still a global runtime switch and should be kept only as a global kill switch if retained after owner settings are implemented.
+- Railway `web` and `worker` currently have Nova Post env-backed configuration names that should be deleted only after code reads owner settings from the database.
+- Ignored local `.env`, `.env.test.local`, and `.env.production.local` contain Nova Post env-backed configuration names that should be removed only after code support lands.
+
+Planned direction:
+- Add owner-scoped encrypted Nova Post settings backed by a new `APP_ENCRYPTION_KEY`.
+- Add owner shipping settings UI alongside the existing payment settings pattern.
+- Refactor public carrier lookups and worker shipment creation to resolve Nova Post settings by owner/order context.
+- Remove deprecated Monobank and Nova Post env validation/docs in a later cleanup step after runtime code no longer depends on those names.
+
 ## Commands
 
 Configured commands:
