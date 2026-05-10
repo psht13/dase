@@ -52,7 +52,7 @@ Monobank/MonoPay is no longer part of the active customer payment flow. The acti
 | `USE_MOCK_SHIPPING_CARRIERS` | `.env.example`, `README.md`, `src/modules/shipping/infrastructure/shipping-carrier-factory.ts`, factory tests, local `.env` and `.env.test.local` | Keep test/dev-only only if still needed after owner settings. Prefer explicit test adapters and Playwright overrides. |
 | `UKRPOSHTA` | DB enums, shipping registry, labels, route tests, owner list/detail tests, docs | Not an env key. Keep readable for historical records while disabled, or handle through a later safe carrier enum migration. |
 
-No `APP_ENCRYPTION_KEY` reference exists yet.
+At ENV-00 audit time, no `APP_ENCRYPTION_KEY` reference existed yet.
 
 ## Runtime Reference Map
 
@@ -303,7 +303,7 @@ Operational cleanup later:
 - Add production `APP_ENCRYPTION_KEY`.
 - Verify production owner settings save/read, directory lookup, shipment creation, and disabled/kill-switch behavior without printing secrets.
 
-No operational cleanup was performed in this audit.
+No operational cleanup was performed during the ENV-00 audit.
 
 ## ENV-04 Tracked Cleanup Result
 
@@ -316,3 +316,42 @@ Completed on 2026-05-10 for tracked code and documentation only.
 - Active shipping runtime continues to resolve Nova Post from encrypted owner settings. `SHIPPING_LABEL_CREATION_MODE` remains as the global kill switch.
 - Existing migrations and Drizzle snapshots still contain historical enum values such as `MONOBANK` and `NOVA_POSHTA`; they were not rewritten or made destructive.
 - This milestone did not delete Railway variables, edit ignored local env files, redeploy production, run a migration helper, or perform final production smoke.
+
+## ENV-05 Operational Cleanup Result
+
+Completed on 2026-05-10 for ignored local env files and Railway production variables.
+
+Secret handling:
+- Local and Railway values were not printed or copied into tracked files.
+- Railway and local env inventories were recorded by key name only.
+- Ignored env files remain untracked and were not committed.
+
+Local ignored env files:
+- Checked files: `.env`, `.env.local`, `.env.test.local`, `.env.production`, `.env.production.local`.
+- Present and edited: `.env`, `.env.test.local`, `.env.production.local`.
+- Not present: `.env.local`, `.env.production`.
+- Removed key names from present local files: `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, `NOVA_POST_SENDER_COUNTRY_CODE`, `NOVA_POST_SENDER_DIVISION_ID`, `NOVA_POST_SENDER_NAME`, `NOVA_POST_SENDER_PHONE`, `NOVA_POST_PAYER_TYPE`, `NOVA_POST_DEFAULT_WIDTH_MM`, `NOVA_POST_DEFAULT_LENGTH_MM`, `NOVA_POST_DEFAULT_HEIGHT_MM`, `NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS`, and `NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS`.
+- No local `MONOBANK_*`, `NOVA_POSHTA_*`, `NOVA_POST_AUTH_URL`, `NOVA_POST_SENDER_EMAIL`, `NOVA_POST_SENDER_COMPANY_TIN`, `NOVA_POST_SENDER_COMPANY_NAME`, or `NOVA_POST_PAYER_CONTRACT_NUMBER` entries were present during ENV-05 cleanup.
+- Added generated development/test `APP_ENCRYPTION_KEY` entries to `.env` and `.env.test.local`.
+- Added a placeholder comment for `APP_ENCRYPTION_KEY` in `.env.production.local`; a production secret was not invented or copied into the local production file.
+- File permissions for present ignored env files were set to `600`.
+
+Railway production variables:
+- Railway MCP authentication passed before live variable work.
+- Inspected production services: `web` and `worker`.
+- Removed deprecated key names from `web`: `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, `NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS`, `NOVA_POST_DEFAULT_HEIGHT_MM`, `NOVA_POST_DEFAULT_LENGTH_MM`, `NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS`, `NOVA_POST_DEFAULT_WIDTH_MM`, `NOVA_POST_PAYER_TYPE`, `NOVA_POST_SENDER_COUNTRY_CODE`, `NOVA_POST_SENDER_DIVISION_ID`, `NOVA_POST_SENDER_NAME`, and `NOVA_POST_SENDER_PHONE`.
+- Removed deprecated key names from `worker`: `NOVA_POST_API_KEY`, `NOVA_POST_API_URL`, `NOVA_POST_DEFAULT_ACTUAL_WEIGHT_GRAMS`, `NOVA_POST_DEFAULT_HEIGHT_MM`, `NOVA_POST_DEFAULT_LENGTH_MM`, `NOVA_POST_DEFAULT_VOLUMETRIC_WEIGHT_GRAMS`, `NOVA_POST_DEFAULT_WIDTH_MM`, `NOVA_POST_PAYER_TYPE`, `NOVA_POST_SENDER_COUNTRY_CODE`, `NOVA_POST_SENDER_DIVISION_ID`, `NOVA_POST_SENDER_NAME`, and `NOVA_POST_SENDER_PHONE`.
+- No `MONOBANK_*`, `NOVA_POSHTA_*`, `NOVA_POST_AUTH_URL`, `NOVA_POST_SENDER_EMAIL`, `NOVA_POST_SENDER_COMPANY_TIN`, `NOVA_POST_SENDER_COMPANY_NAME`, or `NOVA_POST_PAYER_CONTRACT_NUMBER` entries remained after cleanup.
+- Required production `web` variables are present by name: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `OWNER_SETUP_TOKEN`, `APP_ENCRYPTION_KEY`, and `SHIPPING_LABEL_CREATION_MODE`.
+- Required production `worker` variables are present by name: `DATABASE_URL`, `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`, `APP_ENCRYPTION_KEY`, and `SHIPPING_LABEL_CREATION_MODE`.
+- `APP_ENCRYPTION_KEY` was generated once, set on both `web` and `worker`, and verified to differ from `BETTER_AUTH_SECRET`.
+- `SHIPPING_LABEL_CREATION_MODE` was set to `disabled` on both `web` and `worker` until owner shipping settings are saved and verified for a deliberate live-shipping cutover.
+
+Railway verification:
+- Latest ENV-05 Railway `web` deployment succeeded from GitHub `main` commit `74e82b487e7d0182df4f0179d005890034ab959d`; deployment id `b6dd81bd-8c5e-4a12-9e37-fa5905ddd18e`.
+- Latest ENV-05 Railway `worker` deployment succeeded from the same GitHub commit; deployment id `3eaa4437-f2ac-49f9-b458-4ffbac9eadec`.
+- `https://web-production-26609.up.railway.app/api/health` returned `status: ok`.
+- `web` deploy logs showed migrations applied successfully and the Next.js server ready.
+- Filtered `web` and `worker` logs did not show missing Nova Post env errors after cleanup.
+- `worker` deploy logs included `Shipment worker is ready.`
+- Local Playwright coverage verifies `/dashboard/settings/shipping` opens for a seeded owner and remains denied for a `user` role; no authenticated production smoke was run in ENV-05.

@@ -969,10 +969,10 @@ Secret handling:
 - Production payment and shipping API secrets were not copied into local env files.
 - Playwright local E2E now explicitly blanks `DATABASE_URL` and `DATABASE_URL_TEST` for the dev server while `PLAYWRIGHT_E2E=1`, so browser tests keep using isolated in-memory repositories even when local ignored env files contain Railway database URLs.
 
-Shipping creation update on 2026-05-09:
-- `.env`, `.env.test.local`, and `.env.production.local` now use `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API.
-- The local ignored env files include non-secret test sender, payer, and parcel defaults required by live shipment validation. Secret values remain ignored and were not printed.
-- Explicit `SHIPPING_LABEL_CREATION_MODE=live` overrides local mock-carrier flags, so local city/warehouse search uses the Nova Post adapter instead of fixture data.
+Shipping creation update on 2026-05-09, superseded by ENV-05 on 2026-05-10:
+- Local ignored env files previously carried env-backed Nova Post stage/test API and sender/default values for live validation.
+- ENV-05 removed those owner-managed Nova Post key names from `.env`, `.env.test.local`, and `.env.production.local` after runtime switched to encrypted owner settings.
+- `.env` and `.env.test.local` now carry local development/test `APP_ENCRYPTION_KEY` values; `.env.production.local` contains only a placeholder comment for the production encryption key.
 - Playwright local E2E still overrides the dev server to `SHIPPING_LABEL_CREATION_MODE=disabled`, so automated browser tests do not call Nova Post.
 
 Documentation:
@@ -1060,6 +1060,30 @@ Current state:
 - `SHIPPING_LABEL_CREATION_MODE` remains as a global kill switch: `disabled`, `mock`, or `live`.
 - No Railway variables, ignored local env files, production data, or unsafe DB enum history were deleted in this milestone.
 
+## ENV-05 operational environment cleanup on 2026-05-10
+
+Completed operational cleanup of deprecated ignored local env files and Railway production variables after ENV-04 removed the active runtime dependency on those names.
+
+Local ignored env result:
+- Checked `.env`, `.env.local`, `.env.test.local`, `.env.production`, and `.env.production.local`.
+- Edited only existing ignored files: `.env`, `.env.test.local`, and `.env.production.local`.
+- Removed deprecated owner-managed Nova Post key names from the existing ignored files. No `MONOBANK_*`, `NOVA_POSHTA_*`, or `NOVA_POST_AUTH_URL` key names were present locally during ENV-05.
+- Added generated local development/test `APP_ENCRYPTION_KEY` values to `.env` and `.env.test.local`.
+- Left `.env.production.local` with a placeholder comment for `APP_ENCRYPTION_KEY`; a production secret was not invented or copied into the file.
+- Existing ignored env files were set to mode `600` and were not committed.
+
+Railway result:
+- Railway MCP authentication passed before cleanup, and Railway production services `web` and `worker` were inspected without printing secret values.
+- Removed deprecated owner-managed Nova Post key names from both `web` and `worker`.
+- Verified no deprecated `MONOBANK_*`, `NOVA_POSHTA_*`, `NOVA_POST_API_*`, `NOVA_POST_AUTH_URL`, `NOVA_POST_SENDER_*`, `NOVA_POST_PAYER_*`, or `NOVA_POST_DEFAULT_*` names remain on the app services.
+- Generated one production `APP_ENCRYPTION_KEY`, set it on `web` and `worker`, and verified it is not reused from `BETTER_AUTH_SECRET`.
+- Verified required variables are present by name: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `OWNER_SETUP_TOKEN`, `APP_ENCRYPTION_KEY`, and `SHIPPING_LABEL_CREATION_MODE` for `web`; `DATABASE_URL`, `AUTO_COMPLETE_AFTER_DELIVERED_HOURS`, `APP_ENCRYPTION_KEY`, and `SHIPPING_LABEL_CREATION_MODE` for `worker`.
+- Set `SHIPPING_LABEL_CREATION_MODE=disabled` on `web` and `worker` until owner shipping settings are saved and verified for a deliberate live shipment cutover.
+- Latest ENV-05 Railway deploys succeeded from GitHub commit `74e82b487e7d0182df4f0179d005890034ab959d`: `web` deployment `b6dd81bd-8c5e-4a12-9e37-fa5905ddd18e` and `worker` deployment `3eaa4437-f2ac-49f9-b458-4ffbac9eadec`.
+- `/api/health` returned `status: ok`; web deploy logs showed migrations applied successfully and the Next.js server ready; worker deploy logs included `Shipment worker is ready.`
+- Filtered app logs did not show missing Nova Post env errors after cleanup.
+- Authenticated final production smoke remains intentionally out of ENV-05 scope. Local Playwright coverage verifies `/dashboard/settings/shipping` for a seeded owner and denies `user` role access.
+
 ## Commands
 
 Configured commands:
@@ -1099,7 +1123,7 @@ BETTER_AUTH_URL= # production web
 OWNER_SETUP_TOKEN= # production web setup path only while first-owner setup is available
 APP_ENCRYPTION_KEY= # required to save/decrypt owner Nova Post settings
 
-SHIPPING_LABEL_CREATION_MODE=live
+SHIPPING_LABEL_CREATION_MODE=disabled
 
 # Nova Post API key, endpoint, sender, payer, and parcel defaults are owner
 # settings saved from /dashboard/settings/shipping, not runtime env vars.
@@ -1298,8 +1322,8 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 
 ## Open questions
 
-- Nova Post owner settings now back active public lookup and worker shipment creation. Production `web` and `worker` should not keep deprecated owner-managed shipping variables after the matching operational cleanup.
-- Production shipping label creation is currently enabled through `SHIPPING_LABEL_CREATION_MODE=live` against the Nova Post stage/test API; switch to the production Nova Post API only after a deliberate production shipping cutover.
+- Production `web` and `worker` no longer keep deprecated owner-managed shipping variables after ENV-05 cleanup.
+- Production shipping label creation is currently disabled through `SHIPPING_LABEL_CREATION_MODE=disabled`; enable `live` only after saving complete owner Nova Post settings and planning a deliberate production shipping cutover.
 - Future Ukrposhta reintroduction requires practical test/production API access, sender/client/address workflow confirmation, shipment/package details, payer settings, label decisions, and enabling the carrier through the central registry.
 - Whether to reserve stock when order link is created or only after customer confirms.
 - Cash on delivery now enqueues shipment creation after customer confirmation.
@@ -1308,7 +1332,7 @@ Do not use Conventional Commits prefixes like `feat:`, `fix:`, `docs:`, or `chor
 ## Known limitations
 
 - Authenticated production smoke testing requires temporary local `E2E_PROD_EMAIL` and `E2E_PROD_PASSWORD` values. They were not present during Prompt 09 final QA, so only unauthenticated production health was verified live on 2026-05-08.
-- Production external API credentials and Nova Post sender settings are not present in the repository. Nova Post API keys must be saved as encrypted owner settings after `APP_ENCRYPTION_KEY` is configured.
+- Production external API credentials and Nova Post sender settings are not present in the repository. Nova Post API keys must be saved as encrypted owner settings; `APP_ENCRYPTION_KEY` is configured in Railway but its value is never stored in tracked files.
 - Automated tests use MSW, fixtures, and in-memory adapters for external integrations; live Nova Post behavior still needs a low-risk production smoke test after owner settings are configured.
 - Product images are external image URLs only. Binary uploads and object storage are intentionally out of scope for this release candidate.
 - Stock reservation timing is still an open product decision.

@@ -62,7 +62,7 @@ Owner-managed Nova Post settings:
 - Railway `web` and `worker` should not keep deprecated payment variables or owner-managed Nova Post API, sender, payer, or parcel variables. Keep shipping credentials in owner settings and keep secrets out of tracked files.
 - The API key is encrypted in `owner_shipping_settings.api_key_encrypted`; read models expose only `api_key_preview`, for example the last four characters with masking.
 - The supported API environments are stage/test `https://api-stage.novapost.pl/v.1.0/`, production global `https://api.novapost.com/v.1.0/`, production Ukraine `https://api.novaposhta.ua/v.1.0/`, and custom HTTPS URL.
-- ENV-01 added the encrypted database model and application repositories, ENV-02 added the owner UI and dashboard connection test, and ENV-03 switched public lookup and worker carrier runtime to owner settings. Railway/local variable cleanup remains intentionally left for ENV-04.
+- ENV-01 added the encrypted database model and application repositories, ENV-02 added the owner UI and dashboard connection test, ENV-03 switched public lookup and worker carrier runtime to owner settings, ENV-04 removed deprecated tracked env parsing/docs, and ENV-05 removed deprecated ignored local and Railway variables.
 - Official Nova Post references:
   - https://api-portal.novapost.com/en/about-api/general/
   - https://api-portal.novapost.com/en/api-nova-post/start/api-keys/
@@ -240,6 +240,8 @@ Completed live setup:
 - `web` uses `/railway.json`, `pnpm build`, `pnpm db:migrate`, `pnpm start`, and `/api/health`.
 - `worker` uses `/railway.worker.json`, `pnpm build`, and `pnpm worker:start`.
 - Required runtime variables were set securely in Railway variables, including `DATABASE_URL` as a Railway reference to `Postgres-1P5k` for production `web` and `worker`.
+- ENV-05 configured `APP_ENCRYPTION_KEY` on production `web` and `worker`, removed deprecated `MONOBANK_*`, `NOVA_POSHTA_*`, and owner-managed `NOVA_POST_*` variables from app services where present, and set `SHIPPING_LABEL_CREATION_MODE=disabled` on both app services until owner shipping settings are saved and verified for a deliberate live cutover.
+- Latest ENV-05 Railway deployments succeeded from GitHub commit `74e82b487e7d0182df4f0179d005890034ab959d`: `web` deployment `b6dd81bd-8c5e-4a12-9e37-fa5905ddd18e` and `worker` deployment `3eaa4437-f2ac-49f9-b458-4ffbac9eadec`.
 - `OWNER_SETUP_TOKEN` was configured securely on 2026-04-30 with deploy triggering skipped; current runtime validation requires it only for the production `web` first-owner setup path. The `worker` no longer requires login/setup-only secrets. Do not expose the value in logs or commits.
 - Railway web domain: https://web-production-26609.up.railway.app
 - Web health check verified: `/api/health` returns `status: ok`.
@@ -248,7 +250,7 @@ Completed live setup:
 - Нова production база досі не має жодного `owner` після DB-03 перевірки; створіть першого власника через `/setup` з `OWNER_SETUP_TOKEN`.
 
 Remaining manual production verification:
-- Nova Post owner settings and live shipment creation mode are configured through dashboard settings plus the global kill switch. Run a low-risk shipment smoke test after creating the first `owner`.
+- Nova Post owner settings must be configured through dashboard settings plus the global kill switch. `SHIPPING_LABEL_CREATION_MODE` is currently disabled after ENV-05 cleanup; enable `live` only after creating the first `owner`, saving complete owner Nova Post settings, and planning a low-risk shipment smoke test.
 - Do not configure Ukrposhta for the active MVP; re-enable a future carrier only through the central carrier registry and updated deployment docs.
 - Run the external API checklist above with low-risk production test data.
 
@@ -351,14 +353,14 @@ Resolution:
 - Owner setup статус незмінний: першого production `owner` треба створити через `/setup` з `OWNER_SETUP_TOKEN`, коли буде явний дозвіл створити реальний production акаунт.
 - Local verification після DB-04 документації пройшла: `pnpm lint`, `pnpm typecheck`, `pnpm test:coverage`, `pnpm test:e2e`, і `pnpm build`.
 
-## Shipping creation mode enabled for Nova Post stage/test
+## ENV-05 deployment environment cleanup
 
-Оновлено 2026-05-09 після підтвердження, що інтеграція Nova Post використовує stage/test API.
+Оновлено 2026-05-10 після tracked ENV-04 cleanup.
 
-- Railway production `web` і `worker` отримали `SHIPPING_LABEL_CREATION_MODE=live`.
-- На обох сервісах налаштовано Nova Post stage/test API host, sender country, test sender division/name/phone, payer type `Recipient`, and parcel dimension/weight defaults.
-- Локальні ignored файли `.env`, `.env.test.local`, and `.env.production.local` також переведені на `SHIPPING_LABEL_CREATION_MODE=live` з тими самими test sender/payer/parcel defaults.
-- Для локального live режиму `USE_MOCK_SHIPPING_CARRIERS` має бути порожнім; explicit `SHIPPING_LABEL_CREATION_MODE=live` використовує Nova Post adapter, а не fixture carrier.
-- Значення Nova Post API key, database URLs, auth secrets, and owner setup token не друкувалися і не додавалися у tracked files.
+- Railway production `web` і `worker` більше не містять deprecated owner-managed Nova Post API, sender, payer, or parcel-default variables by name.
+- Railway production `web` і `worker` мають `APP_ENCRYPTION_KEY` configured securely without exposing the value in logs or tracked files.
+- Railway production `web` і `worker` мають `SHIPPING_LABEL_CREATION_MODE=disabled`, щоб заблокувати live label creation до завершення owner settings setup і окремого live cutover.
+- Локальні ignored файли `.env`, `.env.test.local`, and `.env.production.local` were cleaned of deprecated owner-managed Nova Post key names. `.env` and `.env.test.local` received generated development/test `APP_ENCRYPTION_KEY` values; `.env.production.local` received only a placeholder comment for the production key.
+- Локальні ignored env файли залишаються untracked and mode `600`; їхні значення не друкувалися і не додавалися у tracked files.
+- Latest ENV-05 Railway deployments succeeded for `web` and `worker`, `/api/health` returns `status: ok`, and worker deploy logs include `Shipment worker is ready.`
 - Playwright e2e залишається ізольованим: `playwright.config.ts` явно задає `SHIPPING_LABEL_CREATION_MODE=disabled`, тому автоматизовані тести не викликають live Nova Post API.
-- ENV-03 supersedes the env-backed Nova Post runtime path: active shipping runtime now reads encrypted owner settings from the database. Delete the older Nova Post Railway/local variables only during ENV-04 operational cleanup.
