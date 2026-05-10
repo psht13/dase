@@ -91,7 +91,10 @@ Test-only variables that must not be enabled in production:
 - `USE_MOCK_SHIPPING_CARRIERS`
 - `DATABASE_URL_TEST`
 
-Manual production smoke-test variables that must be set only in the local shell running the smoke test, not in Railway production runtime config:
+Manual authenticated smoke-test variables that must be set only in the local shell running the smoke test, not in Railway production runtime config:
+- `RUN_AUTH_SMOKE`
+- `E2E_AUTH_EMAIL`
+- `E2E_AUTH_PASSWORD`
 - `RUN_PROD_SMOKE`
 - `E2E_PROD_EMAIL`
 - `E2E_PROD_PASSWORD`
@@ -197,6 +200,24 @@ pnpm test:e2e:prod
 ```
 
 The smoke test opens the Railway production URL, signs in, verifies `/dashboard`, `/dashboard/products`, and `/dashboard/orders`, logs out through the POST logout button, asserts the browser ends at `https://web-production-26609.up.railway.app/login?logout=1`, and fails if any browser request targets `https://localhost:8080`.
+
+For a DB-backed local or test environment, store the account only in an ignored
+env file such as `.env.test.local`:
+
+```bash
+E2E_AUTH_EMAIL='owner@example.com'
+E2E_AUTH_PASSWORD='temporary-password'
+```
+
+Run the auth smoke against an isolated local port:
+
+```bash
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3300 pnpm test:e2e:auth
+```
+
+`RUN_AUTH_SMOKE=1` uses the configured database and real login instead of the
+in-memory `PLAYWRIGHT_E2E=1` fallback. It still disables shipment creation for
+the dev server so the login smoke never calls live carrier APIs.
 
 ## Створення першого owner у production
 

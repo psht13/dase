@@ -107,3 +107,17 @@ pnpm test:e2e:prod
 ```
 
 Do not commit or store the production smoke credentials in repo files or Railway runtime variables.
+
+For a DB-backed local/test environment, put the owner account only in an ignored
+env file such as `.env.test.local`:
+
+```bash
+E2E_AUTH_EMAIL='owner@example.com'
+E2E_AUTH_PASSWORD='temporary-password'
+```
+
+Then run the authenticated smoke against an isolated local port:
+
+```bash
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3300 pnpm test:e2e:auth
+```

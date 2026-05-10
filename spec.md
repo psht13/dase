@@ -1031,6 +1031,7 @@ Current command status:
 - `pnpm db:generate` was verified and generated Drizzle migrations through `drizzle/0003_kind_deathstrike.sql`.
 - `pnpm db:migrate` requires a secure `DATABASE_URL`; Railway web deployments run it as the pre-deploy command against Railway PostgreSQL.
 - `pnpm worker:start` requires a secure `DATABASE_URL` and explicit `AUTO_COMPLETE_AFTER_DELIVERED_HOURS` in production; the Railway worker service starts successfully with the Railway PostgreSQL reference configured.
+- `pnpm test:e2e:auth` is an opt-in DB-backed auth smoke wrapper for `RUN_AUTH_SMOKE=1`, credentials loaded from ignored `.env.test.local`, and a local/test `PLAYWRIGHT_BASE_URL`.
 - `pnpm test:e2e:prod` is an opt-in production auth smoke wrapper for `RUN_PROD_SMOKE=1`, `PLAYWRIGHT_BASE_URL=https://web-production-26609.up.railway.app`, and temporary local `E2E_PROD_EMAIL` / `E2E_PROD_PASSWORD` credentials.
 - Required local checks are available through pnpm scripts.
 
@@ -1080,6 +1081,10 @@ CI=
 PLAYWRIGHT_E2E=
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100
 USE_MOCK_SHIPPING_CARRIERS=
+
+RUN_AUTH_SMOKE=
+E2E_AUTH_EMAIL=
+E2E_AUTH_PASSWORD=
 
 # Local shell only for authenticated production smoke tests. Do not configure
 # these in Railway runtime variables and do not commit credential values.
