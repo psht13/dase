@@ -355,3 +355,14 @@ Railway verification:
 - Filtered `web` and `worker` logs did not show missing Nova Post env errors after cleanup.
 - `worker` deploy logs included `Shipment worker is ready.`
 - Local Playwright coverage verifies `/dashboard/settings/shipping` opens for a seeded owner and remains denied for a `user` role; no authenticated production smoke was run in ENV-05.
+
+## ENV-06 Optional Migration Helper Result
+
+Completed on 2026-05-10 for local/test migration support only.
+
+- Added `pnpm settings:migrate-shipping-env` as an explicit one-time helper for shells that still have deprecated Nova Post env values loaded.
+- The helper requires `--owner-email` or `--owner-id`, refuses missing or non-owner accounts, and refuses to overwrite existing owner shipping settings unless `--force` is passed.
+- It reads deprecated values only from the current process env and does not read or edit ignored env files.
+- It requires `APP_ENCRYPTION_KEY`, encrypts the migrated API key before saving, and prints only a masked preview such as `****7890`.
+- It refuses `NODE_ENV=production` unless `--allow-production` is passed after explicit approval. Production Nova Post setup remains a manual dashboard action through `/dashboard/settings/shipping`.
+- No production migration was run and no secret value was written to tracked documentation.

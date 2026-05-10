@@ -16,6 +16,7 @@
     "build": "next build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "settings:migrate-shipping-env": "tsx scripts/migrate-shipping-env.ts",
     "worker:start": "tsx src/worker/index.ts"
   },
   "dependencies": {

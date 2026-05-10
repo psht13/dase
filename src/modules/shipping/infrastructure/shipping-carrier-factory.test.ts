@@ -91,10 +91,18 @@ describe("owner-scoped Nova Post carrier construction", () => {
     const productionFiles = listProductionShippingFiles(
       join(process.cwd(), "src/modules/shipping"),
     );
+    const allowedOneTimeMigrationFiles = new Set([
+      join(
+        process.cwd(),
+        "src/modules/shipping/application/migrate-owner-shipping-env.ts",
+      ),
+    ]);
     const deprecatedPattern =
       /NOVA_POST_(?:API_KEY|API_URL|AUTH_URL|SENDER_|PAYER_|DEFAULT_)|NOVA_POSHTA_API_(?:KEY|URL)/;
-    const offenders = productionFiles.filter((filePath) =>
-      deprecatedPattern.test(readFileSync(filePath, "utf8")),
+    const offenders = productionFiles.filter(
+      (filePath) =>
+        !allowedOneTimeMigrationFiles.has(filePath) &&
+        deprecatedPattern.test(readFileSync(filePath, "utf8")),
     );
 
     expect(offenders).toEqual([]);

@@ -69,6 +69,12 @@ Owner-managed Nova Post settings:
   - https://api-portal.novapost.com/en/api-nova-post/start/endpoints/
   - https://api-portal.novapost.com/en/api-nova-post/start/token-usage/
 
+Optional one-time local/test migration:
+- `pnpm settings:migrate-shipping-env -- --owner-email owner@example.com` reads deprecated Nova Post values only from the current local process env and saves them into the selected owner's encrypted settings.
+- Use `--owner-id <id>` instead of email when needed. The helper refuses to run without exactly one owner selector, refuses non-owner accounts, refuses missing `APP_ENCRYPTION_KEY`, prints only the masked API key preview, and refuses to overwrite existing settings unless `--force` is passed.
+- This helper is for local/test or staging recovery after env cleanup. Do not run it against production unless there is explicit approval for that exact owner and database; production setup should normally be done manually in `/dashboard/settings/shipping`.
+- Deprecated env keys are no longer the runtime source because they were global to the service, could not be scoped to a specific seller, and made it too easy for `web` and `worker` to drift. Owner settings keep credentials encrypted per owner and let public lookup and worker shipment creation resolve settings from order context.
+
 Legacy sender contact ids and Ukrposhta variables are not required for the current Nova Post v.1.0 integration. Recipient counterparty data comes from the confirmed customer delivery form for each order.
 
 Nova Post authenticated API calls use the generated JWT as the raw `Authorization` header value. Do not prefix the JWT with `Bearer`.

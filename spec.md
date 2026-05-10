@@ -50,7 +50,7 @@ Notes:
 
 ## Current status
 
-Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, final production-readiness audit, production PostgreSQL split, owner-based Nova Post settings, and deprecated env cleanup implemented
+Status: owner authentication, first-owner setup hardening, product catalog, multi-step owner order builder, public order review, post-confirmation public status page, customer delivery confirmation, optional customer Instagram nickname capture, owner payment requisite settings, manual online card transfer customer flow, shipment worker automation, owner order management, UI polish, dashboard filter/action feedback polish, final responsive QA, Railway project/service deployment, Railway PostgreSQL provisioning, GitHub autodeploy configuration, runtime-aware environment validation, release-candidate hardening, final production-readiness audit, production PostgreSQL split, owner-based Nova Post settings, deprecated env cleanup, and optional local/test shipping env migration helper implemented
 
 Repository audit on 2026-04-30:
 - Next.js App Router, TypeScript strict mode, pnpm, Tailwind CSS, and shadcn/ui-compatible configuration are scaffolded.
@@ -1084,6 +1084,25 @@ Railway result:
 - Filtered app logs did not show missing Nova Post env errors after cleanup.
 - Authenticated final production smoke remains intentionally out of ENV-05 scope. Local Playwright coverage verifies `/dashboard/settings/shipping` for a seeded owner and denies `user` role access.
 
+## ENV-06 optional shipping env migration helper on 2026-05-10
+
+Added an opt-in helper for local/test or staging recovery when deprecated Nova Post env values still exist in the current shell:
+
+```bash
+pnpm settings:migrate-shipping-env -- --owner-email owner@example.com
+```
+
+Behavior:
+- Requires exactly one explicit owner selector: `--owner-email` or `--owner-id`.
+- Reads deprecated Nova Post key names only from the current process env; it does not read ignored env files itself and does not call live Nova Post APIs.
+- Resolves the selected account and refuses missing or non-`owner` users, so settings are not created for a `user` account.
+- Requires `DATABASE_URL` and `APP_ENCRYPTION_KEY` in the current shell before writing settings.
+- Encrypts the migrated API key through the existing application encryption service and returns only `apiKeyConfigured` plus the masked preview.
+- Refuses to overwrite existing owner shipping settings unless `--force` is passed.
+- Refuses `NODE_ENV=production` unless `--allow-production` is passed after explicit approval. The normal production path remains manual setup through `/dashboard/settings/shipping`.
+
+Deprecated env keys remain deprecated because they are process-global, not owner-scoped, and cannot safely represent multiple sellers. Runtime public lookup and worker shipment creation continue to resolve encrypted owner settings from order context.
+
 ## Commands
 
 Configured commands:
@@ -1099,6 +1118,7 @@ pnpm test:e2e:prod
 pnpm build
 pnpm db:generate
 pnpm db:migrate
+pnpm settings:migrate-shipping-env
 pnpm worker:start
 ```
 

@@ -82,6 +82,18 @@ When the seller receives and verifies the transfer, the owner order details page
 
 Configure owner Nova Post API access and sender data from `/dashboard/settings/shipping`, not from env variables. Railway should keep only infrastructure/runtime variables and must not keep deprecated payment or owner-managed shipping variables for active runtime.
 
+## One-Time Local Shipping Env Migration
+
+If a local or staging shell still has old Nova Post variables loaded, migrate them into one explicit owner account:
+
+```bash
+pnpm settings:migrate-shipping-env -- --owner-email owner@example.com
+```
+
+Use `--owner-id <id>` instead of email when that is safer. The helper reads only the current process env, requires `DATABASE_URL` and `APP_ENCRYPTION_KEY`, encrypts the API key before saving it, and prints only a masked preview such as `****7890`.
+
+It refuses to overwrite existing owner shipping settings unless `--force` is passed, and it refuses `NODE_ENV=production` unless separately approved with `--allow-production`. For production, configure Nova Post manually through `/dashboard/settings/shipping` after signing in as the correct owner.
+
 Use `SHIPPING_LABEL_CREATION_MODE=disabled` when shipment creation must be blocked globally. Shipment creation jobs stop before live label creation, and no real tracking number is recorded.
 
 Use `SHIPPING_LABEL_CREATION_MODE=mock` only for local fixture-based development. Playwright e2e forces shipping creation to `disabled` in its dev server command and uses saved fake owner settings plus fixture carrier lookup, so automated tests never call the live Nova Post API.
